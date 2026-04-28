@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Media files - served from backend
+public/media/
+out/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
