@@ -1,0 +1,27 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}"
+  ],
+  theme: {
+    extend: {
+      colors: {
+        'primary': 'var(--color-primary)',
+        'secondary': 'var(--color-secondary)',
+        'accent': 'var(--color-accent)',
+      }
+    }
+  },
+  plugins: [
+    function ({ addUtilities }) {
+      addUtilities({
+        '.scrollbar-hide': {
+          '-ms-overflow-style': 'none',
+          'scrollbar-width': 'none',
+          '&::-webkit-scrollbar': { display: 'none' },
+        },
+      });
+    },
+  ],
+}

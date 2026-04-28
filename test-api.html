@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <h1>API Connection Test</h1>
+    <button onclick="testFetch()">Test Fetch Orders</button>
+    <button onclick="testUpdate()">Test Update Order</button>
+    <div id="result"></div>
+
+    <script>
+        async function testFetch() {
+            try {
+                const response = await fetch('http://localhost:8000/api/core/orders/?status=pending');
+                const data = await response.json();
+                document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                document.getElementById('result').innerHTML = 'Error: ' + error.message;
+            }
+        }
+
+        async function testUpdate() {
+            try {
+                const response = await fetch('http://localhost:8000/api/core/orders/', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ id: 19, status: 'pending' })
+                });
+                const data = await response.json();
+                document.getElementById('result').innerHTML = '<pre>Update result: ' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                document.getElementById('result').innerHTML = 'Update Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

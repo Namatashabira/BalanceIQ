@@ -1,0 +1,78 @@
+appId: com.oraka.app
+productName: Oraka
+directories:
+  buildResources: public
+  output: dist
+
+files:
+  - dist/**
+  - electron-main.js
+  - electron-preload.js
+  - package.json
+
+win:
+  target:
+    - nsis
+    - portable
+    - msi
+  certificateFile: null
+  certificatePassword: null
+  signingHashAlgorithms:
+    - sha256
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Oraka
+
+portable:
+  artifactName: Oraka-${version}-portable.exe
+
+msi:
+  artifactName: Oraka-${version}.msi
+
+mac:
+  target:
+    - dmg
+    - zip
+  category: public.app-category.business
+  certificateFile: null
+  certificatePassword: null
+  identity: null
+
+dmg:
+  contents:
+    - x: 130
+      y: 220
+      type: file
+    - x: 438
+      y: 220
+      type: link
+      path: /Applications
+
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Office
+  artifactName: Oraka-${version}.${ext}
+
+deb:
+  afterInstall: scripts/after-install.sh
+
+AppImage:
+  artifactName: Oraka-${version}.AppImage
+
+publish:
+  provider: github
+  owner: your-org
+  repo: oraka-desktop
+  vPrefixedTagName: true
+
+snap:
+  publish:
+    - provider: snapStore
+      channels:
+        - edge

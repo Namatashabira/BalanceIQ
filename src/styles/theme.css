@@ -1,0 +1,361 @@
+/* Theme CSS Variables */
+:root {
+  --color-primary: #3B82F6;
+  --color-secondary: #10B981;
+  --color-accent: #8B5CF6;
+  --color-primary-text: #ffffff;
+  --color-secondary-text: #ffffff;
+  --color-accent-text: #ffffff;
+  --color-on-primary: #ffffff;
+  --color-on-secondary: #ffffff;
+  --color-on-accent: #ffffff;
+  --surface-page: #f3f4f6;
+  --surface-card: #ffffff;
+  --surface-muted: #f9fafb;
+  --text-strong: #111827;
+  --text-subtle: #4b5563;
+  --border-subtle: #e5e7eb;
+  --chart-grid-color: #E5E7EB;
+  --chart-axis-color: #6B7280;
+  --chart-text-color: #374151;
+}
+
+/* Override common Tailwind blue colors with primary theme */
+.bg-blue-500,
+.bg-blue-600 {
+  background-color: var(--color-primary) !important;
+  color: var(--color-on-primary) !important;
+}
+
+/* Primary button styling - make it look like a button */
+button.bg-blue-500,
+button.bg-blue-600,
+.btn-primary {
+  background-color: var(--color-primary) !important;
+  color: var(--color-on-primary) !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.2s ease !important;
+}
+
+button.bg-blue-500:hover,
+button.bg-blue-600:hover,
+.btn-primary:hover {
+  background-color: var(--color-primary) !important;
+  filter: brightness(0.9);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  transform: translateY(-1px);
+}
+
+button.bg-blue-500:active,
+button.bg-blue-600:active,
+.btn-primary:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+.hover\:bg-blue-600:hover,
+.hover\:bg-blue-700:hover {
+  background-color: var(--color-primary) !important;
+  filter: brightness(0.9);
+}
+
+/* Override common Tailwind green colors with secondary theme */
+.bg-green-500,
+.bg-green-600 {
+  background-color: var(--color-secondary) !important;
+  color: var(--color-on-secondary) !important;
+}
+
+/* Secondary button styling - make it look like a button */
+button.bg-green-500,
+button.bg-green-600,
+.btn-secondary {
+  background-color: var(--color-secondary) !important;
+  color: var(--color-on-secondary) !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.2s ease !important;
+}
+
+button.bg-green-500:hover,
+button.bg-green-600:hover,
+.btn-secondary:hover {
+  background-color: var(--color-secondary) !important;
+  filter: brightness(0.95);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  transform: translateY(-1px);
+}
+
+button.bg-green-500:active,
+button.bg-green-600:active,
+.btn-secondary:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+.hover\:bg-green-600:hover,
+.hover\:bg-green-700:hover {
+  background-color: var(--color-secondary) !important;
+  filter: brightness(0.9);
+}
+
+/* Override common Tailwind purple colors with accent theme */
+.bg-purple-500,
+.bg-purple-600 {
+  background-color: var(--color-accent) !important;
+  color: var(--color-on-accent) !important;
+}
+
+/* Accent button styling - make it look like a button */
+button.bg-purple-500,
+button.bg-purple-600,
+.btn-accent {
+  background-color: var(--color-accent) !important;
+  color: var(--color-on-accent) !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.2s ease !important;
+}
+
+button.bg-purple-500:hover,
+button.bg-purple-600:hover,
+.btn-accent:hover {
+  background-color: var(--color-accent) !important;
+  filter: brightness(0.9);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  transform: translateY(-1px);
+}
+
+button.bg-purple-500:active,
+button.bg-purple-600:active,
+.btn-accent:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+.hover\:bg-purple-600:hover,
+.hover\:bg-purple-700:hover {
+  background-color: var(--color-accent) !important;
+  filter: brightness(0.9);
+}
+
+/* Chart and Graph Theming */
+/* Recharts compatible colors */
+.recharts-primary {
+  fill: var(--color-primary) !important;
+  stroke: var(--color-primary) !important;
+}
+
+.recharts-secondary {
+  fill: var(--color-secondary) !important;
+  stroke: var(--color-secondary) !important;
+}
+
+.recharts-accent {
+  fill: var(--color-accent) !important;
+  stroke: var(--color-accent) !important;
+}
+
+/* Chart text visibility */
+.recharts-text {
+  fill: var(--chart-text-color) !important; /* Always use dark gray for chart text */
+}
+
+.recharts-cartesian-axis-tick-value {
+  fill: var(--chart-axis-color) !important; /* Gray for axis labels */
+}
+
+.recharts-legend-item-text {
+  color: var(--chart-text-color) !important; /* Dark gray for legend text */
+}
+
+/* Chart.js compatible colors */
+.chart-primary {
+  background-color: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+}
+
+.chart-secondary {
+  background-color: var(--color-secondary) !important;
+  border-color: var(--color-secondary) !important;
+}
+
+.chart-accent {
+  background-color: var(--color-accent) !important;
+  border-color: var(--color-accent) !important;
+}
+
+/* Chart data colors array for multiple series */
+:root {
+  --chart-color-1: var(--color-primary);
+  --chart-color-2: var(--color-secondary);
+  --chart-color-3: var(--color-accent);
+  --chart-color-4: #F59E0B; /* Amber */
+  --chart-color-5: #EF4444; /* Red */
+  --chart-color-6: #14B8A6; /* Teal */
+  --chart-color-7: #8B5CF6; /* Purple */
+  --chart-color-8: #F97316; /* Orange */
+}
+
+/* Text colors */
+.text-blue-500,
+.text-blue-600 {
+  color: var(--color-primary) !important;
+}
+
+.text-green-500,
+.text-green-600 {
+  color: var(--color-secondary) !important;
+}
+
+.text-purple-500,
+.text-purple-600 {
+  color: var(--color-accent) !important;
+}
+
+/* Border colors */
+.border-blue-500,
+.border-blue-600 {
+  border-color: var(--color-primary) !important;
+}
+
+.border-green-500,
+.border-green-600 {
+  border-color: var(--color-secondary) !important;
+}
+
+.border-purple-500,
+.border-purple-600 {
+  border-color: var(--color-accent) !important;
+}
+
+/* Ring colors */
+.ring-blue-500,
+.focus\:ring-blue-500:focus {
+  --tw-ring-color: var(--color-primary) !important;
+}
+
+.ring-green-500,
+.focus\:ring-green-500:focus {
+  --tw-ring-color: var(--color-secondary) !important;
+}
+
+.ring-purple-500,
+.focus\:ring-purple-500:focus {
+  --tw-ring-color: var(--color-accent) !important;
+}
+
+/* Theme-aware utility classes */
+.btn-primary {
+  background-color: var(--color-primary);
+  color: white;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(0.9);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: var(--color-secondary);
+  color: white;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  filter: brightness(0.9);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-accent {
+  background-color: var(--color-accent);
+  color: white;
+  transition: all 0.2s;
+}
+
+.btn-accent:hover:not(:disabled) {
+  filter: brightness(0.9);
+}
+
+.bg-primary {
+  background-color: var(--color-primary) !important;
+}
+
+.bg-secondary {
+  background-color: var(--color-secondary) !important;
+}
+
+.bg-accent {
+  background-color: var(--color-accent) !important;
+}
+
+.text-primary {
+  color: var(--color-primary) !important;
+}
+
+.text-secondary {
+  color: var(--color-secondary) !important;
+}
+
+.text-accent {
+  color: var(--color-accent) !important;
+}
+
+.border-primary {
+  border-color: var(--color-primary) !important;
+}
+
+.border-secondary {
+  border-color: var(--color-secondary) !important;
+}
+
+.border-accent {
+  border-color: var(--color-accent) !important;
+}
+
+.ring-primary {
+  --tw-ring-color: var(--color-primary) !important;
+}
+
+.ring-secondary {
+  --tw-ring-color: var(--color-secondary) !important;
+}
+
+.ring-accent {
+  --tw-ring-color: var(--color-accent) !important;
+}
+
+/* Hover states */
+.hover\:bg-primary:hover {
+  background-color: var(--color-primary) !important;
+}
+
+.hover\:bg-secondary:hover {
+  background-color: var(--color-secondary) !important;
+}
+
+.hover\:bg-accent:hover {
+  background-color: var(--color-accent) !important;
+}
+
+.hover\:text-primary:hover {
+  color: var(--color-primary) !important;
+}
+
+.hover\:text-secondary:hover {
+  color: var(--color-secondary) !important;
+}
+
+.hover\:text-accent:hover {
+  color: var(--color-accent) !important;
+}

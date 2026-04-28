@@ -1,0 +1,1082 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Users, DollarSign, ShoppingCart, AlertTriangle, 
+  Bell, RefreshCw, ChevronDown, TrendingUp, TrendingDown,
+  Plus, FileText, Send, BarChart3, Activity, Database,
+  Server, Zap, Eye, Calendar, Filter, Package
+} from 'lucide-react';
+import { fetchOrders } from '../api';
+import ProductsOverview from '../components/ProductsOverview';
+
+// Mock data
+const mockKPIData = {
+  totalUsers: { value: '12,847', change: 12.5, trend: 'up' },
+  activeUsers: { value: '8,234', change: -2.3, trend: 'down' },
+  totalRevenue: { value: 'UGX45,892', change: 18.7, trend: 'up' },
+  ordersToday: { value: '156', change: 8.2, trend: 'up' },
+  pendingOrders: { value: '23', change: -15.4, trend: 'down' },
+  systemAlerts: { value: '3', change: 0, trend: 'neutral' }
+};
+
+const mockChartData = {
+  revenue: [
+    { name: 'Jan', value: 4000 },
+    { name: 'Feb', value: 3000 },
+    { name: 'Mar', value: 5000 },
+    { name: 'Apr', value: 4500 },
+    { name: 'May', value: 6000 },
+    { name: 'Jun', value: 5500 }
+  ],
+  orders: [
+    { name: 'Pending', value: 23, color: '#f59e0b' },
+    { name: 'Processing', value: 45, color: '#3b82f6' },
+    { name: 'Completed', value: 156, color: '#10b981' },
+    { name: 'Cancelled', value: 8, color: '#ef4444' }
+  ],
+  userRoles: [
+    { name: 'Admin', value: 12, color: '#8b5cf6' },
+    { name: 'Manager', value: 34, color: '#06b6d4' },
+    { name: 'User', value: 234, color: '#10b981' }
+  ]
+};
+
+const mockRecentActivity = [
+  { id: 1, action: 'New user registered', user: 'John Doe', time: '2 minutes ago', icon: Users },
+  { id: 2, action: 'Order completed', user: 'Order #1234', time: '5 minutes ago', icon: ShoppingCart },
+  { id: 3, action: 'Payment received', user: '$299.99', time: '10 minutes ago', icon: DollarSign },
+  { id: 4, action: 'System alert resolved', user: 'Database', time: '15 minutes ago', icon: AlertTriangle },
+  { id: 5, action: 'New order created', user: 'Order #1235', time: '20 minutes ago', icon: ShoppingCart }
+];
+
+const mockLatestOrders = [
+  { id: '#1234', customer: 'John Doe', status: 'completed', amount: '$299.99', date: '2024-01-15' },
+  { id: '#1235', customer: 'Jane Smith', status: 'processing', amount: '$149.50', date: '2024-01-15' },
+  { id: '#1236', customer: 'Bob Johnson', status: 'pending', amount: '$89.99', date: '2024-01-15' },
+  { id: '#1237', customer: 'Alice Brown', status: 'completed', amount: '$199.99', date: '2024-01-14' },
+  { id: '#1238', customer: 'Charlie Wilson', status: 'cancelled', amount: '$79.99', date: '2024-01-14' }
+];
+
+// Header Component
+function DashboardHeader({ alertCount, notifications, onClearAlerts }) {
+  const [dateRange, setDateRange] = useState('Last 7 Days');
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef = useRef(null);
+  
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'order': return '🛒';
+      case 'warning': return '⚠️';
+      case 'success': return '✅';
+      case 'info': return 'ℹ️';
+      default: return '🔔';
+    }
+  };
+  
+  const handleOrderClick = (orderId) => {
+    // Navigate to orders page
+    window.location.href = '/orders';
+    setShowNotifications(false);
+  };
+  
+  // Click outside to close notifications
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    
+    if (showNotifications) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showNotifications]);
+
+  return (
+    <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 p-4 mb-6">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
+        
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          {/* Date Range Selector */}
+          <div className="relative">
+            <select 
+              value={dateRange} 
+              onChange={(e) => setDateRange(e.target.value)}
+              className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option>Today</option>
+              <option>Last 7 Days</option>
+              <option>Last 30 Days</option>
+              <option>Custom</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Refresh Button */}
+            <button 
+              onClick={() => window.location.reload()}
+              className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              title="Refresh Dashboard"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </button>
+            
+
+
+            {/* Notifications */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors relative"
+              >
+                <Bell className="w-5 h-5" />
+                {alertCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                    {alertCount > 99 ? '99+' : alertCount}
+                  </span>
+                )}
+              </button>
+              
+              {showNotifications && (
+                <div ref={notificationRef} className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-20 max-h-96 overflow-y-auto">
+                  <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Notifications</h3>
+                    <button 
+                      onClick={onClearAlerts}
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                  {notifications.length === 0 ? (
+                    <div className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">
+                      No new notifications
+                    </div>
+                  ) : (
+                    notifications.map((notification) => (
+                      <div 
+                        key={notification.id} 
+                        onClick={() => notification.type === 'order' && handleOrderClick(notification.orderId)}
+                        className={`px-4 py-3 transition-colors border-b border-gray-100 dark:border-gray-600 last:border-b-0 ${
+                          notification.type === 'order' 
+                            ? 'hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer' 
+                            : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <span className="text-lg">{getNotificationIcon(notification.type)}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-gray-900 dark:text-white">{notification.message}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{notification.time}</p>
+                            {notification.type === 'order' && (
+                              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Click to view orders</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Profile Dropdown */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                  A
+                </div>
+                <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+              </button>
+              
+              {showProfileMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-10">
+                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Profile</a>
+                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Settings</a>
+                  <hr className="my-2 border-gray-200 dark:border-gray-600" />
+                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Logout</a>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// KPI Card Component
+function KPICard({ title, value, change, trend, icon: Icon, onClick }) {
+  const getTrendColor = () => {
+    if (trend === 'up') return 'text-green-600';
+    if (trend === 'down') return 'text-red-600';
+    return 'text-gray-600';
+  };
+
+  const getTrendIcon = () => {
+    if (trend === 'up') return <TrendingUp className="w-4 h-4" />;
+    if (trend === 'down') return <TrendingDown className="w-4 h-4" />;
+    return null;
+  };
+
+  return (
+    <div 
+      onClick={onClick}
+      className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer"
+    >
+      <div className="flex items-center justify-between mb-4">
+        <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+          <Icon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+        </div>
+        {change !== 0 && (
+          <div className={`flex items-center gap-1 ${getTrendColor()}`}>
+            {getTrendIcon()}
+            <span className="text-sm font-medium">{Math.abs(change)}%</span>
+          </div>
+        )}
+      </div>
+      <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{title}</h3>
+      <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
+    </div>
+  );
+}
+
+// Simple Chart Components (using CSS for basic visualization)
+function LineChart({ data, title }) {
+  const maxValue = Math.max(...data.map(d => d.value));
+  
+  return (
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{title}</h3>
+      <div className="h-64 flex items-end justify-between gap-2">
+        {data.map((item, index) => (
+          <div key={index} className="flex-1 flex flex-col items-center">
+            <div 
+              className="w-full bg-blue-500 rounded-t transition-all duration-300 hover:bg-blue-600"
+              style={{ height: `${(item.value / maxValue) * 200}px` }}
+              title={`${item.name}: ${item.value}`}
+            ></div>
+            <span className="text-xs text-gray-600 dark:text-gray-400 mt-2">{item.name}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BarChart({ data, title }) {
+  const maxValue = Math.max(...data.map(d => d.value));
+  
+  return (
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{title}</h3>
+      <div className="space-y-3">
+        {data.map((item, index) => (
+          <div key={index} className="flex items-center gap-3">
+            <span className="text-sm text-gray-600 dark:text-gray-400 w-20">{item.name}</span>
+            <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+              <div 
+                className="h-3 rounded-full transition-all duration-300"
+                style={{ 
+                  width: `${(item.value / maxValue) * 100}%`,
+                  backgroundColor: item.color 
+                }}
+              ></div>
+            </div>
+            <span className="text-sm font-medium text-gray-900 dark:text-white w-8">{item.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PieChart({ data, title }) {
+  const total = data.reduce((sum, item) => sum + item.value, 0);
+  
+  return (
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{title}</h3>
+      <div className="flex items-center justify-center">
+        <div className="relative w-32 h-32">
+          <div className="w-32 h-32 rounded-full" style={{
+            background: `conic-gradient(${data.map((item, index) => {
+              const percentage = (item.value / total) * 100;
+              const prevPercentage = data.slice(0, index).reduce((sum, prev) => sum + (prev.value / total) * 100, 0);
+              return `${item.color} ${prevPercentage}% ${prevPercentage + percentage}%`;
+            }).join(', ')})`
+          }}></div>
+          <div className="absolute inset-4 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center">
+            <span className="text-sm font-medium text-gray-900 dark:text-white">{total}</span>
+          </div>
+        </div>
+      </div>
+      <div className="mt-4 space-y-2">
+        {data.map((item, index) => (
+          <div key={index} className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
+            <span className="text-sm text-gray-600 dark:text-gray-400">{item.name}: {item.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Quick Actions Component
+function QuickActions() {
+  const actions = [
+    { label: 'Add User', icon: Plus, gradient: 'from-blue-500 to-blue-600', shadow: 'shadow-blue-500/25', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+    { label: 'Create Order', icon: ShoppingCart, gradient: 'from-emerald-500 to-emerald-600', shadow: 'shadow-emerald-500/25', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+    { label: 'Send Notification', icon: Send, gradient: 'from-purple-500 to-purple-600', shadow: 'shadow-purple-500/25', bg: 'bg-purple-50 dark:bg-purple-900/20' },
+    { label: 'Generate Report', icon: FileText, gradient: 'from-orange-500 to-orange-600', shadow: 'shadow-orange-500/25', bg: 'bg-orange-50 dark:bg-orange-900/20' }
+  ];
+
+  return (
+    <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 p-8 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 backdrop-blur-sm relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full -translate-y-16 translate-x-16"></div>
+      <div className="relative">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
+            <Plus className="w-5 h-5 text-white" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white">Quick Actions</h3>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          {actions.map((action, index) => (
+            <button
+              key={index}
+              className={`${action.bg} p-6 rounded-2xl transition-all duration-300 flex flex-col items-center gap-3 text-sm font-semibold hover:scale-105 hover:shadow-xl group border border-gray-200/50 dark:border-gray-700/50 relative overflow-hidden`}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className={`w-12 h-12 bg-gradient-to-r ${action.gradient} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-lg`}>
+                <action.icon className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-gray-700 dark:text-gray-300 relative z-10">{action.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Recent Activity Component
+function RecentActivity({ notifications, wsRef }) {
+  const getActivityIcon = (type) => {
+    switch (type) {
+      case 'order': return ShoppingCart;
+      case 'warning': return AlertTriangle;
+      case 'success': return Activity;
+      case 'info': return Bell;
+      default: return Activity;
+    }
+  };
+
+  const displayNotifications = notifications.length > 0 ? notifications.slice(0, 5) : [
+    { id: 1, message: 'No recent activity', type: 'info', time: 'Waiting for orders...' }
+  ];
+
+  return (
+    <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 p-8 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 backdrop-blur-sm relative overflow-hidden">
+      <div className="absolute top-0 left-0 w-24 h-24 bg-gradient-to-br from-green-500/10 to-blue-500/10 rounded-full -translate-y-12 -translate-x-12"></div>
+      <div className="relative">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-xl flex items-center justify-center">
+              <Activity className="w-5 h-5 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Recent Activity</h3>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${wsRef?.current ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
+            <span className="text-xs text-gray-500 dark:text-gray-400">{wsRef?.current ? 'Live' : 'Offline'}</span>
+          </div>
+        </div>
+        <div className="space-y-4">
+          {displayNotifications.map((activity, index) => {
+            const IconComponent = getActivityIcon(activity.type);
+            return (
+              <div key={activity.id} className="flex items-center gap-4 p-4 hover:bg-white/60 dark:hover:bg-gray-800/60 rounded-2xl transition-all duration-300 group border border-transparent hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-lg">
+                <div className={`p-3 rounded-2xl group-hover:scale-110 transition-transform duration-200 ${
+                  activity.type === 'order' ? 'bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/40 dark:to-green-800/40' :
+                  activity.type === 'warning' ? 'bg-gradient-to-br from-yellow-100 to-yellow-200 dark:from-yellow-900/40 dark:to-yellow-800/40' :
+                  activity.type === 'success' ? 'bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/40 dark:to-blue-800/40' :
+                  'bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600'
+                }`}>
+                  <IconComponent className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{activity.message}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{activity.orderId ? `Order ID: ${activity.orderId}` : 'System notification'}</p>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-xs font-medium text-gray-400 dark:text-gray-500">{activity.time}</span>
+                  <div className={`w-2 h-2 rounded-full ${activity.type === 'order' && activity.time === 'Just now' ? 'bg-green-400 animate-pulse' : 'bg-gray-300'}`}></div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// System Status Component
+function SystemStatus() {
+  const systems = [
+    { name: 'API Status', status: 'healthy', icon: Server, uptime: '99.9%', response: '45ms' },
+    { name: 'Background Jobs', status: 'warning', icon: Zap, uptime: '97.2%', response: '120ms' },
+    { name: 'Database', status: 'healthy', icon: Database, uptime: '99.8%', response: '23ms' }
+  ];
+
+  const getStatusConfig = (status) => {
+    switch (status) {
+      case 'healthy': return { 
+        color: 'bg-green-500', 
+        text: 'Operational',
+        ring: 'ring-green-500/30',
+        bg: 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20',
+        border: 'border-green-200 dark:border-green-700'
+      };
+      case 'warning': return { 
+        color: 'bg-yellow-500', 
+        text: 'Degraded',
+        ring: 'ring-yellow-500/30',
+        bg: 'bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20',
+        border: 'border-yellow-200 dark:border-yellow-700'
+      };
+      case 'error': return { 
+        color: 'bg-red-500', 
+        text: 'Down',
+        ring: 'ring-red-500/30',
+        bg: 'bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20',
+        border: 'border-red-200 dark:border-red-700'
+      };
+      default: return { 
+        color: 'bg-gray-500', 
+        text: 'Unknown',
+        ring: 'ring-gray-500/30',
+        bg: 'bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20',
+        border: 'border-gray-200 dark:border-gray-700'
+      };
+    }
+  };
+
+  return (
+    <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 p-8 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 backdrop-blur-sm relative overflow-hidden">
+      <div className="absolute bottom-0 right-0 w-32 h-32 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-full translate-y-16 translate-x-16"></div>
+      <div className="relative">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
+            <Server className="w-5 h-5 text-white" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white">System Status</h3>
+        </div>
+        <div className="space-y-4">
+          {systems.map((system, index) => {
+            const config = getStatusConfig(system.status);
+            return (
+              <div key={index} className={`flex items-center gap-4 p-5 rounded-2xl ${config.bg} transition-all duration-300 hover:scale-[1.02] border ${config.border} hover:shadow-lg group`}>
+                <div className="p-3 bg-white dark:bg-gray-800 rounded-2xl shadow-md group-hover:scale-110 transition-transform duration-200">
+                  <system.icon className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                </div>
+                <div className="flex-1">
+                  <span className="text-sm font-bold text-gray-900 dark:text-white block">{system.name}</span>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="text-xs text-gray-600 dark:text-gray-400">{system.uptime} uptime</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-500">•</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400">{system.response} avg</span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <span className="text-xs font-bold text-gray-700 dark:text-gray-300 bg-white/60 dark:bg-gray-800/60 px-2 py-1 rounded-lg">{config.text}</span>
+                  <div className={`w-4 h-4 rounded-full ${config.color} ${config.ring} ring-4 ${system.status === 'healthy' ? 'animate-pulse' : ''}`}></div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Latest Orders Table Component
+function LatestOrdersTable({ orders }) {
+  const getStatusBadge = (status) => {
+    const colors = {
+      confirmed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+      pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+      cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+    };
+    
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[status] || 'bg-gray-100 text-gray-800'}`}>
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </span>
+    );
+  };
+
+  // Get latest 5 orders sorted by date
+  const latestOrders = orders
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 5);
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Latest Orders</h3>
+          <button 
+            onClick={() => window.location.href = '/orders'}
+            className="text-blue-600 dark:text-blue-400 text-sm hover:underline flex items-center gap-1"
+          >
+            <Eye className="w-4 h-4" />
+            View more
+          </button>
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        {latestOrders.length === 0 ? (
+          <div className="p-6 text-center text-gray-500 dark:text-gray-400">
+            No orders found
+          </div>
+        ) : (
+          <table className="w-full">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Order ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Customer</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              {latestOrders.map((order) => (
+                <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">#{order.id}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{order.customer_name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(order.status)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{order.total} UGX</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                    {new Date(order.date).toLocaleDateString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Main Dashboard Component
+export default function Dashboard() {
+  const [loading, setLoading] = useState(true);
+  const [alertCount, setAlertCount] = useState(0);
+  const [notifications, setNotifications] = useState([]);
+  const [kpiData, setKpiData] = useState(mockKPIData);
+  const [chartData, setChartData] = useState(mockChartData);
+  const [orders, setOrders] = useState([]);
+  const wsRef = useRef(null);
+
+  // Load initial order data
+  const loadOrderData = async () => {
+    try {
+      const [pendingOrders, confirmedOrders, cancelledOrders] = await Promise.all([
+        fetchOrders('pending'),
+        fetchOrders('confirmed'), 
+        fetchOrders('cancelled')
+      ]);
+      
+      const totalOrders = [...pendingOrders, ...confirmedOrders, ...cancelledOrders];
+      setOrders(totalOrders);
+      
+      // Calculate real metrics
+      const today = new Date().toDateString();
+      const ordersToday = totalOrders.filter(order => 
+        new Date(order.date).toDateString() === today
+      ).length;
+      
+      const totalRevenue = confirmedOrders.reduce((sum, order) => 
+        sum + parseFloat(order.total || 0), 0
+      );
+      
+      const totalUsers = new Set(totalOrders.map(order => order.customer_email)).size;
+      const activeUsers = new Set(totalOrders.filter(order => 
+        new Date(order.date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      ).map(order => order.customer_email)).size;
+      
+      // Update KPI data with real numbers
+      setKpiData({
+        totalUsers: {
+          value: String(totalUsers),
+          change: 5.2,
+          trend: 'up'
+        },
+        activeUsers: {
+          value: String(activeUsers),
+          change: 2.1,
+          trend: 'up'
+        },
+        totalRevenue: {
+          value: `$${totalRevenue.toLocaleString()}`,
+          change: 12.5,
+          trend: 'up'
+        },
+        ordersToday: {
+          value: String(ordersToday),
+          change: 8.3,
+          trend: 'up'
+        },
+        pendingOrders: {
+          value: String(pendingOrders.length),
+          change: pendingOrders.length > 0 ? 15.2 : -5.1,
+          trend: pendingOrders.length > 0 ? 'up' : 'down'
+        },
+        cancelledOrders: {
+          value: String(cancelledOrders.length),
+          change: cancelledOrders.length > 0 ? -8.4 : 0,
+          trend: cancelledOrders.length > 0 ? 'down' : 'neutral'
+        }
+      });
+      
+      // Update chart data with real order data
+      const ordersByStatus = [
+        { name: 'Pending', value: pendingOrders.length, color: '#f59e0b' },
+        { name: 'Confirmed', value: confirmedOrders.length, color: '#10b981' },
+        { name: 'Cancelled', value: cancelledOrders.length, color: '#ef4444' }
+      ];
+      
+      setChartData(prev => ({
+        ...prev,
+        orders: ordersByStatus
+      }));
+      
+    } catch (error) {
+      console.error('Error loading order data:', error);
+    }
+  };
+
+  // Polling fallback for order updates
+  const [lastOrderCount, setLastOrderCount] = useState(0);
+  
+  const checkForNewOrders = async () => {
+    try {
+      const pendingOrders = await fetchOrders('pending');
+      const currentCount = pendingOrders.length;
+      
+      if (currentCount > lastOrderCount && lastOrderCount > 0) {
+        const newOrders = pendingOrders.slice(0, currentCount - lastOrderCount);
+        
+        newOrders.forEach(order => {
+          const newNotification = {
+            id: Date.now() + Math.random(),
+            message: `New order #${order.id} from ${order.customer_name}`,
+            type: 'order',
+            time: 'Just now',
+            orderId: order.id
+          };
+          
+          setNotifications(prev => [newNotification, ...prev.slice(0, 4)]);
+          setAlertCount(prev => prev + 1);
+          
+          // Browser notification
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('🛒 New Order!', {
+              body: newNotification.message,
+              icon: '/favicon.ico'
+            });
+          }
+          
+          console.log("✅ New order detected via polling:", order);
+        });
+      }
+      
+      setLastOrderCount(currentCount);
+    } catch (error) {
+      console.error("❌ Error checking for new orders:", error);
+    }
+  };
+
+  // WebSocket connection for real-time order updates
+  useEffect(() => {
+    let ws;
+    let reconnectTimeout;
+    
+    const connectWebSocket = () => {
+      try {
+        console.log("🔄 Dashboard attempting WebSocket connection...");
+        ws = new WebSocket("ws://127.0.0.1:8000/ws/orders/");
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+          console.log("✅ Dashboard WebSocket connected successfully");
+          if (reconnectTimeout) {
+            clearTimeout(reconnectTimeout);
+            reconnectTimeout = null;
+          }
+        };
+        
+        ws.onmessage = (event) => {
+          try {
+            console.log("📨 Dashboard WebSocket message:", event.data);
+            const data = JSON.parse(event.data);
+            
+            // Handle any WebSocket message as potential order update
+            if (data.order || data.type === 'order_update' || data.message) {
+              const order = data.order || data;
+              console.log("🛒 Processing order update:", order);
+              
+              // Create notification
+              const newNotification = {
+                id: Date.now(),
+                message: order.customer_name ? 
+                  `New order #${order.id} from ${order.customer_name}` : 
+                  `New order received: ${JSON.stringify(order).substring(0, 50)}...`,
+                type: 'order',
+                time: 'Just now',
+                orderId: order.id || 'unknown'
+              };
+              
+              // Update state
+              setNotifications(prev => [newNotification, ...prev.slice(0, 4)]);
+              setAlertCount(prev => prev + 1);
+              
+              // Update KPI
+              setKpiData(prev => ({
+                ...prev,
+                ordersToday: {
+                  ...prev.ordersToday,
+                  value: String(parseInt(prev.ordersToday.value) + 1)
+                },
+                pendingOrders: {
+                  ...prev.pendingOrders,
+                  value: String(parseInt(prev.pendingOrders.value) + 1)
+                }
+              }));
+              
+              // Reload data to get updated counts
+              loadOrderData();
+              
+              // Browser notification
+              if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('🛒 New Order!', {
+                  body: newNotification.message,
+                  icon: '/favicon.ico'
+                });
+              }
+              
+              console.log("✅ Notification processed successfully");
+            }
+          } catch (error) {
+            console.error("❌ WebSocket message error:", error);
+          }
+        };
+
+        ws.onclose = (event) => {
+          console.log("🔌 Dashboard WebSocket disconnected", event.code, event.reason);
+          wsRef.current = null;
+          
+          // Attempt to reconnect after 3 seconds
+          if (!reconnectTimeout) {
+            reconnectTimeout = setTimeout(() => {
+              console.log("🔄 Attempting to reconnect WebSocket...");
+              connectWebSocket();
+            }, 3000);
+          }
+        };
+        
+        ws.onerror = (error) => {
+          console.warn("⚠️ Dashboard WebSocket error:", error);
+        };
+      } catch (error) {
+        console.warn("⚠️ WebSocket connection failed:", error);
+      }
+    };
+
+    connectWebSocket();
+
+    return () => {
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
+      if (wsRef.current) {
+        wsRef.current.close(1000, 'Dashboard unmounting');
+      }
+    };
+  }, []);
+
+  // Check for orders pending over 20 minutes
+  const checkPendingOrders = async () => {
+    try {
+      const pendingOrders = await fetchOrders('pending');
+      const now = new Date();
+      
+      pendingOrders.forEach(order => {
+        const orderDate = new Date(order.date);
+        const minutesPending = (now - orderDate) / (1000 * 60);
+        
+        if (minutesPending >= 20) {
+          const existingNotification = notifications.find(n => 
+            n.orderId === order.id && n.type === 'warning'
+          );
+          
+          if (!existingNotification) {
+            const warningNotification = {
+              id: Date.now() + Math.random(),
+              message: `Order #${order.id} pending for ${Math.floor(minutesPending)} minutes`,
+              type: 'warning',
+              time: 'Urgent',
+              orderId: order.id
+            };
+            
+            setNotifications(prev => [warningNotification, ...prev.slice(0, 4)]);
+            setAlertCount(prev => prev + 1);
+            
+            // Browser notification for urgent orders
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification('⚠️ Order Pending Too Long!', {
+                body: warningNotification.message,
+                icon: '/favicon.ico'
+              });
+            }
+            
+            console.log("⚠️ Order pending too long:", order);
+          }
+        }
+      });
+    } catch (error) {
+      console.error("❌ Error checking pending orders:", error);
+    }
+  };
+
+  // Polling fallback - check for new orders every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(checkForNewOrders, 5000);
+    return () => clearInterval(interval);
+  }, [lastOrderCount]);
+  
+  // Check for orders pending over 20 minutes every 2 minutes
+  useEffect(() => {
+    const interval = setInterval(checkPendingOrders, 120000); // 2 minutes
+    return () => clearInterval(interval);
+  }, [notifications]);
+
+
+
+  // Request notification permission and initialize data on mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+    
+    const initializeData = async () => {
+      await loadOrderData();
+      // Set initial order count for polling comparison
+      try {
+        const pendingOrders = await fetchOrders('pending');
+        setLastOrderCount(pendingOrders.length);
+      } catch (error) {
+        console.error('Error setting initial order count:', error);
+      }
+    };
+    
+    initializeData();
+  }, []);
+
+  useEffect(() => {
+    // Simulate loading
+    const timer = setTimeout(() => setLoading(false), 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="animate-pulse">
+          <div className="bg-white dark:bg-gray-800 h-20 mb-6"></div>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="bg-white dark:bg-gray-800 h-32 rounded-lg"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const handleClearAlerts = () => {
+    setAlertCount(0);
+    setNotifications([]);
+  };
+
+  const headerProps = {
+    alertCount,
+    notifications,
+    onClearAlerts: handleClearAlerts
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <DashboardHeader {...headerProps} />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
+          <KPICard 
+            title="Total Users" 
+            value={kpiData.totalUsers.value} 
+            change={kpiData.totalUsers.change} 
+            trend={kpiData.totalUsers.trend} 
+            icon={Users}
+            onClick={() => console.log('Navigate to users page')}
+          />
+          <KPICard 
+            title="Active Users" 
+            value={kpiData.activeUsers.value} 
+            change={kpiData.activeUsers.change} 
+            trend={kpiData.activeUsers.trend} 
+            icon={Activity}
+            onClick={() => console.log('Navigate to active users page')}
+          />
+          <KPICard 
+            title="Total Revenue" 
+            value={kpiData.totalRevenue.value} 
+            change={kpiData.totalRevenue.change} 
+            trend={kpiData.totalRevenue.trend} 
+            icon={DollarSign}
+            onClick={() => console.log('Navigate to revenue page')}
+          />
+          <KPICard 
+            title="Orders Today" 
+            value={kpiData.ordersToday.value} 
+            change={kpiData.ordersToday.change} 
+            trend={kpiData.ordersToday.trend} 
+            icon={ShoppingCart}
+            onClick={() => console.log('Navigate to orders page')}
+          />
+          <KPICard 
+            title="Pending Orders" 
+            value={kpiData.pendingOrders.value} 
+            change={kpiData.pendingOrders.change} 
+            trend={kpiData.pendingOrders.trend} 
+            icon={Calendar}
+            onClick={() => console.log('Navigate to pending orders page')}
+          />
+          <KPICard 
+            title="Cancelled Orders" 
+            value={kpiData.cancelledOrders?.value || '0'} 
+            change={kpiData.cancelledOrders?.change || 0} 
+            trend={kpiData.cancelledOrders?.trend || 'neutral'} 
+            icon={AlertTriangle}
+            onClick={() => window.location.href = '/orders'}
+          />
+        </div>
+
+        {/* Main Analytics Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="lg:col-span-2">
+            <LineChart data={mockChartData.revenue} title="Revenue Over Time" />
+          </div>
+          <div className="space-y-6">
+            <BarChart data={chartData.orders} title="Orders by Status" />
+            <PieChart data={mockChartData.userRoles} title="Users by Role" />
+          </div>
+        </div>
+
+        {/* Secondary Sections */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <QuickActions />
+          <RecentActivity notifications={notifications} wsRef={wsRef} />
+          <ProductsOverview />
+          <SystemStatus />
+          <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 p-8 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 backdrop-blur-sm relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-28 h-28 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full -translate-y-14 -translate-x-14"></div>
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                  <BarChart3 className="w-5 h-5 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Performance</h3>
+              </div>
+              <div className="space-y-6">
+                <div className="group">
+                  <div className="flex justify-between items-center mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-4 h-4 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full shadow-lg"></div>
+                      <span className="text-sm font-bold text-gray-700 dark:text-gray-300">CPU Usage</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">2.4 GHz</span>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-700">45%</span>
+                    </div>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden shadow-inner">
+                    <div className="bg-gradient-to-r from-blue-500 via-blue-600 to-blue-500 h-4 rounded-full transition-all duration-700 shadow-lg relative" style={{ width: '45%' }}>
+                      <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent rounded-full"></div>
+                    </div>
+                  </div>
+                </div>
+                <div className="group">
+                  <div className="flex justify-between items-center mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-4 h-4 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full shadow-lg"></div>
+                      <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Memory</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">16 GB</span>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/30 px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-700">67%</span>
+                    </div>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden shadow-inner">
+                    <div className="bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 h-4 rounded-full transition-all duration-700 shadow-lg relative" style={{ width: '67%' }}>
+                      <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent rounded-full"></div>
+                    </div>
+                  </div>
+                </div>
+                <div className="group">
+                  <div className="flex justify-between items-center mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-4 h-4 bg-gradient-to-r from-amber-500 to-amber-600 rounded-full shadow-lg"></div>
+                      <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Storage</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">1 TB SSD</span>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-800/30 px-3 py-1.5 rounded-xl border border-amber-200 dark:border-amber-700">23%</span>
+                    </div>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden shadow-inner">
+                    <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-amber-500 h-4 rounded-full transition-all duration-700 shadow-lg relative" style={{ width: '23%' }}>
+                      <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent rounded-full"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Latest Orders Table */}
+        <div className="mb-8">
+          <LatestOrdersTable orders={orders} />
+        </div>
+      </div>
+    </div>
+    
+  );
+}
