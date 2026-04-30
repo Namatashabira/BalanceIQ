@@ -52,7 +52,7 @@ function setupAutoUpdater(window) {
     dialog.showMessageBox(window, {
       type: 'info',
       title: 'Update Available',
-      message: 'A new version of Oraka is available.',
+      message: 'A new version of BusinessIQ is available.',
       buttons: ['Install', 'Later']
     }).then((result) => {
       if (result.response === 0) {

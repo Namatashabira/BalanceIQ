@@ -76,7 +76,7 @@ export function UpdateAvailableNotification({
             <h3 className="font-semibold text-gray-900">Update Available</h3>
             <p className="text-sm text-gray-600">
               {updateType === 'electron' 
-                ? 'A new version of Oraka is ready to install' 
+                ? 'A new version of BusinessIQ is ready to install' 
                 : 'A new version is available. Refresh to update'}
             </p>
           </div>
@@ -137,7 +137,7 @@ export function AppVersionDisplay({ version, showInFooter = true }) {
   if (showInFooter) {
     return (
       <div className="text-xs text-gray-500 text-center mt-4 pt-2 border-t border-gray-200">
-        Oraka v{version}
+        BusinessIQ v{version}
       </div>
     );
   }

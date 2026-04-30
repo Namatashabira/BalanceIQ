@@ -1,8 +1,8 @@
 {
-  "name": "oraka",
+  "name": "businessiq",
   "private": true,
   "version": "1.0.0",
-  "description": "Oraka - Business Management System (Desktop App & PWA)",
+  "description": "BusinessIQ - Business Management System (Desktop App & PWA)",
   "author": "Your Organization",
   "type": "module",
   "main": "electron-main.js",

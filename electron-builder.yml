@@ -1,5 +1,5 @@
-appId: com.oraka.app
-productName: Oraka
+appId: com.businessiq.app
+productName: BusinessIQ
 directories:
   buildResources: public
   output: dist
@@ -25,13 +25,13 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: Oraka
+  shortcutName: BusinessIQ
 
 portable:
-  artifactName: Oraka-${version}-portable.exe
+  artifactName: BusinessIQ-${version}-portable.exe
 
 msi:
-  artifactName: Oraka-${version}.msi
+  artifactName: BusinessIQ-${version}.msi
 
 mac:
   target:
@@ -57,18 +57,18 @@ linux:
     - AppImage
     - deb
   category: Office
-  artifactName: Oraka-${version}.${ext}
+  artifactName: BusinessIQ-${version}.${ext}
 
 deb:
   afterInstall: scripts/after-install.sh
 
 AppImage:
-  artifactName: Oraka-${version}.AppImage
+  artifactName: BusinessIQ-${version}.AppImage
 
 publish:
   provider: github
   owner: your-org
-  repo: oraka-desktop
+  repo: businessiq-desktop
   vPrefixedTagName: true
 
 snap:
