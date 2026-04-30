@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useConfig, useLabels, useFeatures, useAllowedPages } from '../context/ConfigContext';
 import { getNavigationItems } from '../config/navigationConfig';
 import AccountPopup from './AccountPopup';
+import BIQLogo from './BIQLogo';
 import axios from 'axios';
 import {
   Menu, X, Bell, Search, ChevronDown, Settings, LogOut,
@@ -330,9 +331,7 @@ function MobileDrawer({ open, onClose, items, user, userProfile, onOpenAccount, 
             {logoUrl ? (
               <img src={logoUrl} alt="logo" className="w-9 h-9 rounded-xl object-cover" onError={e => e.target.style.display = 'none'} />
             ) : (
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                <span className="text-white font-bold text-sm">{(businessName || 'B').charAt(0)}</span>
-              </div>
+              <BIQLogo size={36} />
             )}
             <span className="font-semibold text-gray-900 truncate max-w-[140px]">{businessName || 'Menu'}</span>
           </div>
@@ -473,9 +472,7 @@ export default function Navbar({ onToggleSidebar, sidebarOpen }) {
               {logoUrl ? (
                 <img src={logoUrl} alt="logo" className="w-8 h-8 rounded-xl object-cover flex-shrink-0" onError={e => e.target.style.display = 'none'} />
               ) : (
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-bold text-sm">{(businessName || 'B').charAt(0)}</span>
-                </div>
+                <BIQLogo size={34} className="flex-shrink-0" />
               )}
               <span className="hidden sm:block font-semibold text-gray-900 text-sm truncate max-w-[140px]">
                 {businessName || 'Dashboard'}

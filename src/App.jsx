@@ -13,6 +13,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import Pricing from "./pages/Pricing";
+import About from "./pages/About";
 import MyOrganizations from "./pages/MyOrganizations";
 import CreateOrganization from "./pages/CreateOrganization";
 
@@ -286,6 +288,8 @@ function AppContent() {
         <Routes>
           <Route path="/manual-entry-old" element={<ManualEntry />} />
           <Route path="/" element={<HomePage />} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/about" element={<About />} />
           <Route path="/login" element={<Login onLogin={login} />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />

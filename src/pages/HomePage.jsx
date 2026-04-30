@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import BIQLogo from '../components/BIQLogo';
 import { 
   Building2, 
   Users, 
@@ -13,7 +14,10 @@ import {
   Sparkles,
   Box,
   TrendingUp,
-  Clock
+  Clock,
+  Download,
+  Monitor,
+  Smartphone
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -80,25 +84,31 @@ const features = [
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
-              <div className="h-10 w-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-md">
-                <Sparkles className="h-6 w-6 text-white" />
-              </div>
+              <BIQLogo size={40} />
               <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                 BusinessIQ
               </span>
             </div>
             <div className="hidden md:flex items-center space-x-8">
               <a href="#features" className="text-gray-700 hover:text-blue-600 text-sm font-medium transition">Features</a>
-              <a href="#pricing" className="text-gray-700 hover:text-blue-600 text-sm font-medium transition">Pricing</a>
-              <a href="#" className="text-gray-700 hover:text-blue-600 text-sm font-medium transition">About</a>
+              <Link to="/pricing" className="text-gray-700 hover:text-blue-600 text-sm font-medium transition">Pricing</Link>
+              <Link to="/about" className="text-gray-700 hover:text-blue-600 text-sm font-medium transition">About</Link>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               <Link
                 to="/login"
                 className="text-gray-700 hover:text-gray-900 px-4 py-2 rounded-lg text-sm font-medium transition hidden sm:inline"
               >
                 Sign In
               </Link>
+              <a
+                href="/downloads/BusinessIQ-Setup.exe"
+                download
+                className="hidden md:inline-flex items-center gap-1.5 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-700 transition shadow-md"
+              >
+                <Download className="h-4 w-4" />
+                Download
+              </a>
               <Link
                 to="/register"
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition shadow-md hover:shadow-lg"
@@ -119,14 +129,16 @@ const features = [
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center">
-            <div className="inline-flex items-center space-x-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-medium mb-6 animate-fade-in-down">
-              <Sparkles className="h-4 w-4" />
-              <span>Welcome to BusinessIQ</span>
+            <div className="flex flex-col items-center mb-8 animate-fade-in-down">
+              <BIQLogo size={96} className="mb-4 drop-shadow-2xl" />
+              <div className="inline-flex items-center bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-medium">
+                <span>Welcome to BusinessIQ</span>
+              </div>
             </div>
             
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-gray-900 mb-8 leading-tight animate-fade-in-down" style={{animationDelay: '100ms'}}>
-              Intelligent Business
-              <span className="block bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-gray-900 mb-8 leading-tight animate-fade-in-down" style={{animationDelay: '100ms'}}>
+              <span className="whitespace-nowrap">Intelligent Business</span>
+              <span className="block whitespace-nowrap bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
                 Management Platform
               </span>
             </h1>
@@ -135,17 +147,59 @@ const features = [
               All-in-one solution for retail, restaurants, healthcare, education, and growing businesses. Manage sales, inventory, staff, customers, and reports with AI-powered insights.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10 animate-fade-in-down" style={{animationDelay: '300ms'}}>
+            <div className="flex justify-center mb-10 animate-fade-in-down" style={{animationDelay: '300ms'}}>
               <Link
                 to="/register"
-                className="group bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-blue-700 hover:to-indigo-700 transition shadow-xl hover:shadow-2xl hover:scale-105 transform inline-flex items-center justify-center"
+                className="group relative inline-flex items-center justify-center gap-3 px-10 py-4 rounded-2xl text-lg font-bold text-white overflow-hidden shadow-2xl hover:shadow-blue-500/40 hover:scale-105 transform transition-all duration-300"
+                style={{
+                  background: 'linear-gradient(135deg, #1d4ed8 0%, #4f46e5 50%, #7c3aed 100%)',
+                }}
               >
-                Start Free Trial
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition" />
+                {/* animated shimmer overlay */}
+                <span
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                  style={{
+                    background: 'linear-gradient(120deg, transparent 20%, rgba(255,255,255,0.15) 50%, transparent 80%)',
+                    backgroundSize: '200% 100%',
+                  }}
+                />
+                {/* pulse ring */}
+                <span className="absolute inset-0 rounded-2xl ring-2 ring-blue-400/40 group-hover:ring-blue-400/80 transition-all duration-300" />
+                <Zap className="h-5 w-5 text-yellow-300 drop-shadow" />
+                <span>Start Free Trial</span>
+                <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform duration-200" />
               </Link>
-              <button className="bg-white text-gray-700 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-gray-50 transition shadow-md border border-gray-200 hover:scale-105 transform">
-                Watch Demo
-              </button>
+            </div>
+
+            {/* Download Section */}
+            <div className="animate-fade-in-down" style={{animationDelay: '350ms'}}>
+              <p className="text-sm text-gray-500 mb-3">Also available as a desktop app</p>
+              <div className="flex flex-row gap-3 justify-center">
+                <a
+                  href="/downloads/BusinessIQ-Setup.exe"
+                  download
+                  className="group inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white px-4 py-3 rounded-xl font-semibold transition shadow-lg hover:shadow-xl hover:scale-105 transform"
+                >
+                  <Monitor className="h-5 w-5 text-blue-400 flex-shrink-0" />
+                  <div className="text-left">
+                    <div className="text-xs text-gray-400 leading-none">Download for</div>
+                    <div className="text-sm leading-tight">Windows</div>
+                  </div>
+                  <Download className="h-4 w-4 group-hover:translate-y-0.5 transition flex-shrink-0" />
+                </a>
+                <a
+                  href="/downloads/BusinessIQ.apk"
+                  download
+                  className="group inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white px-4 py-3 rounded-xl font-semibold transition shadow-lg hover:shadow-xl hover:scale-105 transform"
+                >
+                  <Smartphone className="h-5 w-5 text-green-400 flex-shrink-0" />
+                  <div className="text-left">
+                    <div className="text-xs text-gray-400 leading-none">Download for</div>
+                    <div className="text-sm leading-tight">Android</div>
+                  </div>
+                  <Download className="h-4 w-4 group-hover:translate-y-0.5 transition flex-shrink-0" />
+                </a>
+              </div>
             </div>
 
             <div className="flex flex-wrap justify-center gap-4 md:gap-8 text-sm text-gray-600 animate-fade-in-down" style={{animationDelay: '400ms'}}>
@@ -231,30 +285,6 @@ const features = [
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12">
-            <div className="text-center group">
-              <div className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3 group-hover:scale-110 transition">10K+</div>
-              <div className="text-lg text-gray-600">Active Businesses</div>
-            </div>
-            <div className="text-center group">
-              <div className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3 group-hover:scale-110 transition">99.9%</div>
-              <div className="text-lg text-gray-600">Uptime SLA</div>
-            </div>
-            <div className="text-center group">
-              <div className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3 group-hover:scale-110 transition">24/7</div>
-              <div className="text-lg text-gray-600">Support Available</div>
-            </div>
-            <div className="text-center group">
-              <div className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3 group-hover:scale-110 transition">14+</div>
-              <div className="text-lg text-gray-600">Industries Supported</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* CTA Section */}
       <section className="relative py-24 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 overflow-hidden">
         <div className="absolute inset-0 opacity-10">
@@ -276,9 +306,12 @@ const features = [
               Start Your Free Trial
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
-            <button className="bg-white/20 backdrop-blur text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-white/30 transition border border-white/30">
+            <Link
+              to="/pricing"
+              className="bg-white/20 backdrop-blur text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-white/30 transition border border-white/30"
+            >
               View Pricing
-            </button>
+            </Link>
           </div>
         </div>
       </section>
@@ -289,9 +322,7 @@ const features = [
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 mb-12">
             <div className="lg:col-span-2">
               <div className="flex items-center space-x-2 mb-4">
-                <div className="h-8 w-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                  <Sparkles className="h-5 w-5 text-white" />
-                </div>
+                <BIQLogo size={32} />
                 <span className="text-xl font-bold text-white">BusinessIQ</span>
               </div>
               <p className="text-sm leading-relaxed mb-6">
@@ -305,7 +336,7 @@ const features = [
               <h3 className="text-white font-semibold mb-6 text-sm">Product</h3>
               <ul className="space-y-3 text-sm">
                 <li><a href="#features" className="hover:text-blue-400 transition">Features</a></li>
-                <li><a href="#pricing" className="hover:text-blue-400 transition">Pricing</a></li>
+                <li><Link to="/pricing" className="hover:text-blue-400 transition">Pricing</Link></li>
                 <li><a href="#" className="hover:text-blue-400 transition">Security</a></li>
                 <li><a href="#" className="hover:text-blue-400 transition">Roadmap</a></li>
               </ul>
