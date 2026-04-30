@@ -123,8 +123,7 @@ export default function Sales() {
           cancellationRate: parseFloat(apiData.sales_operations?.cancellation_rate || 0),
           pendingOrders: apiData.sales_operations?.pending_orders || 0
         },
-        orders: apiData.recent_orders || [],
-        categories: apiData.categories || []
+        orders: apiData.recent_orders || []
       };
       
       setData(transformedData);
