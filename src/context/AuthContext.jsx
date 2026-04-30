@@ -40,12 +40,12 @@ export function AuthProvider({ children }) {
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
         if (!isPublicRoute) alert('Session expired or invalid. Please log in again.');
-        if (!isPublicRoute) window.location.href = '/login';
+        if (!isPublicRoute) window.location.href = '/BalanceIQ/login';
       }
     } catch (err) {
       setUser(null);
       if (!isPublicRoute) alert('Session check failed. Please log in again.');
-      if (!isPublicRoute) window.location.href = '/login';
+      if (!isPublicRoute) window.location.href = '/BalanceIQ/login';
     }
     setLoading(false);
   };
@@ -78,7 +78,7 @@ export function AuthProvider({ children }) {
       <div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh',color:'#b91c1c',background:'#fef2f2'}}>
         <div>
           <h2 style={{fontWeight:'bold',fontSize:'1.5rem'}}>Authentication Error</h2>
-          <p>Session invalid or user data missing.<br/>Please <a href="/login" style={{color:'#2563eb'}}>log in</a> again.</p>
+          <p>Session invalid or user data missing.<br/>Please <a href="/BalanceIQ/login" style={{color:'#2563eb'}}>log in</a> again.</p>
         </div>
       </div>
     );

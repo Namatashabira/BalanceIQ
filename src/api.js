@@ -309,7 +309,7 @@ export async function logoutUser() {
     // Clear all local and session storage on logout
     localStorage.clear();
     sessionStorage.clear();
-    window.location.href = "/login";
+    window.location.href = "/BalanceIQ/login";
   }
 }
 
