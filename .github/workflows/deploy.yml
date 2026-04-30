@@ -28,6 +28,13 @@ jobs:
       
       - name: Build
         run: npm run build
+
+      - name: Download installer from GitHub Releases
+        run: |
+          mkdir -p dist/downloads
+          curl -L -o dist/downloads/BusinessIQ-Setup.exe \
+            https://github.com/Namatashabira/BalanceIQ/releases/latest/download/BusinessIQ-Setup.exe
+        continue-on-error: true
       
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3

@@ -20,14 +20,42 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     // Use BASE_URL so the path is correct whether hosted at / or /BalanceIQ/
     const swUrl = `${import.meta.env.BASE_URL}service-worker.js`;
-    navigator.serviceWorker
-      .register(swUrl)
-      .then((reg) => {
-        console.log('[SW] Registered:', reg.scope);
-        window.addEventListener('online', () => {
-          reg.sync?.register('flush-queue').catch(() => {});
+    
+    // Add timeout and retry logic to prevent port closure issues
+    let retryCount = 0;
+    const maxRetries = 3;
+    const retryDelay = 1000;
+    
+    const registerSW = () => {
+      navigator.serviceWorker
+        .register(swUrl, { scope: import.meta.env.BASE_URL })
+        .then((reg) => {
+          console.log('[SW] Registered:', reg.scope);
+          
+          // Handle service worker updates
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            newWorker?.addEventListener('statechange', () => {
+              if (newWorker.state === 'activated') {
+                console.log('[SW] Updated');
+              }
+            });
+          });
+          
+          // Register background sync for offline queue
+          window.addEventListener('online', () => {
+            reg.sync?.register('flush-queue').catch(() => {});
+          });
+        })
+        .catch((err) => {
+          console.warn(`[SW] Registration failed (attempt ${retryCount + 1}):`, err);
+          if (retryCount < maxRetries) {
+            retryCount++;
+            setTimeout(registerSW, retryDelay * retryCount);
+          }
         });
-      })
-      .catch((err) => console.warn('[SW] Registration failed:', err));
+    };
+    
+    registerSW();
   });
 }

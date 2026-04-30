@@ -15,6 +15,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Pricing from "./pages/Pricing";
 import About from "./pages/About";
+import DownloadPage from "./pages/DownloadPage";
 import MyOrganizations from "./pages/MyOrganizations";
 import CreateOrganization from "./pages/CreateOrganization";
 
@@ -62,8 +63,18 @@ function AccessGuard({ pageKey, children }) {
   const role = user?.role?.toLowerCase();
   const isAdmin = ['tenant_admin', 'superadmin'].includes(role) || user?.is_staff;
 
-  // If config hasn't loaded features yet, hold rendering to avoid exposing pages
-  if (configLoading || !features) {
+  // For non-authenticated users, allow rendering (will redirect to login)
+  if (!user) {
+    return children;
+  }
+
+  // If config is still loading, wait a bit but don't block indefinitely
+  if (configLoading) {
+    return <div className="flex items-center justify-center py-10 text-gray-600">Loading…</div>;
+  }
+
+  // If we have a feature set (with defaults), proceed
+  if (!features) {
     return <div className="flex items-center justify-center py-10 text-gray-600">Loading access…</div>;
   }
 
@@ -290,6 +301,7 @@ function AppContent() {
           <Route path="/" element={<HomePage />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/about" element={<About />} />
+          <Route path="/download" element={<DownloadPage />} />
           <Route path="/login" element={<Login onLogin={login} />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />

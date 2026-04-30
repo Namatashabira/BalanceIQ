@@ -49,8 +49,38 @@ const pricingToApi = (settings) => ({
 export function ConfigProvider({ children }) {
   const [config, setConfig] = useState({
     businessType: null,
-    features: null,
-    labels: null,
+    features: {
+      // Default features - all enabled by default
+      dashboard_enabled: true,
+      product_enabled: true,
+      inventory_enabled: true,
+      orders_enabled: true,
+      sales_enabled: true,
+      customers_enabled: true,
+      scheduling_enabled: true,
+      manual_entry_enabled: true,
+      payments_enabled: true,
+      analytics_enabled: true,
+      ai_insights_enabled: true,
+      accounting_enabled: true,
+      enrollment_enabled: true,
+      website_builder_enabled: true,
+      organizations_enabled: true,
+    },
+    labels: {
+      resource: 'Item',
+      resource_plural: 'Items',
+      transaction: 'Transaction',
+      transaction_plural: 'Transactions',
+      entity: 'Contact',
+      entity_plural: 'Contacts',
+      inventory: 'Stock',
+      inventory_plural: 'Stock',
+      payment: 'Payment',
+      payment_plural: 'Payments',
+      schedule: 'Schedule',
+      schedule_plural: 'Schedules',
+    },
     theme: null,
     logo: localStorage.getItem('cachedLogo') || null,
     pricingSettings: null,
@@ -72,7 +102,8 @@ export function ConfigProvider({ children }) {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) {
-        setConfig(prev => ({ ...prev, loading: false, error: 'No authentication token' }));
+        // Not logged in - use defaults
+        setConfig(prev => ({ ...prev, loading: false }));
         return;
       }
 
@@ -82,12 +113,11 @@ export function ConfigProvider({ children }) {
 
       setConfig({
         businessType: response.data.business_type,
-        features: response.data.features,
-        labels: response.data.labels,
+        features: response.data.features || config.features, // fallback to defaults
+        labels: response.data.labels || config.labels, // fallback to defaults
         theme: response.data.theme || null,
         logo: response.data.theme?.logo_url || null,
         pricingSettings: normalizePricingFromApi(response.data.pricing_settings),
-        // Preserve empty array (no access) instead of defaulting to null/full access
         allowedPages: response.data.allowed_pages ?? null,
         firstAccessiblePath: response.data.first_accessible_path || null,
         onboardingCompleted: response.data.onboarding_completed,
@@ -104,7 +134,6 @@ export function ConfigProvider({ children }) {
         );
         try {
           localStorage.setItem('cachedTheme', JSON.stringify(response.data.theme));
-          // Cache logo URL separately for instant access
           const logoUrl = response.data.theme.logo_url || null;
           if (logoUrl) localStorage.setItem('cachedLogo', logoUrl);
           else localStorage.removeItem('cachedLogo');
@@ -113,11 +142,12 @@ export function ConfigProvider({ children }) {
         }
       }
     } catch (error) {
-      console.error('Error fetching configuration:', error);
+      console.warn('Error fetching configuration (using defaults):', error.message);
+      // Keep defaults, just set loading to false
       setConfig(prev => ({
         ...prev,
         loading: false,
-        error: error.response?.data?.error || 'Failed to load configuration'
+        error: null // Don't show error for public pages
       }));
     }
   };

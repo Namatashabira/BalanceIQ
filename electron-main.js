@@ -40,12 +40,14 @@ function createWindow() {
       enableRemoteModule: false,
       sandbox: false,   // must be false for preload to use require
     },
-    icon: path.join(__dirname, 'public/icons/icon-512x512.png'),
+    icon: isDev
+      ? path.join(__dirname, 'public/icons/icon-512x512.png')
+      : path.join(process.resourcesPath, 'app.asar.unpacked', 'dist', 'icons', 'icon-512x512.png'),
   });
 
   const startUrl = isDev
     ? 'http://127.0.0.1:5175'
-    : `file://${path.join(__dirname, 'dist/index.html')}`;
+    : `file://${path.join(process.resourcesPath, 'app.asar.unpacked', 'dist', 'index.html')}`;
 
   mainWindow.loadURL(startUrl);
   if (isDev) mainWindow.webContents.openDevTools();

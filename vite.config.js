@@ -26,7 +26,15 @@ export default defineConfig({
       },
     },
     rollupOptions: {
-      output: {}
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-charts': ['chart.js', 'react-chartjs-2', 'recharts'],
+          'vendor-ui': ['framer-motion', 'lucide-react', 'react-icons', '@heroicons/react'],
+          'vendor-antd': ['antd', '@ant-design/icons'],
+          'vendor-utils': ['axios', 'fuse.js', 'jspdf', 'xlsx'],
+        }
+      }
     }
   },
   resolve: {

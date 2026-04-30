@@ -2,7 +2,7 @@ appId: com.businessiq.app
 productName: BusinessIQ
 directories:
   buildResources: public
-  output: dist_electron
+  output: dist_electron_build
 
 files:
   - dist/**
@@ -12,17 +12,20 @@ files:
   - package.json
   - node_modules/better-sqlite3/**
 
+asar: true
 asarUnpack:
+  - dist/**
   - node_modules/better-sqlite3/**
   - "*.node"
 
 win:
   target:
-    - nsis
-    - portable
-  icon: public/icons/icon-512x512.png
-  signingHashAlgorithms: null
+    - target: nsis
+      arch:
+        - x64
+  icon: public/icons/icon.ico
   forceCodeSigning: false
+  publisherName: BusinessIQ
 
 nsis:
   oneClick: false
@@ -48,6 +51,7 @@ linux:
 
 publish:
   provider: github
-  owner: your-org
+  owner: YOUR_GITHUB_USERNAME
   repo: businessiq-desktop
   vPrefixedTagName: true
+  releaseType: release

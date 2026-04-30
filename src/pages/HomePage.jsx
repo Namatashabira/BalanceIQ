@@ -20,6 +20,8 @@ import {
   Smartphone
 } from 'lucide-react';
 
+const DOWNLOAD_URL = 'https://github.com/Namatashabira/BalanceIQ/releases/latest/download/BusinessIQ.Setup.1.0.0.exe';
+
 export default function HomePage() {
   const navigate = useNavigate();
   const [selectedType, setSelectedType] = useState(null);
@@ -101,14 +103,13 @@ const features = [
               >
                 Sign In
               </Link>
-              <a
-                href="/downloads/BusinessIQ-Setup.exe"
-                download
+              <Link
+                to="/download"
                 className="hidden md:inline-flex items-center gap-1.5 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-700 transition shadow-md"
               >
                 <Download className="h-4 w-4" />
                 Download
-              </a>
+              </Link>
               <Link
                 to="/register"
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition shadow-md hover:shadow-lg"
@@ -175,9 +176,8 @@ const features = [
             <div className="animate-fade-in-down" style={{animationDelay: '350ms'}}>
               <p className="text-sm text-gray-500 mb-3">Also available as a desktop app</p>
               <div className="flex flex-row gap-3 justify-center">
-                <a
-                  href="/downloads/BusinessIQ-Setup.exe"
-                  download
+                <Link
+                  to="/download"
                   className="group inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white px-4 py-3 rounded-xl font-semibold transition shadow-lg hover:shadow-xl hover:scale-105 transform"
                 >
                   <Monitor className="h-5 w-5 text-blue-400 flex-shrink-0" />
@@ -186,7 +186,7 @@ const features = [
                     <div className="text-sm leading-tight">Windows</div>
                   </div>
                   <Download className="h-4 w-4 group-hover:translate-y-0.5 transition flex-shrink-0" />
-                </a>
+                </Link>
                 <a
                   href="/downloads/BusinessIQ.apk"
                   download
