@@ -15,7 +15,7 @@ import Fuse from 'fuse.js';
 import { getFeaturesForBusinessType } from '../businessTypeFeatures';
 import { useAuth } from '../context/AuthContext';
 
-const API_URL = 'http://localhost:8000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api';
 
 export default function Register() {
   const navigate = useNavigate();

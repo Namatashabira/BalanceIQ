@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api';
 
 export default function MyOrganizations() {
   const navigate = useNavigate();

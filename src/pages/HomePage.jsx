@@ -22,7 +22,7 @@ export default function HomePage() {
   const [businessTypes, setBusinessTypes] = useState([]);
 
   React.useEffect(() => {
-    axios.get('http://localhost:8000/api/core/auth/business-types/')
+    axios.get(`${import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api'}/core/auth/business-types/`)
       .then(res => setBusinessTypes(res.data.business_types || []));
   }, []);
 
