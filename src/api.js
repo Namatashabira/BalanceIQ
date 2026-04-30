@@ -1,4 +1,4 @@
-const BASE_URL = "http://127.0.0.1:8000/api"; // consistent with user frontend
+const BASE_URL = import.meta.env.VITE_API_URL || "https://web-production-36021.up.railway.app/api";
 
 // ---------- Helper: fetch with JWT + auto-refresh ----------
 export async function fetchWithAuth(url, options = {}) {
