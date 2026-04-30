@@ -18,6 +18,14 @@
     <link rel="mask-icon" href="/icons/icon-maskable-192x192.png" color="#1890ff" />
     
     <title>Oraka - Business Management System</title>
+    <script>
+      (function() {
+        if (location.search.startsWith('?/')) {
+          var path = location.search.slice(2).replace(/~and~/g, '&');
+          history.replaceState(null, null, '/BalanceIQ/' + path + location.hash);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
