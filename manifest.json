@@ -1,6 +1,6 @@
 {
-  "name": "Oraka - Business Management System",
-  "short_name": "Oraka",
+  "name": "BusinessIQ - Business Management System",
+  "short_name": "BusinessIQ",
   "description": "Electronic business management system with inventory, orders, and analytics",
   "start_url": "/BalanceIQ/",
   "scope": "/BalanceIQ/",
