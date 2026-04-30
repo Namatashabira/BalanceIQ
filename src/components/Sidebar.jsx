@@ -26,7 +26,7 @@ export default function Sidebar({ isOpen, onToggle, sidebarWidth = 256 }) {
     if (businessLogo) return;
     const fetchLogo = async () => {
       try {
-        const res = await axios.get('http://127.0.0.1:8000/api/core/business-settings/');
+        const res = await axios.get(`${import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api'}/core/business-settings/`);
         const apiLogo = res.data?.businessLogoUrl;
         if (apiLogo) {
           setBusinessLogo(apiLogo);
@@ -83,7 +83,7 @@ export default function Sidebar({ isOpen, onToggle, sidebarWidth = 256 }) {
 
     // Fetch if missing
     if (!storedName) {
-      axios.get('http://127.0.0.1:8000/api/core/business-settings/')
+      axios.get(`${import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api'}/core/business-settings/`)
         .then(res => {
           const name = res.data?.businessName || '';
           if (name) {

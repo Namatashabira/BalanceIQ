@@ -10,7 +10,7 @@ import {
   User, Home, ChevronRight
 } from 'lucide-react';
 
-const API = 'http://127.0.0.1:8000/api';
+const API = import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api';
 const getAuthHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('accessToken')}` });
 
 // ── Breadcrumb labels ────────────────────────────────────────────────────────
@@ -289,7 +289,7 @@ function MobileDrawer({ open, onClose, items, user, userProfile, onOpenAccount, 
         role="dialog"
         aria-modal="true"
         aria-label="Navigation menu"
-        aria-hidden={!open}
+        {...(!open ? { inert: '' } : {})}
       >
         {/* Drawer header with X close button */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
