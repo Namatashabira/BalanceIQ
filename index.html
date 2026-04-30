@@ -12,10 +12,10 @@
     <meta name="keywords" content="business, management, inventory, orders, analytics" />
     
     <!-- PWA Meta Tags -->
-    <link rel="manifest" href="/manifest.json" />
+    <link rel="manifest" href="/assets/manifest-GNfT8DrM.json" />
     <link rel="icon" type="image/svg+xml" href="https://www.oraka-dgia.com/web/image/website/1/logo/Oraka-dgia?unique=3f8e18b" />
-    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-    <link rel="mask-icon" href="/icons/icon-maskable-192x192.png" color="#1890ff" />
+    <link rel="apple-touch-icon" href="/assets/icon-192x192-BP8D_USM.png" />
+    <link rel="mask-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAIAAADdvvtQAAABZElEQVR42u3SQQ0AAAjEsDOBRHwiDQuEd5MqWJbqgbdIgIEwEAbCQGAgDISBMBAYCANhIAwEBsJAGAgDgYEwEAbCQBgIDISBMBAGAgNhIAyEgcBAGAgDYSAwEAbCQBgIA4GBMBAGwkBgIAyEgTAQGAgDYSAMBAbCQBgIA4GBMBAGwkAYCAyEgTAQBgIDYSAMhIHAQBgIA2EgMBAGwkAYCAOBgTAQBsJAYCAMhIEwEBgIA2EgDAQGwkAYCANhIDAQBsJAGAgMhIEwEAYCA2EgDISBwEAYCANhIDAQBsJAGAgDgYEwEAbCQGAgDISBMBAYCANhIAwEBsJAGAgDYSAwEAbCQBgIDISBMBAGAgNhIAyEgcBAGAgDYSAMpAIGwkAYCAOBgTAQBsJAYCAMhIEwEBgIA2EgDAQGwkAYCANhIDAQBsJAGAgMhIEwEAYCA2EgDISBwEAYCANhIAwEBsJAGAgDwdUCSPOqUcfzqocAAAAASUVORK5CYII=" color="#1890ff" />
     
     <title>Oraka - Business Management System</title>
     <script>
@@ -39,7 +39,7 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/service-worker.js')
+          navigator.serviceWorker.register('./service-worker.js')
             .then((registration) => {
               console.log('Service Worker registered:', registration);
               
