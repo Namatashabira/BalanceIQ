@@ -24,26 +24,7 @@ export default defineConfig({
       },
     },
     rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: [
-            'react',
-            'react-dom',
-            'react-router-dom',
-            'axios'
-          ],
-          'ui': [
-            'antd',
-            '@ant-design/icons',
-            'lucide-react'
-          ],
-          'charts': [
-            'recharts',
-            'chart.js',
-            'react-chartjs-2'
-          ]
-        }
-      }
+      output: {}
     }
   },
   resolve: {
