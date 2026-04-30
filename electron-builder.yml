@@ -2,7 +2,7 @@ appId: com.businessiq.app
 productName: BusinessIQ
 directories:
   buildResources: public
-  output: dist
+  output: dist_electron
 
 files:
   - dist/**
@@ -20,11 +20,9 @@ win:
   target:
     - nsis
     - portable
-    - msi
-  certificateFile: null
-  certificatePassword: null
-  signingHashAlgorithms:
-    - sha256
+  icon: public/icons/icon-512x512.png
+  signingHashAlgorithms: null
+  forceCodeSigning: false
 
 nsis:
   oneClick: false
@@ -36,49 +34,20 @@ nsis:
 portable:
   artifactName: BusinessIQ-${version}-portable.exe
 
-msi:
-  artifactName: BusinessIQ-${version}.msi
-
 mac:
   target:
     - dmg
-    - zip
   category: public.app-category.business
-  certificateFile: null
-  certificatePassword: null
-  identity: null
-
-dmg:
-  contents:
-    - x: 130
-      y: 220
-      type: file
-    - x: 438
-      y: 220
-      type: link
-      path: /Applications
+  icon: public/icons/icon-512x512.png
 
 linux:
   target:
     - AppImage
-    - deb
   category: Office
-  artifactName: BusinessIQ-${version}.${ext}
-
-deb:
-  afterInstall: scripts/after-install.sh
-
-AppImage:
-  artifactName: BusinessIQ-${version}.AppImage
+  icon: public/icons/icon-512x512.png
 
 publish:
   provider: github
   owner: your-org
   repo: businessiq-desktop
   vPrefixedTagName: true
-
-snap:
-  publish:
-    - provider: snapStore
-      channels:
-        - edge

@@ -6,8 +6,10 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const isElectron = process.env.VITE_ELECTRON === 'true';
+
 export default defineConfig({
-  base: '/BalanceIQ/',
+  base: isElectron ? './' : '/BalanceIQ/',
   plugins: [react()],
   server: {
     host: '127.0.0.1',
