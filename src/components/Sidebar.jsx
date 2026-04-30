@@ -139,8 +139,24 @@ export default function Sidebar({ isOpen, onToggle, sidebarWidth = 256 }) {
         }`}
         style={{ position: 'relative', width: isOpen ? sidebarWidth : 0, minWidth: isOpen ? sidebarWidth : 0 }}
       >
-        <div className="w-full text-center py-3 border-b border-gray-700">
-          <h1 className="text-sm font-semibold text-gray-300 uppercase tracking-widest">Navigation</h1>
+        <div className="w-full flex items-center gap-2 px-3 py-3 border-b border-gray-700">
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt="logo"
+              className="w-8 h-8 rounded-lg object-contain flex-shrink-0"
+              onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+            />
+          ) : null}
+          <div
+            className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0 text-white text-sm font-bold"
+            style={{ display: logoUrl ? 'none' : 'flex' }}
+          >
+            {(businessName || 'B').charAt(0).toUpperCase()}
+          </div>
+          <span className="text-sm font-semibold text-gray-300 uppercase tracking-widest truncate">
+            {businessName || 'BusinessIQ'}
+          </span>
         </div>
 
         {/* Scrollable Content Container */}
