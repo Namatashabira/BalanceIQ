@@ -3,6 +3,8 @@ import axios from 'axios';
 import { applyThemeColors } from '../utils/themeUtils';
 import { defaultPricingSettings } from '../utils/pricingHelpers';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api';
+
 /**
  * Configuration Context
  * Provides business configuration, feature toggles, and dynamic labels throughout the app
@@ -74,7 +76,7 @@ export function ConfigProvider({ children }) {
         return;
       }
 
-      const response = await axios.get('http://127.0.0.1:8000/api/core/configuration/', {
+      const response = await axios.get(`${API_BASE}/core/configuration/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -125,7 +127,7 @@ export function ConfigProvider({ children }) {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) return null;
-      const response = await axios.get('http://127.0.0.1:8000/api/core/pricing-settings/', {
+      const response = await axios.get(`${API_BASE}/core/pricing-settings/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const normalized = normalizePricingFromApi(response.data);
@@ -148,7 +150,7 @@ export function ConfigProvider({ children }) {
     try {
       const token = localStorage.getItem('accessToken');
       await axios.post(
-        'http://127.0.0.1:8000/api/core/feature-toggles/bulk_update/',
+        `${API_BASE}/core/feature-toggles/bulk_update/`,
         {
           features: { [featureKey]: enabled }
         },
@@ -178,7 +180,7 @@ export function ConfigProvider({ children }) {
     try {
       const token = localStorage.getItem('accessToken');
       await axios.post(
-        'http://127.0.0.1:8000/api/core/terminology/bulk_update/',
+        `${API_BASE}/core/terminology/bulk_update/`,
         {
           labels: {
             [entity]: {
@@ -225,7 +227,7 @@ export function ConfigProvider({ children }) {
 
       // Get current theme ID or create new one
       const themesResponse = await axios.get(
-        'http://127.0.0.1:8000/api/core/theme/',
+        `${API_BASE}/core/theme/`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -235,7 +237,7 @@ export function ConfigProvider({ children }) {
 
       if (themeId) {
         await axios.put(
-          `http://127.0.0.1:8000/api/core/theme/${themeId}/`,
+          `${API_BASE}/core/theme/${themeId}/`,
           formData,
           {
             headers: {
@@ -246,7 +248,7 @@ export function ConfigProvider({ children }) {
         );
       } else {
         await axios.post(
-          'http://127.0.0.1:8000/api/core/theme/',
+          `${API_BASE}/core/theme/`,
           formData,
           {
             headers: {
@@ -274,7 +276,7 @@ export function ConfigProvider({ children }) {
       
       // First get the business config ID
       const configsResponse = await axios.get(
-        'http://127.0.0.1:8000/api/core/business-config/',
+        `${API_BASE}/core/business-config/`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -288,7 +290,7 @@ export function ConfigProvider({ children }) {
 
       // Apply preset
       await axios.post(
-        `http://127.0.0.1:8000/api/core/business-config/${configId}/apply_preset/`,
+        `${API_BASE}/core/business-config/${configId}/apply_preset/`,
         { business_type: businessType },
         {
           headers: { Authorization: `Bearer ${token}` }
@@ -311,7 +313,7 @@ export function ConfigProvider({ children }) {
       const token = localStorage.getItem('accessToken');
       const payload = pricingToApi(settings);
       await axios.post(
-        'http://127.0.0.1:8000/api/core/pricing-settings/',
+        `${API_BASE}/core/pricing-settings/`,
         payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -346,7 +348,7 @@ export function ConfigProvider({ children }) {
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     if (!token) return;
-    axios.get('http://127.0.0.1:8000/api/core/auth/profile/', {
+    axios.get(`${API_BASE}/core/auth/profile/`, {
       headers: { Authorization: `Bearer ${token}` }
     }).then(res => {
       const fresh = res.data.user || res.data;
