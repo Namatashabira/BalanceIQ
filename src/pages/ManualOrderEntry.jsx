@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Plus, X, Trash2 } from 'lucide-react';
+import { ShoppingCart, Plus, X, Trash2, WifiOff } from 'lucide-react';
 import ProductSearch from '../components/ProductSearch';
 import SelectedProductCard from '../components/SelectedProductCard';
 import CheckoutModal from '../components/CheckoutModal';
@@ -7,6 +7,7 @@ import Receipt from '../components/Receipt';
 import Invoice from '../components/Invoice';
 import { useConfig } from '../context/ConfigContext';
 import { selectUnitPrice, computeTax, defaultPricingSettings, formatCurrency, getCurrencyCode, isWholesaleEligible } from '../utils/pricingHelpers';
+import { enqueue, getAll, bulkUpsert } from '../services/localStore';
 
 export default function ManualOrderEntry() {
   const API_URL = `${import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api'}/core`;
@@ -21,6 +22,7 @@ export default function ManualOrderEntry() {
   const [showReceipt, setShowReceipt] = useState(false);
   const [showInvoice, setShowInvoice] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [autoRefresh] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [mobileMoneyNumber, setMobileMoneyNumber] = useState('');
@@ -37,6 +39,18 @@ export default function ManualOrderEntry() {
   const [receiptNumber, setReceiptNumber] = useState('');
   const fullCartRef = useRef(null);
   const paymentSectionRef = useRef(null);
+
+  // Track online/offline status
+  useEffect(() => {
+    const onOnline  = () => setIsOffline(false);
+    const onOffline = () => setIsOffline(true);
+    window.addEventListener('online',  onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online',  onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, []);
 
   // Auto-refresh products every 30 seconds if enabled
     // Listen for product load event from ProductSearch
@@ -214,25 +228,39 @@ export default function ManualOrderEntry() {
     let createdOrderId = null;
 
     try {
-      const orderResponse = await fetch(`${API_URL}/user/orders/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...buildAuthHeaders(),
-        },
-        body: JSON.stringify(orderPayload),
-      });
-
-      if (!orderResponse.ok) {
-        const errorBody = await orderResponse.text();
-        throw new Error(`Order create failed (${orderResponse.status}): ${errorBody}`);
+      if (!navigator.onLine) {
+        // Offline — queue the order for later sync
+        await enqueue({ method: 'POST', url: `${API_URL}/user/orders/`, body: orderPayload });
+        createdOrderId = `offline_${Date.now()}`;
+        // Also save customer locally
+        await bulkUpsert('customers', [{
+          id: `cust_${Date.now()}`,
+          name: resolvedName, phone: resolvedPhone,
+          email: resolvedEmail, location: resolvedLocation,
+          updated_at: new Date().toISOString(),
+        }]);
+      } else {
+        const orderResponse = await fetch(`${API_URL}/user/orders/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...buildAuthHeaders() },
+          body: JSON.stringify(orderPayload),
+        });
+        if (!orderResponse.ok) {
+          const errorBody = await orderResponse.text();
+          throw new Error(`Order create failed (${orderResponse.status}): ${errorBody}`);
+        }
+        const orderData = await orderResponse.json();
+        createdOrderId = orderData.id || orderData?.order?.id || null;
       }
-
-      const orderData = await orderResponse.json();
-      createdOrderId = orderData.id || orderData?.order?.id || null;
     } catch (error) {
-      console.error('Error creating order:', error);
-      throw error;
+      // Network failure mid-request — queue it
+      if (!navigator.onLine || error.message?.includes('fetch')) {
+        await enqueue({ method: 'POST', url: `${API_URL}/user/orders/`, body: orderPayload });
+        createdOrderId = `offline_${Date.now()}`;
+      } else {
+        console.error('Error creating order:', error);
+        throw error;
+      }
     }
 
       const receiptPayload = {
@@ -323,7 +351,9 @@ export default function ManualOrderEntry() {
     }
     try {
       const { orderId, receiptNumber: savedReceiptNumber } = await createOrderAndReceipt();
-      if (orderId) {
+      if (orderId?.toString().startsWith('offline_')) {
+        setSuccessMessage('Order saved offline — will sync automatically when reconnected.');
+      } else if (orderId) {
         setSuccessMessage(`Order #${orderId} recorded. Receipt ${savedReceiptNumber || ''} saved.`);
       } else if (savedReceiptNumber) {
         setSuccessMessage(`Receipt ${savedReceiptNumber} saved.`);
@@ -512,6 +542,12 @@ export default function ManualOrderEntry() {
             </h1>
             <p className="text-gray-600 mt-2 text-sm md:text-base">Search and add products to create a manual order</p>
           </div>
+          {isOffline && (
+            <div className="flex items-center gap-2 bg-yellow-100 border border-yellow-300 text-yellow-800 text-sm font-medium px-4 py-2 rounded-xl">
+              <WifiOff size={16} />
+              Offline — orders will sync when reconnected
+            </div>
+          )}
         </div>
 
         {/* Success Message */}

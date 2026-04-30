@@ -9,7 +9,8 @@ import {
   ArrowRight,
   AlertCircle,
   CheckCircle,
-  RefreshCw
+  RefreshCw,
+  WifiOff
 } from 'lucide-react';
 import {
   fetchExpenseSummary,
@@ -20,6 +21,7 @@ import {
 } from '../../api/accounting';
 import { useConfig } from '../../context/ConfigContext';
 import { formatCurrency } from '../../utils/pricingHelpers';
+import { getAll, bulkUpsert } from '../../services/localStore';
 
 // Avoid UI blink: only replace summaries when something actually changes
 const summariesChanged = (prev, next) => {
@@ -34,78 +36,74 @@ const AccountingDashboard = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [error, setError] = useState(null);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [summaries, setSummaries] = useState({
-    expenses: null,
-    payments: null,
-    taxes: null,
-    profitLoss: null,
-    balanceSheet: null
+    expenses: null, payments: null, taxes: null, profitLoss: null, balanceSheet: null
   });
   const { pricingSettings } = useConfig();
   const fmt = (value) => formatCurrency(value, pricingSettings);
   const refreshIntervalRef = useRef(null);
 
+  useEffect(() => {
+    const onOnline  = () => { setIsOffline(false); loadSummaries(); };
+    const onOffline = () => setIsOffline(true);
+    window.addEventListener('online',  onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online',  onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, []);
+
   const loadSummaries = useCallback(async () => {
     try {
-      if (!hasLoadedOnce) {
-        setLoading(true);
-      } else {
-        setIsRefreshing(true);
-      }
+      if (!hasLoadedOnce) setLoading(true);
+      else setIsRefreshing(true);
       setError(null);
-      
-      // Get current month date range
+
+      if (!navigator.onLine) {
+        // Offline — load from cache
+        const cached = await getAll('accounting');
+        const entry = cached.find(r => r.id === 'dashboard_summaries');
+        if (entry) {
+          setSummaries(entry.data);
+          if (!hasLoadedOnce) setHasLoadedOnce(true);
+        }
+        return;
+      }
+
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      
-      console.log('Fetching accounting summaries...');
-      
+      const endOfMonth   = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
       const [expenses, payments, taxes, profitLoss, balanceSheet] = await Promise.all([
-        fetchExpenseSummary().catch(err => {
-          console.error('Expenses error:', err);
-          return null;
-        }),
-        fetchPaymentSummary().catch(err => {
-          console.error('Payments error:', err);
-          return null;
-        }),
-        fetchTaxSummary().catch(err => {
-          console.error('Taxes error:', err);
-          return null;
-        }),
-        fetchProfitLoss({
-          date_from: startOfMonth.toISOString().split('T')[0],
-          date_to: endOfMonth.toISOString().split('T')[0]
-        }).catch(err => {
-          console.error('Profit/Loss error:', err);
-          return null;
-        }),
-        fetchBalanceSheet().catch(err => {
-          console.error('Balance Sheet error:', err);
-          return null;
-        })
+        fetchExpenseSummary().catch(() => null),
+        fetchPaymentSummary().catch(() => null),
+        fetchTaxSummary().catch(() => null),
+        fetchProfitLoss({ date_from: startOfMonth.toISOString().split('T')[0], date_to: endOfMonth.toISOString().split('T')[0] }).catch(() => null),
+        fetchBalanceSheet().catch(() => null),
       ]);
 
-      console.log('API Responses:', { expenses, payments, taxes, profitLoss, balanceSheet });
+      const nextSummaries = { expenses, payments, taxes, profitLoss, balanceSheet };
+      setSummaries(prev => summariesChanged(prev, nextSummaries) ? nextSummaries : prev);
 
-      const nextSummaries = {
-        expenses,
-        payments,
-        taxes,
-        profitLoss,
-        balanceSheet
-      };
+      // Cache for offline
+      await bulkUpsert('accounting', [{ id: 'dashboard_summaries', data: nextSummaries, updated_at: new Date().toISOString() }]);
 
-      setSummaries((prev) => (summariesChanged(prev, nextSummaries) ? nextSummaries : prev));
       if (!hasLoadedOnce) setHasLoadedOnce(true);
     } catch (error) {
       console.error('Error loading summaries:', error);
-      setError(error.message || 'Failed to load accounting data');
-    } finally {
-      if (!hasLoadedOnce) {
-        setLoading(false);
+      // Try cache on failure
+      try {
+        const cached = await getAll('accounting');
+        const entry = cached.find(r => r.id === 'dashboard_summaries');
+        if (entry) setSummaries(entry.data);
+        else setError(error.message || 'Failed to load accounting data');
+      } catch {
+        setError(error.message || 'Failed to load accounting data');
       }
+    } finally {
+      if (!hasLoadedOnce) setLoading(false);
       setIsRefreshing(false);
     }
   }, [hasLoadedOnce]);
@@ -369,6 +367,11 @@ const AccountingDashboard = () => {
           <p className="text-gray-600">
             Manage your financial records, track expenses, and monitor profitability
           </p>
+          {isOffline && (
+            <div className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-yellow-700 bg-yellow-100 border border-yellow-300 px-3 py-1 rounded-full">
+              <WifiOff className="w-3.5 h-3.5" /> Offline — showing cached data
+            </div>
+          )}
         </div>
         <button
           onClick={loadSummaries}

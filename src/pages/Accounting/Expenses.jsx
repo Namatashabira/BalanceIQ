@@ -2,41 +2,22 @@ import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '../../context/ToastContext';
 import { useSavingAction } from '../../hooks/useSavingAction';
 import {
-  PlusIcon,
-  TrashIcon,
-  PencilIcon,
-  ExclamationTriangleIcon,
-  ArrowTrendingUpIcon,
-  CheckCircleIcon,
-  CurrencyDollarIcon,
-  BriefcaseIcon,
-  LightBulbIcon,
+  PlusIcon, TrashIcon, PencilIcon, ExclamationTriangleIcon,
+  ArrowTrendingUpIcon, CheckCircleIcon, CurrencyDollarIcon,
+  BriefcaseIcon, LightBulbIcon,
 } from '@heroicons/react/24/outline';
 import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  Legend,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
 import {
-  fetchExpenses,
-  fetchExpenseSummary,
-  fetchExpenseCategories,
-  createExpense,
-  updateExpense,
-  deleteExpense,
-  createExpenseCategory,
+  fetchExpenses, fetchExpenseSummary, fetchExpenseCategories,
+  createExpense, updateExpense, deleteExpense, createExpenseCategory,
 } from '../../api/accounting';
 import { getChartTheme } from '../../utils/themeUtils';
 import { useConfig } from '../../context/ConfigContext';
 import { formatCurrency } from '../../utils/pricingHelpers';
+import { getAll, bulkUpsert, enqueue } from '../../services/localStore';
 
 export default function Expenses() {
   const toast = useToast();
@@ -60,16 +41,38 @@ export default function Expenses() {
 
   const loadData = useCallback(async () => {
     try {
-      const [expensesData, summaryData, categoriesData] = await Promise.all([
-        fetchExpenses(filters),
-        fetchExpenseSummary(),
-        fetchExpenseCategories(),
-      ]);
-      setExpenses(expensesData);
-      setSummary(summaryData);
-      setCategories(categoriesData);
+      if (navigator.onLine) {
+        const [expensesData, summaryData, categoriesData] = await Promise.all([
+          fetchExpenses(filters),
+          fetchExpenseSummary(),
+          fetchExpenseCategories(),
+        ]);
+        setExpenses(expensesData);
+        setSummary(summaryData);
+        setCategories(categoriesData);
+        // Cache
+        await bulkUpsert('accounting', [
+          { id: 'expenses_list', data: expensesData, updated_at: new Date().toISOString() },
+          { id: 'expenses_summary', data: summaryData, updated_at: new Date().toISOString() },
+          { id: 'expenses_categories', data: categoriesData, updated_at: new Date().toISOString() },
+        ]);
+      } else {
+        const cached = await getAll('accounting');
+        const expensesEntry   = cached.find(r => r.id === 'expenses_list');
+        const summaryEntry    = cached.find(r => r.id === 'expenses_summary');
+        const categoriesEntry = cached.find(r => r.id === 'expenses_categories');
+        if (expensesEntry)   setExpenses(expensesEntry.data);
+        if (summaryEntry)    setSummary(summaryEntry.data);
+        if (categoriesEntry) setCategories(categoriesEntry.data);
+      }
     } catch (err) {
       console.error(err);
+      // Fallback to cache
+      try {
+        const cached = await getAll('accounting');
+        const expensesEntry = cached.find(r => r.id === 'expenses_list');
+        if (expensesEntry) setExpenses(expensesEntry.data);
+      } catch {}
     }
   }, [filters]);
 
@@ -79,57 +82,45 @@ export default function Expenses() {
 
   const handleAddExpense = async (data) => {
     try {
-      console.log('Creating expense with data:', data);
       const token = localStorage.getItem('accessToken');
-      console.log('Auth token exists:', !!token);
-      
-      if (!token) {
-        alert('You are not logged in. Please log in first.');
+      if (!token) { alert('You are not logged in. Please log in first.'); return; }
+      if (!navigator.onLine) {
+        const API = import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api';
+        await enqueue({ method: 'POST', url: `${API}/accounting/expenses/`, body: data });
+        toast.success('Expense saved offline — will sync when reconnected.');
+        setShowAddModal(false);
         return;
       }
-      
       await createExpense(data);
       setShowAddModal(false);
       await loadData();
       toast.success('Expense added successfully!');
     } catch (err) {
       console.error('Error adding expense:', err);
-      console.error('Error response:', err.response?.data);
-      console.error('Error status:', err.response?.status);
-      
-      if (err.response?.status === 401) {
-        toast.error('Unauthorized. Please log in again.');
-      } else {
-        toast.error('Failed to add expense: ' + (err.response?.data?.message || err.message));
-      }
+      if (err.response?.status === 401) toast.error('Unauthorized. Please log in again.');
+      else toast.error('Failed to add expense: ' + (err.response?.data?.message || err.message));
     }
   };
 
   const handleUpdateExpense = async (data) => {
     try {
-      console.log('Updating expense with data:', data);
       const token = localStorage.getItem('accessToken');
-      
-      if (!token) {
-        toast.error('You are not logged in. Please log in first.');
+      if (!token) { toast.error('You are not logged in. Please log in first.'); return; }
+      if (!navigator.onLine) {
+        const API = import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api';
+        await enqueue({ method: 'PATCH', url: `${API}/accounting/expenses/${editingExpense.id}/`, body: data });
+        toast.success('Expense update saved offline — will sync when reconnected.');
+        setEditingExpense(null); setShowAddModal(false);
         return;
       }
-      
       await updateExpense(editingExpense.id, data);
-      setEditingExpense(null);
-      setShowAddModal(false);
+      setEditingExpense(null); setShowAddModal(false);
       await loadData();
       toast.success('Expense updated successfully!');
     } catch (err) {
       console.error('Error updating expense:', err);
-      console.error('Error response:', err.response?.data);
-      console.error('Error status:', err.response?.status);
-      
-      if (err.response?.status === 401) {
-        toast.error('Unauthorized. Please log in again.');
-      } else {
-        toast.error('Failed to update expense: ' + (err.response?.data?.message || err.message));
-      }
+      if (err.response?.status === 401) toast.error('Unauthorized. Please log in again.');
+      else toast.error('Failed to update expense: ' + (err.response?.data?.message || err.message));
     }
   };
 

@@ -6,6 +6,8 @@ import { AccountingProvider } from "./context/AccountingContext";
 import { ToastProvider, useToast } from "./context/ToastContext";
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
+import OfflineBanner from "./components/OfflineBanner";
+import useSync from "./hooks/useSync";
 import HomePage from "./pages/HomePage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -157,6 +159,7 @@ function DefaultRoute() {
 
 function AppContent() {
   const { isAuthenticated, loading, login, user } = useAuth();
+  const { isOnline, syncing, pendingCount } = useSync(isAuthenticated);
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     // Open by default on desktop, closed on mobile
     if (typeof window !== 'undefined') {
@@ -209,6 +212,15 @@ function AppContent() {
 
   return (
     <div className="flex h-screen">
+      <OfflineBanner
+        isOnline={isOnline}
+        syncing={syncing}
+        pendingCount={pendingCount}
+        onManualSync={async () => {
+          const { syncOnReconnect } = await import('./services/syncEngine');
+          await syncOnReconnect();
+        }}
+      />
       {isAuthenticated && (
         <>
           <Sidebar
@@ -224,7 +236,6 @@ function AppContent() {
             <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} sidebarOpen={sidebarOpen} />
             <main className="flex-1 p-4 sm:p-6 overflow-auto">
               <Routes>
-                {/* ...existing routes... */}
                 <Route path="/" element={<DefaultRoute />} />
                 <Route path="/dashboard" element={<AccessGuard pageKey="dashboard_enabled"><Dashboard /></AccessGuard>} />
                 <Route path="/my-organizations" element={<AccessGuard pageKey="organizations_enabled"><MyOrganizations /></AccessGuard>} />

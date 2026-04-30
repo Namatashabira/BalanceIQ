@@ -4,6 +4,7 @@ import { fetchBalanceSheet, fetchAssets, fetchLiabilities, fetchEquity } from '.
 import { useToast } from '../../context/ToastContext';
 import { useConfig } from '../../context/ConfigContext';
 import { formatCurrency } from '../../utils/pricingHelpers';
+import { getAll, bulkUpsert } from '../../services/localStore';
 
 export default function BalanceSheet() {
   const toast = useToast();
@@ -22,18 +23,41 @@ export default function BalanceSheet() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [sheetData, assetsData, liabilitiesData, equityData] = await Promise.all([
-        fetchBalanceSheet(),
-        fetchAssets(),
-        fetchLiabilities(),
-        fetchEquity(),
-      ]);
-      setData(sheetData);
-      setAssets(assetsData);
-      setLiabilities(liabilitiesData);
-      setEquity(equityData);
+      if (navigator.onLine) {
+        const [sheetData, assetsData, liabilitiesData, equityData] = await Promise.all([
+          fetchBalanceSheet(), fetchAssets(), fetchLiabilities(), fetchEquity(),
+        ]);
+        setData(sheetData);
+        setAssets(assetsData);
+        setLiabilities(liabilitiesData);
+        setEquity(equityData);
+        await bulkUpsert('accounting', [{
+          id: 'balance_sheet',
+          data: { sheet: sheetData, assets: assetsData, liabilities: liabilitiesData, equity: equityData },
+          updated_at: new Date().toISOString()
+        }]);
+      } else {
+        const cached = await getAll('accounting');
+        const entry = cached.find(r => r.id === 'balance_sheet');
+        if (entry) {
+          setData(entry.data.sheet);
+          setAssets(entry.data.assets);
+          setLiabilities(entry.data.liabilities);
+          setEquity(entry.data.equity);
+        }
+      }
     } catch (error) {
       console.error('Failed to load balance sheet:', error);
+      try {
+        const cached = await getAll('accounting');
+        const entry = cached.find(r => r.id === 'balance_sheet');
+        if (entry) {
+          setData(entry.data.sheet);
+          setAssets(entry.data.assets);
+          setLiabilities(entry.data.liabilities);
+          setEquity(entry.data.equity);
+        }
+      } catch {}
     } finally {
       setLoading(false);
     }

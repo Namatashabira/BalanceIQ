@@ -25,6 +25,7 @@
     "@heroicons/react": "^2.2.0",
     "antd": "^6.2.1",
     "axios": "^1.13.2",
+    "better-sqlite3": "^12.9.0",
     "chart.js": "^4.5.1",
     "framer-motion": "^12.23.12",
     "fuse.js": "^7.1.0",

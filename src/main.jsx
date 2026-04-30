@@ -14,3 +14,20 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </BrowserRouter>
   </React.StrictMode>
 );
+
+// ── Service Worker registration ───────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    // Use BASE_URL so the path is correct whether hosted at / or /BalanceIQ/
+    const swUrl = `${import.meta.env.BASE_URL}service-worker.js`;
+    navigator.serviceWorker
+      .register(swUrl)
+      .then((reg) => {
+        console.log('[SW] Registered:', reg.scope);
+        window.addEventListener('online', () => {
+          reg.sync?.register('flush-queue').catch(() => {});
+        });
+      })
+      .catch((err) => console.warn('[SW] Registration failed:', err));
+  });
+}

@@ -8,6 +8,7 @@ import {
 import { fetchTaxes, fetchTaxSummary, createTax, updateTax, deleteTax } from '../../api/accounting';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useToast } from '../../context/ToastContext';
+import { getAll, bulkUpsert, enqueue } from '../../services/localStore';
 
 export default function TaxesEnhanced() {
   const toast = useToast();
@@ -31,14 +32,31 @@ export default function TaxesEnhanced() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [taxesData, summaryData] = await Promise.all([
-        fetchTaxes(filters),
-        fetchTaxSummary(),
-      ]);
-      setTaxes(taxesData);
-      setSummary(summaryData);
+      if (navigator.onLine) {
+        const [taxesData, summaryData] = await Promise.all([
+          fetchTaxes(filters),
+          fetchTaxSummary(),
+        ]);
+        setTaxes(taxesData);
+        setSummary(summaryData);
+        await bulkUpsert('accounting', [
+          { id: 'taxes_list',    data: taxesData,   updated_at: new Date().toISOString() },
+          { id: 'taxes_summary', data: summaryData, updated_at: new Date().toISOString() },
+        ]);
+      } else {
+        const cached = await getAll('accounting');
+        const taxesEntry   = cached.find(r => r.id === 'taxes_list');
+        const summaryEntry = cached.find(r => r.id === 'taxes_summary');
+        if (taxesEntry)   setTaxes(taxesEntry.data);
+        if (summaryEntry) setSummary(summaryEntry.data);
+      }
     } catch (error) {
       console.error('Failed to load taxes:', error);
+      try {
+        const cached = await getAll('accounting');
+        const taxesEntry = cached.find(r => r.id === 'taxes_list');
+        if (taxesEntry) setTaxes(taxesEntry.data);
+      } catch {}
     } finally {
       setLoading(false);
     }
@@ -48,8 +66,16 @@ export default function TaxesEnhanced() {
     loadData();
   }, [loadData]);
 
+  const API = import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api';
+
   const handleAddTax = async (formData) => {
     try {
+      if (!navigator.onLine) {
+        await enqueue({ method: 'POST', url: `${API}/accounting/taxes/`, body: formData });
+        toast.success('Tax saved offline — will sync when reconnected.');
+        setShowAddModal(false);
+        return;
+      }
       await createTax(formData);
       setShowAddModal(false);
       loadData();
@@ -62,9 +88,14 @@ export default function TaxesEnhanced() {
 
   const handleUpdateTax = async (formData) => {
     try {
+      if (!navigator.onLine) {
+        await enqueue({ method: 'PATCH', url: `${API}/accounting/taxes/${editingTax.id}/`, body: formData });
+        toast.success('Tax update saved offline — will sync when reconnected.');
+        setEditingTax(null); setShowAddModal(false);
+        return;
+      }
       await updateTax(editingTax.id, formData);
-      setEditingTax(null);
-      setShowAddModal(false);
+      setEditingTax(null); setShowAddModal(false);
       loadData();
       toast.success('Tax updated successfully!');
     } catch (error) {

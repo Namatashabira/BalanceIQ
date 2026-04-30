@@ -3,26 +3,61 @@ import { fetchAnalytics } from "../api";
 import { getChartTheme } from "../utils/themeUtils";
 import { useConfig } from "../context/ConfigContext";
 import { formatCurrency, getCurrencyCode } from "../utils/pricingHelpers";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, WifiOff } from "lucide-react";
+import { getAll, bulkUpsert } from '../services/localStore';
 
 export default function Analytics() {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState('7d');
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const { pricingSettings } = useConfig();
   const fmt = useCallback((value) => formatCurrency(value, pricingSettings), [pricingSettings]);
 
   const loadAnalytics = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await fetchAnalytics(dateRange);
-      setAnalytics(data || null);
+      if (navigator.onLine) {
+        const data = await fetchAnalytics(dateRange);
+        if (data) {
+          await bulkUpsert('analytics', [{ id: `analytics_${dateRange}`, ...data }]);
+          setAnalytics(data);
+          setIsOffline(false);
+        } else {
+          setAnalytics(null);
+        }
+      } else {
+        // Offline — load cached
+        setIsOffline(true);
+        const cached = await getAll('analytics');
+        const entry = cached.find(r => r.id === `analytics_${dateRange}`) || cached.find(r => r.id?.startsWith('analytics_'));
+        setAnalytics(entry || null);
+      }
     } catch {
-      setAnalytics(null);
+      // Network failed — try cache
+      setIsOffline(true);
+      try {
+        const cached = await getAll('analytics');
+        const entry = cached.find(r => r.id === `analytics_${dateRange}`) || cached.find(r => r.id?.startsWith('analytics_'));
+        setAnalytics(entry || null);
+      } catch {
+        setAnalytics(null);
+      }
     } finally {
       setLoading(false);
     }
   }, [dateRange]);
+
+  useEffect(() => {
+    const onOnline  = () => { setIsOffline(false); loadAnalytics(); };
+    const onOffline = () => setIsOffline(true);
+    window.addEventListener('online',  onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online',  onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, [loadAnalytics]);
 
   useEffect(() => {
     loadAnalytics();
@@ -31,9 +66,14 @@ export default function Analytics() {
   }, [loadAnalytics]);
 
   if (loading) return <div className="p-4">Loading analytics...</div>;
-  // Show specific message for forbidden (admin required) or generic no data
   if (!analytics) {
-    // Try to detect if last fetch failed due to forbidden (403)
+    if (isOffline) return (
+      <div className="p-8 text-center">
+        <WifiOff className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+        <p className="text-gray-600 font-medium">You're offline</p>
+        <p className="text-gray-400 text-sm mt-1">No cached analytics available. Connect to load data.</p>
+      </div>
+    );
     const lastError = window.__lastAnalyticsError;
     if (lastError && lastError.includes('403')) {
       return <div className="p-4 text-red-600">Access denied. Admin access required to view analytics.</div>;
@@ -68,6 +108,11 @@ export default function Analytics() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <h1 className="text-2xl font-bold">Analytics Dashboard</h1>
         <div className="flex items-center gap-3">
+          {isOffline && (
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-yellow-700 bg-yellow-100 border border-yellow-300 px-3 py-1.5 rounded-full">
+              <WifiOff className="w-3.5 h-3.5" /> Offline — cached data
+            </span>
+          )}
           <a
             href="/forecast"
             className="flex items-center gap-2 px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm"

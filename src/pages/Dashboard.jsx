@@ -10,6 +10,7 @@ import {
 import { Line, Doughnut } from 'react-chartjs-2';
 import { fetchWithAuth } from '../api';
 import { useConfig } from '../context/ConfigContext';
+import { getAll, bulkUpsert } from '../services/localStore';
 import { formatCurrency, getCurrencyCode } from '../utils/pricingHelpers';
 import {
   Chart as ChartJS,
@@ -120,30 +121,57 @@ export default function Dashboard() {
   const fetchDashboardData = useCallback(async () => {
     try {
       setError(null);
+      const isOnline = navigator.onLine;
 
-      const [dashboardResponse, accountingResponse, contactsResponse] = await Promise.all([
-        fetchWithAuth(`${API_BASE}/products/dashboard/stats/?role=${userRole}`),
-        fetchAccountingData(),
-        fetchWithAuth(`${API_BASE}/core/customers/`)
-      ]);
+      let data, accountingResponse, contactsData;
 
-      if (!dashboardResponse || !dashboardResponse.ok) {
-        throw new Error('Unable to load dashboard data. Please log in again.');
+      if (isOnline) {
+        const [dashboardResponse, accResponse, contactsResponse] = await Promise.all([
+          fetchWithAuth(`${API_BASE}/products/dashboard/stats/?role=${userRole}`),
+          fetchAccountingData(),
+          fetchWithAuth(`${API_BASE}/core/customers/`)
+        ]);
+
+        if (!dashboardResponse || !dashboardResponse.ok) {
+          throw new Error('Unable to load dashboard data. Please log in again.');
+        }
+
+        data = await dashboardResponse.json();
+        accountingResponse = accResponse;
+        contactsData = contactsResponse?.ok ? await contactsResponse.json() : [];
+
+        // Cache for offline use
+        await bulkUpsert('analytics', [{ id: 'dashboard', ...data }]);
+        await bulkUpsert('customers', Array.isArray(contactsData) ? contactsData : []);
+      } else {
+        // Offline — load from local store
+        const cached = await getAll('analytics');
+        const dashEntry = cached.find(r => r.id === 'dashboard');
+        data = dashEntry || null;
+        accountingResponse = null;
+        const cachedCustomers = await getAll('customers');
+        contactsData = cachedCustomers;
       }
 
-      const data = await dashboardResponse.json();
+      if (!data) throw new Error('No dashboard data available offline.');
+
       setDashboardData(data);
       setAccountingData(accountingResponse);
-      if (contactsResponse && contactsResponse.ok) {
-        const contactsData = await contactsResponse.json();
-        setContacts(Array.isArray(contactsData) ? contactsData : []);
-      } else {
-        setContacts([]);
-      }
+      setContacts(Array.isArray(contactsData) ? contactsData : []);
       setLastUpdated(new Date().toLocaleString());
       setLoading(false);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      // Last resort: try local cache
+      try {
+        const cached = await getAll('analytics');
+        const dashEntry = cached.find(r => r.id === 'dashboard');
+        if (dashEntry) {
+          setDashboardData(dashEntry);
+          setLoading(false);
+          return;
+        }
+      } catch {}
       setError(error.message || 'Failed to load dashboard');
       setLoading(false);
     }

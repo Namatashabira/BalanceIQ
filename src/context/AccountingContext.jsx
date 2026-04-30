@@ -1,14 +1,10 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 import {
-  fetchExpenses,
-  fetchPayments,
-  fetchTaxes,
-  fetchExpenseCategories,
-  fetchPaymentSummary,
-  fetchTaxSummary,
+  fetchExpenses, fetchPayments, fetchTaxes,
+  fetchExpenseCategories, fetchPaymentSummary, fetchTaxSummary,
 } from '../api/accounting';
+import { getAll, bulkUpsert } from '../services/localStore';
 
-// Create the context
 const AccountingContext = createContext(null);
 
 export const AccountingProvider = ({ children }) => {
@@ -20,72 +16,98 @@ export const AccountingProvider = ({ children }) => {
   const [taxSummary, setTaxSummary] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Refresh Expenses
   const refreshExpenses = useCallback(async () => {
     try {
-      const data = await fetchExpenses();
-      setExpenses(data);
-      return data;
+      if (navigator.onLine) {
+        const data = await fetchExpenses();
+        setExpenses(data);
+        await bulkUpsert('accounting', [{ id: 'expenses_list', data, updated_at: new Date().toISOString() }]);
+        return data;
+      } else {
+        const cached = await getAll('accounting');
+        const entry = cached.find(r => r.id === 'expenses_list');
+        if (entry) setExpenses(entry.data);
+      }
     } catch (error) {
       console.error('Error fetching expenses:', error);
-      throw error;
+      const cached = await getAll('accounting').catch(() => []);
+      const entry = cached.find(r => r.id === 'expenses_list');
+      if (entry) setExpenses(entry.data);
     }
   }, []);
 
-  // Refresh Payments
   const refreshPayments = useCallback(async () => {
     try {
-      const [paymentsData, summaryData] = await Promise.all([
-        fetchPayments(),
-        fetchPaymentSummary(),
-      ]);
-      setPayments(paymentsData);
-      setPaymentSummary(summaryData);
-      return paymentsData;
+      if (navigator.onLine) {
+        const [paymentsData, summaryData] = await Promise.all([fetchPayments(), fetchPaymentSummary()]);
+        setPayments(paymentsData);
+        setPaymentSummary(summaryData);
+        await bulkUpsert('accounting', [
+          { id: 'payments_list',    data: paymentsData, updated_at: new Date().toISOString() },
+          { id: 'payments_summary', data: summaryData,  updated_at: new Date().toISOString() },
+        ]);
+        return paymentsData;
+      } else {
+        const cached = await getAll('accounting');
+        const pEntry = cached.find(r => r.id === 'payments_list');
+        const sEntry = cached.find(r => r.id === 'payments_summary');
+        if (pEntry) setPayments(pEntry.data);
+        if (sEntry) setPaymentSummary(sEntry.data);
+      }
     } catch (error) {
       console.error('Error fetching payments:', error);
-      throw error;
+      const cached = await getAll('accounting').catch(() => []);
+      const pEntry = cached.find(r => r.id === 'payments_list');
+      const sEntry = cached.find(r => r.id === 'payments_summary');
+      if (pEntry) setPayments(pEntry.data);
+      if (sEntry) setPaymentSummary(sEntry.data);
     }
   }, []);
 
-  // Refresh Taxes
   const refreshTaxes = useCallback(async () => {
     try {
-      const [taxesData, summaryData] = await Promise.all([
-        fetchTaxes(),
-        fetchTaxSummary(),
-      ]);
-      setTaxes(taxesData);
-      setTaxSummary(summaryData);
-      return taxesData;
+      if (navigator.onLine) {
+        const [taxesData, summaryData] = await Promise.all([fetchTaxes(), fetchTaxSummary()]);
+        setTaxes(taxesData);
+        setTaxSummary(summaryData);
+        await bulkUpsert('accounting', [
+          { id: 'taxes_list',    data: taxesData,   updated_at: new Date().toISOString() },
+          { id: 'taxes_summary', data: summaryData, updated_at: new Date().toISOString() },
+        ]);
+        return taxesData;
+      } else {
+        const cached = await getAll('accounting');
+        const tEntry = cached.find(r => r.id === 'taxes_list');
+        const sEntry = cached.find(r => r.id === 'taxes_summary');
+        if (tEntry) setTaxes(tEntry.data);
+        if (sEntry) setTaxSummary(sEntry.data);
+      }
     } catch (error) {
       console.error('Error fetching taxes:', error);
-      throw error;
     }
   }, []);
 
-  // Refresh Expense Categories
   const refreshExpenseCategories = useCallback(async () => {
     try {
-      const data = await fetchExpenseCategories();
-      setExpenseCategories(data);
-      return data;
+      if (navigator.onLine) {
+        const data = await fetchExpenseCategories();
+        setExpenseCategories(data);
+        await bulkUpsert('accounting', [{ id: 'expense_categories', data, updated_at: new Date().toISOString() }]);
+        return data;
+      } else {
+        const cached = await getAll('accounting');
+        const entry = cached.find(r => r.id === 'expense_categories');
+        if (entry) setExpenseCategories(entry.data);
+      }
     } catch (error) {
       console.error('Error fetching expense categories:', error);
-      throw error;
     }
   }, []);
 
-  // Refresh all accounting data
   const refreshAll = useCallback(async () => {
     setLoading(true);
     try {
-      await Promise.all([
-        refreshExpenses(),
-        refreshPayments(),
-        refreshTaxes(),
-        refreshExpenseCategories(),
-      ]);
+      await Promise.all([refreshExpenses(), refreshPayments(), refreshTaxes(), refreshExpenseCategories()]);
     } catch (error) {
       console.error('Error refreshing accounting data:', error);
     } finally {
@@ -94,27 +116,9 @@ export const AccountingProvider = ({ children }) => {
   }, [refreshExpenses, refreshPayments, refreshTaxes, refreshExpenseCategories]);
 
   const value = {
-    // State
-    expenses,
-    payments,
-    taxes,
-    expenseCategories,
-    paymentSummary,
-    taxSummary,
-    loading,
-    
-    // Actions
-    refreshAll,
-    refreshExpenses,
-    refreshPayments,
-    refreshTaxes,
-    refreshExpenseCategories,
-    
-    // Direct setters (for optimistic updates)
-    setExpenses,
-    setPayments,
-    setTaxes,
-    setExpenseCategories,
+    expenses, payments, taxes, expenseCategories, paymentSummary, taxSummary, loading,
+    refreshAll, refreshExpenses, refreshPayments, refreshTaxes, refreshExpenseCategories,
+    setExpenses, setPayments, setTaxes, setExpenseCategories,
   };
 
   return (
@@ -124,11 +128,8 @@ export const AccountingProvider = ({ children }) => {
   );
 };
 
-// Custom hook to use the accounting context
 export const useAccounting = () => {
   const context = useContext(AccountingContext);
-  if (!context) {
-    throw new Error('useAccounting must be used within an AccountingProvider');
-  }
+  if (!context) throw new Error('useAccounting must be used within an AccountingProvider');
   return context;
 };

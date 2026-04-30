@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Search, FileText, X } from 'lucide-react';
+import { Search, FileText, X, WifiOff } from 'lucide-react';
 import Receipt from '../components/Receipt';
+import { getAll, bulkUpsert } from '../services/localStore';
 
 const API_URL = `${import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api'}/core`;
 
@@ -19,6 +20,18 @@ export default function ReceiptLookup() {
   const [statusMessage, setStatusMessage] = useState('');
   const [allReceipts, setAllReceipts] = useState([]);
   const [filteredReceipts, setFilteredReceipts] = useState([]);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const onOnline  = () => { setIsOffline(false); fetchRecentReceipts(); };
+    const onOffline = () => setIsOffline(true);
+    window.addEventListener('online',  onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online',  onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, []);
 
   const upsertReceiptInLists = (receiptSummary) => {
     if (!receiptSummary || !receiptSummary.receiptNumber) return;
@@ -39,14 +52,29 @@ export default function ReceiptLookup() {
   const fetchRecentReceipts = async () => {
     setIsLoadingList(true);
     try {
-      const response = await fetch(`${API_URL}/receipts/`, { headers: authHeaders() });
-      if (response.ok) {
-        const data = await response.json();
-        setAllReceipts(data);
-        setFilteredReceipts(data);
+      if (navigator.onLine) {
+        const response = await fetch(`${API_URL}/receipts/`, { headers: authHeaders() });
+        if (response.ok) {
+          const data = await response.json();
+          setAllReceipts(data);
+          setFilteredReceipts(data);
+          // Cache for offline
+          await bulkUpsert('receipts', Array.isArray(data) ? data.map(r => ({ ...r, id: r.receiptNumber })) : []);
+        }
+      } else {
+        // Offline — load from local store
+        const cached = await getAll('receipts');
+        setAllReceipts(cached);
+        setFilteredReceipts(cached);
       }
     } catch (err) {
       console.error('Error fetching receipts list:', err);
+      // Fallback to cache on network error
+      try {
+        const cached = await getAll('receipts');
+        setAllReceipts(cached);
+        setFilteredReceipts(cached);
+      } catch {}
     } finally {
       setIsLoadingList(false);
     }
@@ -70,36 +98,70 @@ export default function ReceiptLookup() {
     setStatusMessage('');
 
     try {
-      const response = await fetch(`${API_URL}/receipts/?receipt_number=${targetNumber}`, { headers: authHeaders() });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setReceiptData(data);
-        setShowReceipt(true);
-        setStatusMessage('Receipt found and loaded.');
-        setReceiptNumber(targetNumber);
+      if (navigator.onLine) {
+        const response = await fetch(`${API_URL}/receipts/?receipt_number=${targetNumber}`, { headers: authHeaders() });
 
-        // Ensure the fetched receipt appears in the sidebar suggestions
-        upsertReceiptInLists({
-          receiptNumber: data.receiptNumber,
-          totalAmount: data.totalAmount,
-          amountPaid: data.amountPaid,
-          paymentMethod: data.paymentMethod,
-          createdAt: data.createdAt,
-        });
-      } else if (response.status === 404) {
-        setError('Receipt not found');
-        setReceiptData(null);
-        setShowReceipt(false);
+        if (response.ok) {
+          const data = await response.json();
+          setReceiptData(data);
+          setShowReceipt(true);
+          setStatusMessage('Receipt found and loaded.');
+          setReceiptNumber(targetNumber);
+          // Cache it
+          await bulkUpsert('receipts', [{ ...data, id: data.receiptNumber }]);
+          upsertReceiptInLists({
+            receiptNumber: data.receiptNumber,
+            totalAmount: data.totalAmount,
+            amountPaid: data.amountPaid,
+            paymentMethod: data.paymentMethod,
+            createdAt: data.createdAt,
+          });
+        } else if (response.status === 404) {
+          setError('Receipt not found');
+          setReceiptData(null);
+          setShowReceipt(false);
+        } else {
+          const message = await response.text();
+          setError(`Failed to fetch receipt (${response.status}). ${message || ''}`.trim());
+          setReceiptData(null);
+          setShowReceipt(false);
+        }
       } else {
-        const message = await response.text();
-        setError(`Failed to fetch receipt (${response.status}). ${message || ''}`.trim());
-        setReceiptData(null);
-        setShowReceipt(false);
+        // Offline — search local cache
+        const cached = await getAll('receipts');
+        const found = cached.find(r =>
+          (r.receiptNumber || r.id || '').toLowerCase() === targetNumber.toLowerCase()
+        );
+        if (found) {
+          setReceiptData(found);
+          setShowReceipt(true);
+          setStatusMessage('Receipt loaded from local cache (offline).');
+          setReceiptNumber(targetNumber);
+        } else {
+          setError('Receipt not found in offline cache.');
+          setReceiptData(null);
+          setShowReceipt(false);
+        }
       }
     } catch (err) {
       console.error('Error fetching receipt:', err);
-      setError('Failed to fetch receipt. Please try again.');
+      // Try cache on network failure
+      try {
+        const cached = await getAll('receipts');
+        const found = cached.find(r =>
+          (r.receiptNumber || r.id || '').toLowerCase() === targetNumber.toLowerCase()
+        );
+        if (found) {
+          setReceiptData(found);
+          setShowReceipt(true);
+          setStatusMessage('Receipt loaded from local cache.');
+          setReceiptNumber(targetNumber);
+        } else {
+          setError('Failed to fetch receipt. No cached version available.');
+        }
+      } catch {
+        setError('Failed to fetch receipt. Please try again.');
+      }
       setReceiptData(null);
       setShowReceipt(false);
     } finally {
@@ -138,6 +200,11 @@ export default function ReceiptLookup() {
             Receipt Lookup
           </h1>
           <p className="text-gray-600 mt-2">Search and view receipts by receipt number</p>
+          {isOffline && (
+            <div className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-yellow-700 bg-yellow-100 border border-yellow-300 px-3 py-1.5 rounded-full">
+              <WifiOff className="w-4 h-4" /> Offline — showing cached receipts
+            </div>
+          )}
         </div>
 
         {/* Search Card */}

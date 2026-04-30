@@ -8,6 +8,7 @@
  */
 
 import axios from 'axios';
+import { dbPut, dbGetAll, enqueueRequest } from './offlineDB';
 
 // Create API instance
 export const api = axios.create({
@@ -67,6 +68,18 @@ api.interceptors.response.use(
     // Handle network error (offline)
     if (!error.response && !navigator.onLine) {
       console.warn('API: Offline - attempting to use cached data');
+      // Queue mutations for later replay
+      if (['post', 'patch', 'put', 'delete'].includes(originalRequest.method?.toLowerCase())) {
+        await enqueueRequest({
+          method: originalRequest.method,
+          url: originalRequest.baseURL
+            ? originalRequest.baseURL.replace(/\/$/, '') + originalRequest.url
+            : originalRequest.url,
+          body: originalRequest.data ? JSON.parse(originalRequest.data) : null,
+          headers: originalRequest.headers,
+        }).catch(() => {});
+        return Promise.resolve({ data: { offline: true, queued: true }, status: 202 });
+      }
       // Try to return cached response
       const cachedResponse = await getCachedResponse(originalRequest.url);
       if (cachedResponse) {
@@ -209,96 +222,31 @@ export const apiEndpoints = {
 };
 
 /**
- * Offline data management
+ * Offline data management — delegates to offlineDB for consistency.
  */
 export class OfflineDataManager {
-  constructor() {
-    this.storeName = 'oraka-offline-changes';
-    this.initDB();
-  }
-
-  async initDB() {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open('orakaDB', 1);
-
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result);
-
-      request.onupgradeneeded = (event) => {
-        const db = event.target.result;
-        if (!db.objectStoreNames.contains(this.storeName)) {
-          db.createObjectStore(this.storeName, { keyPath: 'id', autoIncrement: true });
-        }
-      };
-    });
-  }
-
   async saveOfflineChange(type, data) {
-    const db = await this.initDB();
-    const tx = db.transaction(this.storeName, 'readwrite');
-    const store = tx.objectStore(this.storeName);
-    
-    store.add({
-      type,
-      data,
-      timestamp: new Date().toISOString(),
-      synced: false
-    });
-
-    return new Promise((resolve, reject) => {
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
+    return enqueueRequest({ method: type, url: '', body: data });
   }
 
   async getAllChanges() {
-    const db = await this.initDB();
-    const tx = db.transaction(this.storeName, 'readonly');
-    const store = tx.objectStore(this.storeName);
-
-    return new Promise((resolve, reject) => {
-      const request = store.getAll();
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    const { getQueue } = await import('./offlineDB');
+    return getQueue();
   }
 
   async syncChanges() {
-    if (!navigator.onLine) {
-      console.log('Offline - cannot sync');
-      return;
-    }
-
-    const changes = await this.getAllChanges();
-    if (changes.length === 0) return;
-
-    try {
-      const response = await api.post('/sync/', { changes });
-      console.log('Sync successful:', response.data);
-      
-      // Clear synced changes
-      const db = await this.initDB();
-      const tx = db.transaction(this.storeName, 'readwrite');
-      tx.objectStore(this.storeName).clear();
-    } catch (error) {
-      console.error('Sync failed:', error);
-      throw error;
-    }
+    if (!navigator.onLine) return;
+    const { flushQueue } = await import('./offlineDB');
+    return flushQueue();
   }
 }
 
 export const offlineManager = new OfflineDataManager();
 
-/**
- * Listen for online status and sync when back online
- */
+// Flush queued mutations when back online
 window.addEventListener('online', async () => {
-  console.log('Back online - syncing changes...');
-  try {
-    await offlineManager.syncChanges();
-  } catch (error) {
-    console.error('Failed to sync offline changes:', error);
-  }
+  const { flushQueue } = await import('./offlineDB');
+  flushQueue().catch(() => {});
 });
 
 export default api;

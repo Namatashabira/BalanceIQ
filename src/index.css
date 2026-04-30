@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes shrink {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+
+.animate-shrink {
+  animation: shrink linear forwards;
+}
+
 @keyframes slide-in {
   from {
     transform: translateX(100%);
@@ -37,6 +46,10 @@
   75% {
     transform: translate(50px, 50px) scale(1.05);
   }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
 }
 
 .animate-slide-in {

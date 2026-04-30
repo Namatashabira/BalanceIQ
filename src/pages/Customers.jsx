@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { UserRound, MapPin, Phone, Mail, RefreshCw, Loader2, Plus, Star } from 'lucide-react';
+import { UserRound, MapPin, Phone, Mail, RefreshCw, Loader2, Plus, Star, WifiOff } from 'lucide-react';
 import { useConfig, useLabels } from '../context/ConfigContext';
 import { fetchWithAuth } from '../api';
+import { getAll, bulkUpsert, enqueue } from '../services/localStore';
 
 const CUSTOMERS_API = `${import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api'}/core/customers/`;
 
@@ -24,16 +25,42 @@ export default function Customers() {
   const [saving, setSaving] = useState(false);
   const [customers, setCustomers] = useState([]);
   const [form, setForm] = useState({ name: '', email: '', phone: '', location: '' });
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const onOnline  = () => { setIsOffline(false); loadCustomers(); };
+    const onOffline = () => setIsOffline(true);
+    window.addEventListener('online',  onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online',  onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, []);
 
   const loadCustomers = async () => {
     try {
       setLoading(true);
-      const res = await fetchWithAuth(CUSTOMERS_API);
-      if (!res || !res.ok) throw new Error(`Load failed (${res?.status || 'no response'})`);
-      const data = await res.json();
-      setCustomers(Array.isArray(data) ? data : data?.results || []);
+      if (navigator.onLine) {
+        const res = await fetchWithAuth(CUSTOMERS_API);
+        if (!res || !res.ok) throw new Error(`Load failed (${res?.status || 'no response'})`);
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : data?.results || [];
+        setCustomers(list);
+        // Cache for offline
+        await bulkUpsert('customers', list.map(c => ({ ...c, id: c.id || c.phone || c.email })));
+      } else {
+        // Offline — load from local store
+        const cached = await getAll('customers');
+        setCustomers(cached);
+      }
     } catch (err) {
       console.error('Failed to load customers', err);
+      // Fallback to cache
+      try {
+        const cached = await getAll('customers');
+        setCustomers(cached);
+      } catch {}
     } finally {
       setLoading(false);
     }
@@ -48,17 +75,34 @@ export default function Customers() {
     if (!form.name && !form.email && !form.phone) return;
     try {
       setSaving(true);
-      const res = await fetchWithAuth(CUSTOMERS_API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      if (!res || !res.ok) {
-        const txt = await res?.text();
-        throw new Error(txt || 'Save failed');
+      const newCustomer = {
+        ...form,
+        id: `cust_${Date.now()}`,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (navigator.onLine) {
+        const res = await fetchWithAuth(CUSTOMERS_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form),
+        });
+        if (!res || !res.ok) {
+          const txt = await res?.text();
+          throw new Error(txt || 'Save failed');
+        }
+        // Save locally too
+        const saved = await res.json();
+        await bulkUpsert('customers', [{ ...saved, id: saved.id || newCustomer.id }]);
+        loadCustomers();
+      } else {
+        // Offline — save locally and queue for sync
+        await bulkUpsert('customers', [newCustomer]);
+        await enqueue({ method: 'POST', url: CUSTOMERS_API, body: form });
+        setCustomers(prev => [newCustomer, ...prev]);
       }
+
       setForm({ name: '', email: '', phone: '', location: '' });
-      loadCustomers();
     } catch (err) {
       console.error('Failed to save customer', err);
     } finally {
@@ -77,6 +121,11 @@ export default function Customers() {
         <div>
           <p className="text-sm text-gray-500">Unified {contactLabel.toLowerCase()} records from public site + manual entry</p>
           <h1 className="text-2xl font-bold text-gray-900">{contactLabelPlural}</h1>
+          {isOffline && (
+            <div className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-yellow-700 bg-yellow-100 border border-yellow-300 px-3 py-1 rounded-full">
+              <WifiOff className="w-3.5 h-3.5" /> Offline — new contacts saved locally
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -134,9 +183,13 @@ export default function Customers() {
             className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-60"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            Save {contactLabel}
+            {isOffline ? `Save ${contactLabel} (offline)` : `Save ${contactLabel}`}
           </button>
-          <p className="text-xs text-gray-500">Blank fields stay optional; the system auto-dedupe by phone/email on the backend.</p>
+          <p className="text-xs text-gray-500">
+            {isOffline
+              ? 'Saved locally — will sync to server when reconnected.'
+              : 'Blank fields stay optional; the system auto-dedupe by phone/email on the backend.'}
+          </p>
         </form>
 
         <div className="lg:col-span-2 bg-white p-4 rounded-lg shadow border border-gray-100">

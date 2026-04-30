@@ -16,12 +16,13 @@ import {
   TrendingUp, TrendingDown, AlertTriangle, Package, Users, DollarSign,
   BarChart3, Activity, Target, Calendar, Filter, Download, Settings,
   MapPin, Smartphone, Globe, CreditCard, Zap, Bell, RefreshCw,
-  ArrowUp, ArrowDown, Minus, Eye, EyeOff, ChevronDown, ChevronUp
+  ArrowUp, ArrowDown, Minus, Eye, EyeOff, ChevronDown, ChevronUp, WifiOff
 } from 'lucide-react';
 import {
   LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
+import { getAll, bulkUpsert } from '../services/localStore';
 
 export default function Forecast() {
   const toast = useToast();
@@ -39,8 +40,20 @@ export default function Forecast() {
   const [growthPeriod, setGrowthPeriod] = useState('MoM');
   const [showGrowthDetails, setShowGrowthDetails] = useState(false);
   const [data, setData] = useState({});
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   const fmt = useCallback((value) => formatCurrency(value, pricingSettings), [pricingSettings]);
+
+  useEffect(() => {
+    const onOnline  = () => { setIsOffline(false); loadForecastData(); };
+    const onOffline = () => setIsOffline(true);
+    window.addEventListener('online',  onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online',  onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, []);
 
   useEffect(() => {
     loadForecastData();
@@ -48,6 +61,7 @@ export default function Forecast() {
 
   const loadForecastData = async () => {
     setLoading(true);
+    const cacheKey = `forecast_${activeTab}_${dateRange}`;
     try {
       const activeTenant = JSON.parse(localStorage.getItem('activeTenant'));
       const tenantId = activeTenant?.uuid;
@@ -57,6 +71,20 @@ export default function Forecast() {
       if (!tenantId) {
         toast.error('No active tenant found. Please select a tenant.');
         setData({});
+        setLoading(false);
+        return;
+      }
+
+      if (!navigator.onLine) {
+        // Offline — load from cache
+        const cached = await getAll('forecast');
+        const entry = cached.find(r => r.id === cacheKey) || cached.find(r => r.id?.startsWith('forecast_'));
+        if (entry) {
+          setData(entry.data);
+        } else {
+          toast.error('No cached forecast available offline.');
+          setData({});
+        }
         setLoading(false);
         return;
       }
@@ -84,7 +112,7 @@ export default function Forecast() {
       const baseline = parseFloat(forecastResponse.baseline || 0);
       const growthRate = baseline > 0 ? ((forecastSales - baseline) / baseline) * 100 : 0;
 
-      setData({
+      const built = {
         kpis: {
           forecastRevenue: forecastSales,
           expectedOrders: Math.floor(forecastSales / 150),
@@ -129,11 +157,30 @@ export default function Forecast() {
         risks: forecastResponse.sales_increase_hints?.length
           ? []
           : [{ type: 'no_growth', message: 'No major seasonal increases expected', probability: 10 }]
-      });
+      };
+
+      setData(built);
+
+      // Cache for offline
+      await bulkUpsert('forecast', [{ id: cacheKey, data: built, updated_at: new Date().toISOString() }]);
+
     } catch (err) {
       console.error('Failed to load forecast data:', err);
-      toast.error('Failed to load forecast data');
-      setData({});
+      // Try cache on network failure
+      try {
+        const cached = await getAll('forecast');
+        const entry = cached.find(r => r.id === cacheKey) || cached.find(r => r.id?.startsWith('forecast_'));
+        if (entry) {
+          setData(entry.data);
+          toast.error('Network error — showing cached forecast');
+        } else {
+          toast.error('Failed to load forecast data');
+          setData({});
+        }
+      } catch {
+        toast.error('Failed to load forecast data');
+        setData({});
+      }
     } finally {
       setLoading(false);
     }
@@ -173,7 +220,14 @@ export default function Forecast() {
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Forecast</h1>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Forecast</h1>
+          {isOffline && (
+            <div className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-yellow-700 bg-yellow-100 border border-yellow-300 px-3 py-1 rounded-full">
+              <WifiOff className="w-3.5 h-3.5" /> Offline — showing cached forecast
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <button
             onClick={handleRefresh}

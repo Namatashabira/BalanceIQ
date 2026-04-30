@@ -6,6 +6,7 @@ import { getChartTheme } from '../../utils/themeUtils';
 import { useToast } from '../../context/ToastContext';
 import { useConfig } from '../../context/ConfigContext';
 import { formatCurrency } from '../../utils/pricingHelpers';
+import { getAll, bulkUpsert } from '../../services/localStore';
 
 export default function ProfitAndLoss() {
   const toast = useToast();
@@ -22,12 +23,25 @@ export default function ProfitAndLoss() {
   const fmt = useCallback((value) => formatCurrency(value, pricingSettings), [pricingSettings]);
 
   const loadData = useCallback(async () => {
+    const cacheKey = `pl_${dateRange.date_from}_${dateRange.date_to}`;
     try {
       setLoading(true);
-      const result = await fetchProfitLoss(dateRange);
-      setData(result);
+      if (navigator.onLine) {
+        const result = await fetchProfitLoss(dateRange);
+        setData(result);
+        await bulkUpsert('accounting', [{ id: cacheKey, data: result, updated_at: new Date().toISOString() }]);
+      } else {
+        const cached = await getAll('accounting');
+        const entry = cached.find(r => r.id === cacheKey) || cached.find(r => r.id?.startsWith('pl_'));
+        setData(entry?.data || null);
+      }
     } catch (error) {
       console.error('Failed to load P&L data:', error);
+      try {
+        const cached = await getAll('accounting');
+        const entry = cached.find(r => r.id === cacheKey) || cached.find(r => r.id?.startsWith('pl_'));
+        setData(entry?.data || null);
+      } catch {}
     } finally {
       setLoading(false);
     }
