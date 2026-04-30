@@ -2,7 +2,7 @@
 import { fetchWithAuth } from '../api';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Edit, Trash2, Upload, Save, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, Save, X, Eye } from 'lucide-react';
 import { CloudCheck } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import {
@@ -18,6 +18,8 @@ import Spinner from '../components/Spinner';
 import '../styles/ProductSearch.css';
 import { useConfig } from '../context/ConfigContext';
 import { formatCurrency, getCurrencyCode } from '../utils/pricingHelpers';
+
+const BACKEND_URL = (import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api').replace(/\/api$/, '');
 
 // Simple client-side image compression to stay under backend limits
 const compressImage = (file, maxBytes = 2 * 1024 * 1024, maxDimension = 1600) =>
@@ -122,7 +124,7 @@ export default function Products() {
           reviewer_name: reviewForm.reviewer_name || '',
         };
         // Use fetch directly for public review submission (no auth)
-        const res = await fetch('http://127.0.0.1:8000/api/customer-reviews/', {
+        const res = await fetch(`${BACKEND_URL}/api/customer-reviews/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -217,6 +219,7 @@ export default function Products() {
   });
   const [saving, setSaving] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const { pricingSettings } = useConfig();
   const fmt = useCallback((value) => formatCurrency(value, pricingSettings), [pricingSettings]);
   const currencyCode = getCurrencyCode(pricingSettings);
@@ -224,7 +227,7 @@ export default function Products() {
   const resolveImageUrl = (url) => {
     if (!url || typeof url !== 'string') return null;
     if (url.startsWith('/')) {
-      return `http://127.0.0.1:8000${url}`;
+      return `${BACKEND_URL}${url}`;
     }
     return url;
   };
@@ -479,7 +482,7 @@ export default function Products() {
         // If it's a relative URL (starts with /), convert to absolute pointing to backend
         if (typeof url === 'string' && url.startsWith('/')) {
           // Use backend API URL instead of current window location
-          return 'http://127.0.0.1:8000' + url;
+          return BACKEND_URL + url;
         }
         return url;
       }).filter(Boolean);
@@ -785,10 +788,10 @@ export default function Products() {
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 overflow-hidden flex gap-6 p-6">
-              {/* Form Section - Left */}
-              <div className="flex-1 overflow-y-auto pr-4">
-                <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="flex-1 overflow-hidden flex flex-col p-4 sm:p-6">
+              {/* Form Section - Full Width */}
+              <div className="flex-1 overflow-y-auto">
+                <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl mx-auto">
                   {/* Product Name */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Product Name</label>
@@ -1149,12 +1152,19 @@ export default function Products() {
                   </div>
 
                   {/* Buttons */}
-                  <div className="flex gap-4 pt-4 sticky bottom-0 bg-white dark:bg-gray-800 pb-6">
+                  <div className="flex flex-wrap gap-3 pt-4 sticky bottom-0 bg-white dark:bg-gray-800 pb-6">
                     <button
                       type="submit"
                       className="bg-blue-600 text-white px-6 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
                     >
                       <Save className="w-4 h-4" /> {editingProduct ? 'Update' : 'Save'} Product
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowPreview(true)}
+                      className="bg-purple-600 text-white px-6 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700"
+                    >
+                      <Eye className="w-4 h-4" /> Preview
                     </button>
                     <button type="button" onClick={handleCancel} className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400">
                       Cancel
@@ -1162,40 +1172,52 @@ export default function Products() {
                   </div>
                 </form>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-              {/* Preview Section - Right */}
-              <div className="flex-1 overflow-y-auto border-l border-gray-200 dark:border-gray-700 pl-6">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Live Preview</h3>
-                
-                {/* Mobile Preview */}
-                <div className="mb-8">
-                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">ðŸ“± Mobile View (Phone)</h4>
-                  <div className="bg-gray-900 rounded-2xl p-2 w-80 h-screen max-h-96 flex flex-col shadow-lg border-8 border-gray-800">
-                    <div className="bg-white dark:bg-gray-900 rounded-xl overflow-hidden flex-1 flex flex-col">
-                      <PreviewContent 
-                        formData={formData} 
-                        displaySettings={formData.displaySettings || defaultDisplaySettings()}
-                        imageIndex={previewMobileIndex}
-                        setImageIndex={setPreviewMobileIndex}
-                        isMobile
-                        fmt={fmt}
-                      />
+
+      {/* Preview Modal */}
+      {showPreview && (
+        <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-6xl flex flex-col shadow-2xl" style={{maxHeight: '95vh'}}>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white">Product Preview</h3>
+              <button onClick={() => setShowPreview(false)} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
+              <div className="flex flex-col items-center justify-start bg-gray-100 dark:bg-gray-800 px-6 py-6 lg:w-80 flex-shrink-0 border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-gray-700">
+                <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-4">Mobile Preview</span>
+                <div className="relative bg-gray-900 rounded-[2.5rem] border-[6px] border-gray-800 shadow-2xl w-64 flex-shrink-0" style={{height: '520px'}}>
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-5 bg-gray-900 rounded-b-xl z-10" />
+                  <div className="absolute inset-0 rounded-[2rem] overflow-hidden bg-white dark:bg-gray-900">
+                    <div className="h-full overflow-y-auto">
+                      <PreviewContent formData={formData} displaySettings={formData.displaySettings || defaultDisplaySettings()} isMobile fmt={fmt} />
                     </div>
                   </div>
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-16 h-1 bg-gray-600 rounded-full z-10" />
                 </div>
-
-                {/* Desktop Preview */}
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">ðŸ–¥ï¸ Desktop View (Computer)</h4>
-                  <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 h-96 overflow-auto border border-gray-300 dark:border-gray-600">
-                    <PreviewContent 
-                      formData={formData} 
-                      displaySettings={formData.displaySettings || defaultDisplaySettings()}
-                      imageIndex={previewDesktopIndex}
-                      setImageIndex={setPreviewDesktopIndex}
-                      isMobile={false}
-                      fmt={fmt}
-                    />
+              </div>
+              <div className="flex flex-col flex-1 bg-gray-50 dark:bg-gray-800 overflow-hidden min-h-0">
+                <div className="flex-shrink-0 px-4 pt-4 pb-2">
+                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Desktop Preview</span>
+                </div>
+                <div className="mx-4 mb-4 flex-1 flex flex-col rounded-xl overflow-hidden border border-gray-300 dark:border-gray-600 shadow-lg min-h-0">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-gray-200 dark:bg-gray-700 flex-shrink-0">
+                    <div className="flex gap-1.5">
+                      <div className="w-3 h-3 rounded-full bg-red-400" />
+                      <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                      <div className="w-3 h-3 rounded-full bg-green-400" />
+                    </div>
+                    <div className="flex-1 bg-white dark:bg-gray-600 rounded px-3 py-0.5 text-xs text-gray-400 truncate">
+                      store.com/products/{formData.name ? formData.name.toLowerCase().replace(/\s+/g, '-') : 'product'}
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-900">
+                    <PreviewContent formData={formData} displaySettings={formData.displaySettings || defaultDisplaySettings()} isMobile={false} fmt={fmt} />
                   </div>
                 </div>
               </div>
@@ -1203,7 +1225,6 @@ export default function Products() {
           </div>
         </div>
       )}
-
       {/* Main Content - Products List */}
       <div className="px-2 sm:px-6 pb-6 max-w-7xl mx-auto">
         <div className="mb-6">
@@ -1343,9 +1364,7 @@ function ProductReviews({ productId }) {
     async function fetchReviews() {
       setLoading(true);
       try {
-        const res = await fetch(
-          `http://127.0.0.1:8000/api/customer-reviews/product-reviews/?product_id=${productId}`
-        );
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api'}/customer-reviews/product-reviews/?product_id=${productId}`);
         const data = await res.json();
         setReviews(data.reviews || []);
       } catch {

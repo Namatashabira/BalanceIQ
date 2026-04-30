@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { UserRound, MapPin, Phone, Mail, RefreshCw, Loader2, Plus, Star } from 'lucide-react';
 import { useConfig, useLabels } from '../context/ConfigContext';
-import { useToast } from '../context/ToastContext';
 import { fetchWithAuth } from '../api';
 
-const CUSTOMERS_API = 'http://127.0.0.1:8000/api/core/customers/';
+const CUSTOMERS_API = `${import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api'}/core/customers/`;
 
 const deriveContactLabels = (businessType, labels) => {
   const baseSingular = labels.entity || (businessType === 'education' ? 'Student' : businessType === 'services' ? 'Client' : 'Customer');
@@ -15,7 +14,6 @@ const deriveContactLabels = (businessType, labels) => {
 export default function Customers() {
   const { businessType } = useConfig();
   const labels = useLabels();
-  const toast = useToast();
 
   const { singular: contactLabel, plural: contactLabelPlural } = useMemo(
     () => deriveContactLabels(businessType, labels),
@@ -36,7 +34,6 @@ export default function Customers() {
       setCustomers(Array.isArray(data) ? data : data?.results || []);
     } catch (err) {
       console.error('Failed to load customers', err);
-      toast.error('Could not load customers.');
     } finally {
       setLoading(false);
     }
@@ -48,10 +45,7 @@ export default function Customers() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name && !form.email && !form.phone) {
-      toast.warning(`Add at least a name, email, or phone to save a ${contactLabel.toLowerCase()}.`);
-      return;
-    }
+    if (!form.name && !form.email && !form.phone) return;
     try {
       setSaving(true);
       const res = await fetchWithAuth(CUSTOMERS_API, {
@@ -63,12 +57,10 @@ export default function Customers() {
         const txt = await res?.text();
         throw new Error(txt || 'Save failed');
       }
-      toast.success(`${contactLabel} saved`);
       setForm({ name: '', email: '', phone: '', location: '' });
       loadCustomers();
     } catch (err) {
       console.error('Failed to save customer', err);
-      toast.error('Could not save entry.');
     } finally {
       setSaving(false);
     }

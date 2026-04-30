@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useToast } from '../context/ToastContext';
 import { useConfig } from '../context/ConfigContext';
 import { formatCurrency } from '../utils/pricingHelpers';
 import { salesAPI } from '../services/salesAPI';
@@ -18,7 +17,6 @@ export default function Sales() {
       const activeTenant = JSON.parse(localStorage.getItem('activeTenant'));
       return activeTenant?.uuid || activeTenant?.id;
     };
-  const toast = useToast();
   const { pricingSettings } = useConfig();
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState('30d');
@@ -32,100 +30,6 @@ export default function Sales() {
   const [data, setData] = useState({});
 
   const fmt = useCallback((value) => formatCurrency(value, pricingSettings), [pricingSettings]);
-
-  // Mock data
-  const mockData = {
-    overview: {
-      totalSales: 485000,
-      totalOrders: 1250,
-      unitsSold: 3420,
-      avgOrderValue: 388,
-      retailSplit: 65,
-      wholesaleSplit: 35,
-      trends: {
-        sales: 12.5,
-        orders: 8.3,
-        units: 15.2,
-        aov: 4.1
-      }
-    },
-    growth: {
-      monthOverMonth: 12.5,
-      quarterOverQuarter: 8.3,
-      yearOverYear: 25.7,
-      trend: [
-        { period: 'Jan', growth: 15.2 },
-        { period: 'Feb', growth: 8.7 },
-        { period: 'Mar', growth: -2.1 },
-        { period: 'Apr', growth: 22.4 },
-        { period: 'May', growth: 18.9 },
-        { period: 'Jun', growth: 5.3 },
-        { period: 'Jul', growth: -4.8 },
-        { period: 'Aug', growth: 12.6 },
-        { period: 'Sep', growth: 28.1 },
-        { period: 'Oct', growth: 16.7 },
-        { period: 'Nov', growth: 9.4 },
-        { period: 'Dec', growth: 25.8 }
-      ]
-    },
-    salesTrend: Array.from({length: 30}, (_, i) => ({
-      date: new Date(Date.now() - (29-i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      sales: Math.random() * 20000 + 10000,
-      orders: Math.floor(Math.random() * 50 + 20),
-      retail: Math.random() * 12000 + 6000,
-      wholesale: Math.random() * 8000 + 4000
-    })),
-    topProducts: [
-      { name: 'Premium Seeds Pack', units: 450, revenue: 67500, percentage: 13.9, type: 'retail' },
-      { name: 'Organic Fertilizer 50kg', units: 320, revenue: 48000, percentage: 9.9, type: 'wholesale' },
-      { name: 'Herbicide Pro 5L', units: 280, revenue: 42000, percentage: 8.7, type: 'retail' },
-      { name: 'NPK Fertilizer Bulk', units: 200, revenue: 35000, percentage: 7.2, type: 'wholesale' },
-      { name: 'Insecticide Spray', units: 380, revenue: 30400, percentage: 6.3, type: 'retail' }
-    ],
-    categories: [
-      { name: 'Seeds', sales: 125000, units: 850, growth: 15.2, share: 25.8 },
-      { name: 'Fertilizers', sales: 145000, units: 620, growth: 8.7, share: 29.9 },
-      { name: 'Herbicides', sales: 95000, units: 480, growth: -2.1, share: 19.6 },
-      { name: 'Insecticides', sales: 75000, units: 390, growth: 12.3, share: 15.5 },
-      { name: 'Supplies', sales: 45000, units: 280, growth: 5.8, share: 9.3 }
-    ],
-    customers: {
-      newCustomers: 185,
-      returningCustomers: 320,
-      avgSpendNew: 245,
-      avgSpendReturning: 485,
-      repeatRate: 68.5,
-      topCustomers: [
-        { name: 'AgriCorp Ltd', orders: 45, revenue: 125000, type: 'wholesale' },
-        { name: 'Green Valley Farms', orders: 32, revenue: 89000, type: 'wholesale' },
-        { name: 'John Smith', orders: 28, revenue: 12500, type: 'retail' }
-      ]
-    },
-    geography: [
-      { region: 'North Region', sales: 185000, orders: 450, growth: 12.5 },
-      { region: 'South Region', sales: 165000, orders: 380, growth: 8.2 },
-      { region: 'East Region', sales: 95000, orders: 280, growth: 15.8 },
-      { region: 'West Region', sales: 40000, orders: 140, growth: -3.2 }
-    ],
-    operations: {
-      salesVelocity: 16200,
-      fulfillmentTime: 2.3,
-      cancellationRate: 3.2,
-      returnRate: 1.8,
-      paidSales: 92.5,
-      completedOrders: 89.3
-    },
-    orders: Array.from({length: 50}, (_, i) => ({
-      id: `ORD-${1000 + i}`,
-      date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      customer: ['John Doe', 'AgriCorp Ltd', 'Jane Smith', 'Green Farms'][Math.floor(Math.random() * 4)],
-      type: Math.random() > 0.6 ? 'wholesale' : 'retail',
-      items: Math.floor(Math.random() * 5 + 1),
-      amount: Math.random() * 5000 + 500,
-      paymentStatus: Math.random() > 0.1 ? 'paid' : 'pending',
-      orderStatus: ['completed', 'processing', 'shipped', 'cancelled'][Math.floor(Math.random() * 4)]
-    }))
-  };
 
   useEffect(() => {
     loadSalesData();
@@ -204,6 +108,7 @@ export default function Sales() {
         })),
         // Real data from API
         topProducts: apiData.top_products || [],
+        categories: apiData.categories || [],
         customers: {
           newCustomers: apiData.customer_insights?.new_customers || 0,
           returningCustomers: apiData.customer_insights?.returning_customers || 0,
@@ -219,20 +124,13 @@ export default function Sales() {
           pendingOrders: apiData.sales_operations?.pending_orders || 0
         },
         orders: apiData.recent_orders || [],
-        // Keep mock data for categories until we add that endpoint
-        categories: mockData.categories
+        categories: apiData.categories || []
       };
       
       setData(transformedData);
-      toast.success('Sales data loaded successfully');
     } catch (error) {
       console.error('Error loading sales data:', error);
-      if (error.response?.status === 401) {
-        toast.error('Please log in to view sales data');
-      } else {
-        toast.error('Failed to load sales data, using demo data');
-        setData(mockData);
-      }
+      setData({});
     } finally {
       setLoading(false);
     }
@@ -425,12 +323,7 @@ export default function Sales() {
             <div className="flex gap-2 mt-3">
               <button
                 onClick={() => {
-                  if (customDateFrom && customDateTo) {
-                    loadSalesData();
-                    toast.success('Custom date range applied');
-                  } else {
-                    toast.error('Please select both start and end dates');
-                  }
+                  if (customDateFrom && customDateTo) loadSalesData();
                 }}
                 className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm"
               >

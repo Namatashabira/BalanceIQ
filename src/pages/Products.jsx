@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '../context/ToastContext';
-import { Plus, Edit, Trash2, Upload, Save, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, Save, X, Eye, Monitor, Smartphone } from 'lucide-react';
 import { fetchProducts, createProduct, updateProduct, deleteProduct } from '../services/productAPI';
 import { useConfig } from '../context/ConfigContext';
 import { formatCurrency, getCurrencyCode } from '../utils/pricingHelpers';
@@ -25,6 +25,8 @@ export default function Products() {
   });
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewMode, setPreviewMode] = useState('desktop');
   const { pricingSettings } = useConfig();
   const fmt = useCallback((value) => formatCurrency(value, pricingSettings), [pricingSettings]);
   const currencyCode = getCurrencyCode(pricingSettings);
@@ -336,13 +338,21 @@ export default function Products() {
                 </select>
               </div>
 
-              <div className="flex gap-4 pt-4">
+              <div className="flex flex-wrap gap-3 pt-4">
                 <button
                   type="submit"
                   className="bg-primary text-white px-6 py-2 rounded-lg flex items-center gap-2 hover:brightness-90 transition-all"
                 >
                   <Save className="w-4 h-4" />
-                  {editingProduct ? 'Update' : 'Update'} Product
+                  {editingProduct ? 'Update' : 'Save'} Product
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(true)}
+                  className="bg-indigo-100 text-indigo-700 px-6 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-200 transition-all"
+                >
+                  <Eye className="w-4 h-4" />
+                  Preview
                 </button>
                 <button
                   type="button"
@@ -353,6 +363,96 @@ export default function Products() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Preview Modal */}
+      {showPreview && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Product Preview</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPreviewMode('desktop')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    previewMode === 'desktop' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <Monitor className="w-4 h-4" /> Desktop
+                </button>
+                <button
+                  onClick={() => setPreviewMode('mobile')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    previewMode === 'mobile' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <Smartphone className="w-4 h-4" /> Mobile
+                </button>
+                <button onClick={() => setShowPreview(false)} className="ml-2 text-gray-400 hover:text-gray-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Preview Area */}
+            <div className="p-6 flex justify-center bg-gray-50 dark:bg-gray-800">
+              {previewMode === 'desktop' ? (
+                /* Desktop Card */
+                <div className="w-full max-w-sm bg-white dark:bg-gray-700 rounded-xl shadow-md overflow-hidden border border-gray-200 dark:border-gray-600">
+                  <div className="relative h-52 bg-gray-100 dark:bg-gray-600">
+                    {(imagePreview || formData.image) ? (
+                      <img src={imagePreview || formData.image} alt={formData.name || 'Product'} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">No Image</div>
+                    )}
+                    <span className={`absolute top-3 right-3 px-2 py-0.5 rounded-full text-xs font-semibold ${
+                      formData.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
+                    }`}>{formData.status || 'active'}</span>
+                  </div>
+                  <div className="p-4">
+                    <p className="text-xs text-indigo-500 font-medium uppercase tracking-wide mb-1">{formData.category || 'Category'}</p>
+                    <h4 className="text-base font-bold text-gray-900 dark:text-white mb-1 truncate">{formData.name || 'Product Name'}</h4>
+                    <p className="text-sm text-gray-500 dark:text-gray-300 line-clamp-2 mb-3">{formData.description || 'Product description will appear here.'}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg font-bold text-indigo-600">{formData.price ? fmt(parseFloat(formData.price)) : fmt(0)}</span>
+                      <span className="text-xs text-gray-400">Stock: {formData.stock || 0}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Mobile Card — narrow phone frame */
+                <div className="w-72 bg-white dark:bg-gray-700 rounded-2xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-600">
+                  <div className="relative h-44 bg-gray-100 dark:bg-gray-600">
+                    {(imagePreview || formData.image) ? (
+                      <img src={imagePreview || formData.image} alt={formData.name || 'Product'} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">No Image</div>
+                    )}
+                    <span className={`absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-semibold ${
+                      formData.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
+                    }`}>{formData.status || 'active'}</span>
+                  </div>
+                  <div className="p-3">
+                    <p className="text-xs text-indigo-500 font-medium uppercase tracking-wide mb-0.5">{formData.category || 'Category'}</p>
+                    <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-1 truncate">{formData.name || 'Product Name'}</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-300 line-clamp-2 mb-2">{formData.description || 'Product description will appear here.'}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-base font-bold text-indigo-600">{formData.price ? fmt(parseFloat(formData.price)) : fmt(0)}</span>
+                      <span className="text-xs text-gray-400">Stock: {formData.stock || 0}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="px-5 py-3 border-t border-gray-200 dark:border-gray-700 text-right">
+              <button onClick={() => setShowPreview(false)} className="bg-gray-200 text-gray-700 px-5 py-2 rounded-lg hover:bg-gray-300 text-sm font-medium">
+                Close Preview
+              </button>
+            </div>
           </div>
         </div>
       )}

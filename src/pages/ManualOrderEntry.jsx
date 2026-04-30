@@ -5,12 +5,11 @@ import SelectedProductCard from '../components/SelectedProductCard';
 import CheckoutModal from '../components/CheckoutModal';
 import Receipt from '../components/Receipt';
 import Invoice from '../components/Invoice';
-import toast from '../utils/toast';
 import { useConfig } from '../context/ConfigContext';
 import { selectUnitPrice, computeTax, defaultPricingSettings, formatCurrency, getCurrencyCode, isWholesaleEligible } from '../utils/pricingHelpers';
 
 export default function ManualOrderEntry() {
-  const API_URL = 'http://127.0.0.1:8000/api/core';
+  const API_URL = `${import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api'}/core`;
   const CART_STORAGE_KEY = 'manualOrder.cartItems';
   const SELECTION_STORAGE_KEY = 'manualOrder.selectedProducts';
   const { pricingSettings } = useConfig();
@@ -141,7 +140,7 @@ export default function ManualOrderEntry() {
     if (!isAuthenticated) return;
     if (!name && !phone && !email && !location) return;
     try {
-      await fetch('http://127.0.0.1:8000/api/core/customers/', {
+      await fetch(`${API_URL}/customers/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -163,10 +162,7 @@ export default function ManualOrderEntry() {
         pricingSettings,
         item.priceType
       );
-      if (blocked) {
-        toast.error(`Cannot price ${item.product?.name || 'item'}: ${reason}`);
-        continue;
-      }
+      if (blocked) continue;
       subTotal += unitPrice * item.quantity;
     }
     const { tax: taxAmount, total: totalAmount } = computeTax(subTotal, pricingSettings);
@@ -296,28 +292,15 @@ export default function ManualOrderEntry() {
   };
 
   const handleCheckoutAndPrint = async () => {
-    if (cartItems.length === 0) {
-      toast.warning('Cart is empty!');
-      return;
-    }
-    // Validate debt form if payment method is debt
+    if (cartItems.length === 0) return;
     if (paymentMethod === 'debt') {
-      if (!debtCustomerName || !debtCustomerPhone || !debtAmountPaid) {
-        toast.warning('Please fill in all required debt information fields!');
-        return;
-      }
-      if (parseFloat(debtAmountPaid) >= 500 && !debtPartialPaymentMethod) {
-        toast.warning('Please select how the customer is paying!');
-        return;
-      }
-      if (debtPartialPaymentMethod === 'mobilemoney' && !debtPartialMobileNumber) {
-        toast.warning('Please enter mobile money number!');
-        return;
-      }
+      if (!debtCustomerName || !debtCustomerPhone || !debtAmountPaid) return;
+      if (parseFloat(debtAmountPaid) >= 500 && !debtPartialPaymentMethod) return;
+      if (debtPartialPaymentMethod === 'mobilemoney' && !debtPartialMobileNumber) return;
       // Save customer data to backend only if authenticated
       if (isAuthenticated) {
         try {
-          await fetch('http://127.0.0.1:8000/api/core/customers/', {
+          await fetch(`${API_URL}/customers/`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -347,33 +330,20 @@ export default function ManualOrderEntry() {
       }
       setShowReceipt(true);
     } catch (error) {
-      toast.error('Failed to record order or receipt. Please try again.');
+      console.error('Failed to record order or receipt.');
     }
   };
 
   const handleCheckoutAndExit = async () => {
-    if (cartItems.length === 0) {
-      toast.warning('Cart is empty!');
-      return;
-    }
-    // Validate debt form if payment method is debt
+    if (cartItems.length === 0) return;
     if (paymentMethod === 'debt') {
-      if (!debtCustomerName || !debtCustomerPhone || !debtAmountPaid) {
-        toast.warning('Please fill in all required debt information fields!');
-        return;
-      }
-      if (parseFloat(debtAmountPaid) >= 500 && !debtPartialPaymentMethod) {
-        toast.warning('Please select how the customer is paying!');
-        return;
-      }
-      if (debtPartialPaymentMethod === 'mobilemoney' && !debtPartialMobileNumber) {
-        toast.warning('Please enter mobile money number!');
-        return;
-      }
+      if (!debtCustomerName || !debtCustomerPhone || !debtAmountPaid) return;
+      if (parseFloat(debtAmountPaid) >= 500 && !debtPartialPaymentMethod) return;
+      if (debtPartialPaymentMethod === 'mobilemoney' && !debtPartialMobileNumber) return;
       
       // Save customer data to backend if it's a debt transaction
       try {
-        await fetch('http://127.0.0.1:8000/api/core/customers/', {
+        await fetch(`${API_URL}/customers/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -398,10 +368,7 @@ export default function ManualOrderEntry() {
   const handleProductSelect = (product) => {
     // Check if product already in selected list
     const exists = selectedProducts.find(p => p.id === product.id);
-    if (exists) {
-      toast.info('This product is already in your selection list!');
-      return;
-    }
+    if (exists) return;
 
     // Add product to selection list with default values
     const newSelection = {
@@ -425,9 +392,6 @@ export default function ManualOrderEntry() {
         next.priceType = value;
         if (value === 'wholesale') {
           const adjustedQty = Math.max(Number(next.quantity) || 1, threshold);
-          if (adjustedQty !== next.quantity) {
-            toast.info(`Wholesale requires at least ${threshold}. Quantity updated to ${adjustedQty}.`);
-          }
           next.quantity = adjustedQty;
         } else {
           next.quantity = Math.max(Number(next.quantity) || 1, 1);
@@ -453,10 +417,7 @@ export default function ManualOrderEntry() {
 
   const handleAddToCart = (selection) => {
     const { blocked, reason, unitPrice } = selectUnitPrice(selection.product, selection.quantity, pricingSettings, selection.priceType);
-    if (blocked || !unitPrice || !Number.isFinite(unitPrice) || unitPrice <= 0) {
-      toast.error(reason || 'Price not available for this item');
-      return;
-    }
+    if (blocked || !unitPrice || !Number.isFinite(unitPrice) || unitPrice <= 0) return;
     const cartItem = {
       id: `${selection.id}-${selection.priceType}-${Date.now()}`,
       product: selection.product,
@@ -496,9 +457,7 @@ export default function ManualOrderEntry() {
       setCartItems(prev => [...prev, ...validItems]);
     }
 
-    if (skipped.length) {
-      toast.error(`Skipped ${skipped.length} item(s) without valid price: ${skipped.join(', ')}`);
-    }
+    if (skipped.length) console.warn(`Skipped ${skipped.length} item(s) without valid price`);
 
     setSelectedProducts(skippedSelections);
   };

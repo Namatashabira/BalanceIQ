@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Search, FileText, X } from 'lucide-react';
 import Receipt from '../components/Receipt';
 
-const API_URL = 'http://127.0.0.1:8000/api/core';
+const API_URL = `${import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api'}/core`;
 
 function authHeaders() {
-  const token = localStorage.getItem('access_token');
+  const token = localStorage.getItem('accessToken');
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 

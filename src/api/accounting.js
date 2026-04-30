@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://127.0.0.1:8000/api/accounting';
+const API_URL = `${import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api'}/accounting`;
 
 // Add axios interceptor to handle 401 errors globally
 axios.interceptors.response.use(
