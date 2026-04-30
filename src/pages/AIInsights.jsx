@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import aiAnalyticsAPI from '../api/aiAnalytics';
 import openAIAPI from '../api/openai';
@@ -148,13 +149,13 @@ export default function AIInsights() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <a
-            href="/forecast"
+          <Link
+            to="/forecast"
             className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
           >
             <TrendingUp className="w-4 h-4" />
             View Forecast
-          </a>
+          </Link>
           <button
             onClick={handleRefresh}
             disabled={refreshing}

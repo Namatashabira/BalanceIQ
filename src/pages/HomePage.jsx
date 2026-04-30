@@ -20,10 +20,17 @@ export default function HomePage() {
   const navigate = useNavigate();
   const [selectedType, setSelectedType] = useState(null);
   const [businessTypes, setBusinessTypes] = useState([]);
+  const [scrolled, setScrolled] = useState(false);
 
   React.useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api'}/core/auth/business-types/`)
       .then(res => setBusinessTypes(res.data.business_types || []));
+  }, []);
+
+  React.useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 50);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
 const features = [
@@ -69,19 +76,26 @@ const features = [
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Navigation */}
-      <nav className="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-gray-200">
+      <nav className={`${scrolled ? 'shadow-lg bg-white/90' : 'bg-white/50'} backdrop-blur-md sticky top-0 z-50 border-b border-gray-100 transition-all duration-300`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
-              { /*<div className="h-10 w-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-md">
-               <Sparkles className="h-6 w-6 text-white" />
-              </div>*/}
-              <img src="./media/logo.jpg" alt="BusinessOS Logo" className="h-12 w-auto" style={{ borderRadius: "50%" }} />
+              <div className="h-10 w-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-md">
+                <Sparkles className="h-6 w-6 text-white" />
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                BusinessIQ
+              </span>
+            </div>
+            <div className="hidden md:flex items-center space-x-8">
+              <a href="#features" className="text-gray-700 hover:text-blue-600 text-sm font-medium transition">Features</a>
+              <a href="#pricing" className="text-gray-700 hover:text-blue-600 text-sm font-medium transition">Pricing</a>
+              <a href="#" className="text-gray-700 hover:text-blue-600 text-sm font-medium transition">About</a>
             </div>
             <div className="flex items-center space-x-4">
               <Link
                 to="/login"
-                className="text-gray-700 hover:text-gray-900 px-4 py-2 rounded-lg text-sm font-medium transition"
+                className="text-gray-700 hover:text-gray-900 px-4 py-2 rounded-lg text-sm font-medium transition hidden sm:inline"
               >
                 Sign In
               </Link>
@@ -97,40 +111,44 @@ const features = [
       </nav>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 lg:py-28">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative overflow-hidden py-20 lg:py-32 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+        </div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center">
-            <div className="inline-flex items-center space-x-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-medium mb-6">
-              <Globe className="h-4 w-4" />
-              <span>All-in-One Business Management Platform</span>
+            <div className="inline-flex items-center space-x-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-medium mb-6 animate-fade-in-down">
+              <Sparkles className="h-4 w-4" />
+              <span>Welcome to BusinessIQ</span>
             </div>
             
-            <h1 className="text-5xl lg:text-6xl font-extrabold text-gray-900 mb-6">
-              All-In-One Business
-              <span className="block bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-gray-900 mb-8 leading-tight animate-fade-in-down" style={{animationDelay: '100ms'}}>
+              Intelligent Business
+              <span className="block bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
                 Management Platform
               </span>
             </h1>
             
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-10">
-             Manage sales, inventory, staff, customers, and reports in one powerful system.
-Built for retail, restaurants, healthcare, education, and growing businesses.
+            <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto mb-12 animate-fade-in-down" style={{animationDelay: '200ms'}}>
+              All-in-one solution for retail, restaurants, healthcare, education, and growing businesses. Manage sales, inventory, staff, customers, and reports with AI-powered insights.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10 animate-fade-in-down" style={{animationDelay: '300ms'}}>
               <Link
                 to="/register"
-                className="group bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-blue-700 hover:to-indigo-700 transition shadow-xl hover:shadow-2xl inline-flex items-center justify-center"
+                className="group bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-blue-700 hover:to-indigo-700 transition shadow-xl hover:shadow-2xl hover:scale-105 transform inline-flex items-center justify-center"
               >
                 Start Free Trial
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition" />
               </Link>
-              <button className="bg-white text-gray-700 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-gray-50 transition shadow-md border border-gray-200">
+              <button className="bg-white text-gray-700 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-gray-50 transition shadow-md border border-gray-200 hover:scale-105 transform">
                 Watch Demo
               </button>
             </div>
 
-            <div className="mt-10 flex flex-wrap justify-center gap-6 text-sm text-gray-600">
+            <div className="flex flex-wrap justify-center gap-4 md:gap-8 text-sm text-gray-600 animate-fade-in-down" style={{animationDelay: '400ms'}}>
               <div className="flex items-center space-x-2">
                 <CheckCircle className="h-5 w-5 text-green-500" />
                 <span>No credit card required</span>
@@ -141,7 +159,7 @@ Built for retail, restaurants, healthcare, education, and growing businesses.
               </div>
               <div className="flex items-center space-x-2">
                 <CheckCircle className="h-5 w-5 text-green-500" />
-                <span>Cancel anytime</span>
+                <span>Instant setup</span>
               </div>
             </div>
           </div>
@@ -149,14 +167,14 @@ Built for retail, restaurants, healthcare, education, and growing businesses.
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-white">
+      <section id="features" className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-              Everything you need to run your business
+          <div className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+              Everything you need to succeed
             </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Powerful features that adapt to your industry and scale with your growth
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Comprehensive tools that adapt to your business and scale with your growth
             </p>
           </div>
 
@@ -164,15 +182,15 @@ Built for retail, restaurants, healthcare, education, and growing businesses.
             {features.map((feature, index) => (
               <div
                 key={index}
-                className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 border border-gray-200 hover:shadow-xl hover:border-blue-200 transition group"
+                className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200 hover:shadow-2xl hover:border-blue-300 transition-all hover:scale-105 hover:-translate-y-2 duration-300"
               >
-                <div className="h-12 w-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition">
-                  <feature.icon className="h-6 w-6 text-white" />
+                <div className="h-14 w-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-125 transition-all shadow-lg">
+                  <feature.icon className="h-7 w-7 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition">
                   {feature.title}
                 </h3>
-                <p className="text-gray-600">
+                <p className="text-gray-600 leading-relaxed">
                   {feature.description}
                 </p>
               </div>
@@ -182,22 +200,22 @@ Built for retail, restaurants, healthcare, education, and growing businesses.
       </section>
 
       {/* Business Types Section */}
-      <section className="py-20 bg-gradient-to-br from-blue-50 to-indigo-50">
+      <section className="py-24 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-              Built for your industry
+          <div className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+              Tailored for your industry
             </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Pre-configured templates and features for 14+ business types
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3 md:gap-4">
             {businessTypes.map((type, index) => (
               <div
                 key={type.value}
-                className={`bg-white rounded-lg p-4 text-center border cursor-pointer transition ${selectedType === type.value ? 'border-blue-600 ring-2 ring-blue-200' : 'border-gray-200 hover:border-blue-400 hover:shadow-md'}`}
+                className={`bg-white rounded-xl p-4 text-center border-2 cursor-pointer transition-all hover:shadow-lg transform hover:scale-105 ${selectedType === type.value ? 'border-blue-600 ring-2 ring-blue-200 bg-blue-50' : 'border-gray-200 hover:border-blue-400'}`}
                 onClick={() => {
                   setSelectedType(type.value);
                   setTimeout(() => {
@@ -205,8 +223,8 @@ Built for retail, restaurants, healthcare, education, and growing businesses.
                   }, 300);
                 }}
               >
-                <div className="text-sm font-medium text-gray-700">{type.label}</div>
-                <div className="text-xs text-gray-400 mt-1">{type.description}</div>
+                <div className="text-sm font-bold text-gray-900">{type.label}</div>
+                <div className="text-xs text-gray-500 mt-1 line-clamp-2">{type.description}</div>
               </div>
             ))}
           </div>
@@ -214,90 +232,112 @@ Built for retail, restaurants, healthcare, education, and growing businesses.
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 bg-white">
+      <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-4xl font-bold text-blue-600 mb-2">10K+</div>
-              <div className="text-gray-600">Active Businesses</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12">
+            <div className="text-center group">
+              <div className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3 group-hover:scale-110 transition">10K+</div>
+              <div className="text-lg text-gray-600">Active Businesses</div>
             </div>
-            <div>
-              <div className="text-4xl font-bold text-blue-600 mb-2">99.9%</div>
-              <div className="text-gray-600">Uptime SLA</div>
+            <div className="text-center group">
+              <div className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3 group-hover:scale-110 transition">99.9%</div>
+              <div className="text-lg text-gray-600">Uptime SLA</div>
             </div>
-            <div>
-              <div className="text-4xl font-bold text-blue-600 mb-2">24/7</div>
-              <div className="text-gray-600">Support Available</div>
+            <div className="text-center group">
+              <div className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3 group-hover:scale-110 transition">24/7</div>
+              <div className="text-lg text-gray-600">Support Available</div>
             </div>
-            <div>
-              <div className="text-4xl font-bold text-blue-600 mb-2">14+</div>
-              <div className="text-gray-600">Industries Supported</div>
+            <div className="text-center group">
+              <div className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3 group-hover:scale-110 transition">14+</div>
+              <div className="text-lg text-gray-600">Industries Supported</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-indigo-600">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
-            Ready to transform your business?
+      <section className="relative py-24 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent"></div>
+        </div>
+        
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
+            Transform Your Business with BusinessIQ
           </h2>
-          <p className="text-xl text-blue-100 mb-8">
-            Join thousands of businesses already using <img src="./media/logo.jpg" alt="BusinessOS Logo" className="inline h-6 align-text-bottom"  style={{borderRadius: "50%"}}/>
+          <p className="text-xl text-blue-100 mb-10 max-w-2xl mx-auto">
+            Join thousands of businesses already using BusinessIQ to streamline operations, boost efficiency, and drive growth.
           </p>
-          <Link
-            to="/register"
-            className="inline-flex items-center bg-white text-blue-600 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-gray-100 transition shadow-xl"
-          >
-            Get Started Free
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              to="/register"
+              className="inline-flex items-center justify-center bg-white text-blue-600 px-8 py-4 rounded-xl text-lg font-bold hover:bg-gray-100 transition shadow-2xl hover:shadow-3xl transform hover:scale-105"
+            >
+              Start Your Free Trial
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Link>
+            <button className="bg-white/20 backdrop-blur text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-white/30 transition border border-white/30">
+              View Pricing
+            </button>
+          </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-gray-400 py-12">
+      <footer className="bg-gray-950 text-gray-400 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 mb-12">
+            <div className="lg:col-span-2">
               <div className="flex items-center space-x-2 mb-4">
-                {/*<div className="h-8 w-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+                <div className="h-8 w-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
                   <Sparkles className="h-5 w-5 text-white" />
-                </div>*/}
-                <img src="./media/logo.jpg" alt="BusinessOS Logo" className="h-6 w-auto" style={{ borderRadius: "50px" }} />
+                </div>
+                <span className="text-xl font-bold text-white">BusinessIQ</span>
               </div>
-              <p className="text-sm">
-                All-in-one business management platform for the modern enterprise.
+              <p className="text-sm leading-relaxed mb-6">
+                All-in-one business management platform for retail, restaurants, healthcare, education, and growing businesses worldwide.
               </p>
+              <div className="text-xs text-gray-500">
+                © 2026 BusinessIQ. All rights reserved.
+              </div>
             </div>
             <div>
-              <h3 className="text-white font-semibold mb-4">Product</h3>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white transition">Features</a></li>
-                <li><a href="#" className="hover:text-white transition">Pricing</a></li>
-                <li><a href="#" className="hover:text-white transition">Security</a></li>
+              <h3 className="text-white font-semibold mb-6 text-sm">Product</h3>
+              <ul className="space-y-3 text-sm">
+                <li><a href="#features" className="hover:text-blue-400 transition">Features</a></li>
+                <li><a href="#pricing" className="hover:text-blue-400 transition">Pricing</a></li>
+                <li><a href="#" className="hover:text-blue-400 transition">Security</a></li>
+                <li><a href="#" className="hover:text-blue-400 transition">Roadmap</a></li>
               </ul>
             </div>
             <div>
-              <h3 className="text-white font-semibold mb-4">Company</h3>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white transition">About</a></li>
-                <li><a href="#" className="hover:text-white transition">Blog</a></li>
-                <li><a href="#" className="hover:text-white transition">Careers</a></li>
+              <h3 className="text-white font-semibold mb-6 text-sm">Company</h3>
+              <ul className="space-y-3 text-sm">
+                <li><a href="#" className="hover:text-blue-400 transition">About</a></li>
+                <li><a href="#" className="hover:text-blue-400 transition">Blog</a></li>
+                <li><a href="#" className="hover:text-blue-400 transition">Careers</a></li>
+                <li><a href="#" className="hover:text-blue-400 transition">Contact</a></li>
               </ul>
             </div>
             <div>
-              <h3 className="text-white font-semibold mb-4">Support</h3>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white transition">Help Center</a></li>
-                <li><a href="#" className="hover:text-white transition">Contact</a></li>
-                <li><a href="#" className="hover:text-white transition">Status</a></li>
+              <h3 className="text-white font-semibold mb-6 text-sm">Support</h3>
+              <ul className="space-y-3 text-sm">
+                <li><a href="#" className="hover:text-blue-400 transition">Help Center</a></li>
+                <li><a href="#" className="hover:text-blue-400 transition">Documentation</a></li>
+                <li><a href="#" className="hover:text-blue-400 transition">API Docs</a></li>
+                <li><a href="#" className="hover:text-blue-400 transition">Status</a></li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm">
-            <p>&copy; 2026 <img src="./media/logo.jpg" alt="BusinessOS Logo" className="inline h-5 align-text-bottom" style={{ borderRadius: "50%" }} />. All rights reserved.</p>
+          
+          <div className="border-t border-gray-800 pt-8">
+            <div className="flex flex-col md:flex-row justify-between items-center text-sm text-gray-500">
+              <div className="flex space-x-6">
+                <a href="#" className="hover:text-gray-300 transition">Privacy Policy</a>
+                <a href="#" className="hover:text-gray-300 transition">Terms of Service</a>
+                <a href="#" className="hover:text-gray-300 transition">Cookie Policy</a>
+              </div>
+            </div>
           </div>
         </div>
       </footer>
