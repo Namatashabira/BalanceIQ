@@ -1,6 +1,8 @@
 // ...existing code...
 import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api';
 import { Settings as SettingsIcon, Tag, Sparkles, ShieldCheck, Coins, ToggleRight, Save, RefreshCw, Edit2, Check, Loader2, Palette, Upload, X, Building2, FileText } from 'lucide-react';
 import { useConfig } from '../context/ConfigContext';
 import { defaultPricingSettings } from '../utils/pricingHelpers';
@@ -97,7 +99,7 @@ export default function SettingsPage() {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) return;
-      const res = await axios.get('http://127.0.0.1:8000/api/core/access/invite/', {
+      const res = await axios.get(`${API_BASE}/core/access/invite/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setInvites(res.data || []);
@@ -307,7 +309,7 @@ export default function SettingsPage() {
     try {
       const token = localStorage.getItem('accessToken');
       const res = await axios.post(
-        'http://127.0.0.1:8000/api/core/access/invite/',
+        `${API_BASE}/core/access/invite/`,
         accessForm,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -333,7 +335,7 @@ export default function SettingsPage() {
     try {
       const token = localStorage.getItem('accessToken');
       await axios.post(
-        'http://127.0.0.1:8000/api/core/access/pages/',
+        `${API_BASE}/core/access/pages/`,
         assignForm,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -368,7 +370,7 @@ export default function SettingsPage() {
     try {
       const token = localStorage.getItem('accessToken');
       await axios.post(
-        'http://127.0.0.1:8000/api/core/access/invite/',
+        `${API_BASE}/core/access/invite/`,
         {
           name: selectedInvite.name,
           email: selectedInvite.email,

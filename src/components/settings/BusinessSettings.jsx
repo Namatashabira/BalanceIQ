@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useConfig } from '../../context/ConfigContext';
 import { useSavingAction } from '../../hooks/useSavingAction';
 
-const API_URL = 'http://127.0.0.1:8000/api/core';
+const API_URL = `${import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api'}/core`;
 
 export default function BusinessSettings() {
     const getTenantUUID = () => {
