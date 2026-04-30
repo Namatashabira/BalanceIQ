@@ -107,14 +107,13 @@ export default function Dashboard() {
     return () => window.removeEventListener('resize', checkScreen);
   }, []);
 
+  const API_BASE = import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api';
+
   // Build WebSocket URL from env or API base so it works in dev/prod without edits
   const getAdminWsUrl = useCallback(() => {
     const envUrl = import.meta.env.VITE_ADMIN_WS_URL;
     if (envUrl) return envUrl;
-
-    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
-    const normalized = apiBase.replace(/\/$/, '');
-    const wsBase = normalized.replace(/^http/, 'ws');
+    const wsBase = API_BASE.replace(/^http/, 'ws').replace('/api', '');
     return `${wsBase}/ws/admin/orders/`;
   }, []);
 
@@ -123,9 +122,9 @@ export default function Dashboard() {
       setError(null);
 
       const [dashboardResponse, accountingResponse, contactsResponse] = await Promise.all([
-        fetchWithAuth(`http://127.0.0.1:8000/api/products/dashboard/stats/?role=${userRole}`),
+        fetchWithAuth(`${API_BASE}/products/dashboard/stats/?role=${userRole}`),
         fetchAccountingData(),
-        fetchWithAuth('http://127.0.0.1:8000/api/core/customers/')
+        fetchWithAuth(`${API_BASE}/core/customers/`)
       ]);
 
       if (!dashboardResponse || !dashboardResponse.ok) {
@@ -163,10 +162,10 @@ export default function Dashboard() {
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
 
       const [expenses, payments, taxes, profitLoss] = await Promise.all([
-        fetch('http://127.0.0.1:8000/api/accounting/expenses/summary/', { headers }).then(r => r.json()).catch(() => null),
-        fetch('http://127.0.0.1:8000/api/accounting/payments/summary/', { headers }).then(r => r.json()).catch(() => null),
-        fetch('http://127.0.0.1:8000/api/accounting/taxes/summary/', { headers }).then(r => r.json()).catch(() => null),
-        fetch(`http://127.0.0.1:8000/api/accounting/profit-loss/?date_from=${startOfMonth}&date_to=${endOfMonth}`, { headers }).then(r => r.json()).catch(() => null)
+        fetch(`${API_BASE}/accounting/expenses/summary/`, { headers }).then(r => r.json()).catch(() => null),
+        fetch(`${API_BASE}/accounting/payments/summary/`, { headers }).then(r => r.json()).catch(() => null),
+        fetch(`${API_BASE}/accounting/taxes/summary/`, { headers }).then(r => r.json()).catch(() => null),
+        fetch(`${API_BASE}/accounting/profit-loss/?date_from=${startOfMonth}&date_to=${endOfMonth}`, { headers }).then(r => r.json()).catch(() => null)
       ]);
 
       return { expenses, payments, taxes, profitLoss };
