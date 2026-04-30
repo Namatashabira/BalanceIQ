@@ -342,21 +342,29 @@ export function ConfigProvider({ children }) {
       // ignore malformed cache
     }
     fetchConfiguration();
+
+    const handleAuthChanged = () => fetchConfiguration();
+    window.addEventListener('auth-changed', handleAuthChanged);
+    return () => window.removeEventListener('auth-changed', handleAuthChanged);
   }, []);
 
   // Effect 2: userProfile — seed from localStorage, then fetch fresh from API
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) return;
-    axios.get(`${API_BASE}/core/auth/profile/`, {
-      headers: { Authorization: `Bearer ${token}` }
-    }).then(res => {
-      const fresh = res.data.user || res.data;
-      setUserProfile(fresh);
-      try { localStorage.setItem('cachedUserProfile', JSON.stringify(fresh)); } catch {}
-    }).catch(() => {
-      // keep cached value on failure
-    });
+    const fetchProfile = () => {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+      axios.get(`${API_BASE}/core/auth/profile/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(res => {
+        const fresh = res.data.user || res.data;
+        setUserProfile(fresh);
+        try { localStorage.setItem('cachedUserProfile', JSON.stringify(fresh)); } catch {}
+      }).catch(() => {});
+    };
+
+    fetchProfile();
+    window.addEventListener('auth-changed', fetchProfile);
+    return () => window.removeEventListener('auth-changed', fetchProfile);
   }, []);
 
   const value = {

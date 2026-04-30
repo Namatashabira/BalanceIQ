@@ -56,8 +56,8 @@ function SearchBar({ items }) {
   }, []);
 
   return (
-    <div ref={ref} className="relative hidden md:block">
-      <div className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 transition-colors rounded-xl px-3 py-2 w-56 lg:w-72">
+    <div ref={ref} className="relative hidden md:flex w-full max-w-xs lg:max-w-sm">
+      <div className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 transition-colors rounded-xl px-3 py-2 w-full">
         <Search size={15} className="text-gray-400 flex-shrink-0" />
         <input
           value={query}
@@ -252,6 +252,42 @@ function UserMenu({ user, userProfile, onOpenAccount, onLogout }) {
   );
 }
 
+// ── Mobile Search (inside drawer) ──────────────────────────────────────────
+function MobileSearch({ items, onClose }) {
+  const [query, setQuery] = useState('');
+  const navigate = useNavigate();
+  const results = query.trim().length > 0
+    ? items.filter(i => i.label.toLowerCase().includes(query.toLowerCase())).slice(0, 6)
+    : [];
+  return (
+    <div className="flex-1">
+      <input
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+        placeholder="Search pages…"
+        className="bg-transparent text-sm text-gray-700 placeholder-gray-400 outline-none w-full"
+      />
+      {results.length > 0 && (
+        <div className="mt-2 space-y-0.5">
+          {results.map(item => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.path}
+                onClick={() => { navigate(item.path); setQuery(''); onClose(); }}
+                className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-blue-50 text-left text-sm text-gray-700"
+              >
+                {Icon && <Icon size={15} className="text-gray-400" />}
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Mobile Drawer (slides from RIGHT) ───────────────────────────────────────
 function MobileDrawer({ open, onClose, items, user, userProfile, onOpenAccount, onLogout, logoUrl, businessName }) {
   const location = useLocation();
@@ -275,21 +311,18 @@ function MobileDrawer({ open, onClose, items, user, userProfile, onOpenAccount, 
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300 ${
-          open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
+        className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300"
+        style={{ opacity: open ? 1 : 0, pointerEvents: open ? 'auto' : 'none' }}
         onClick={onClose}
         aria-hidden="true"
       />
       {/* Drawer — hidden off-screen right when closed */}
       <div
-        className={`fixed top-0 right-0 h-full w-72 bg-white z-50 lg:hidden flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${
-          open ? 'translate-x-0' : 'translate-x-full'
-        }`}
+        className="fixed top-0 right-0 h-full w-72 bg-white z-50 lg:hidden flex flex-col shadow-2xl transition-transform duration-300 ease-in-out"
+        style={{ transform: open ? 'translateX(0)' : 'translateX(100%)' }}
         role="dialog"
         aria-modal="true"
         aria-label="Navigation menu"
-        {...(!open ? { inert: '' } : {})}
       >
         {/* Drawer header with X close button */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
@@ -310,6 +343,20 @@ function MobileDrawer({ open, onClose, items, user, userProfile, onOpenAccount, 
           >
             <X size={20} />
           </button>
+        </div>
+
+        {/* Mobile search */}
+        <div className="px-4 py-3 border-b border-gray-100">
+          <div className="flex items-center gap-2 bg-gray-100 rounded-xl px-3 py-2">
+            <Search size={15} className="text-gray-400 flex-shrink-0" />
+            <MobileSearch items={items} onClose={onClose} />
+          </div>
+        </div>
+
+        {/* Mobile notifications */}
+        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Notifications</span>
+          <NotificationBell />
         </div>
 
         {/* Nav items */}
@@ -411,11 +458,10 @@ export default function Navbar({ onToggleSidebar, sidebarOpen }) {
   return (
     <>
       <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
-        <div className="flex items-center h-14 px-3 sm:px-4 gap-2 sm:gap-3">
+        <div className="flex items-center justify-between h-14 px-3 sm:px-4">
 
           {/* ── Left: Logo + business name ─────────────────────────────── */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Desktop sidebar toggle */}
             <button
               onClick={onToggleSidebar}
               className="hidden lg:flex p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors"
@@ -423,16 +469,9 @@ export default function Navbar({ onToggleSidebar, sidebarOpen }) {
             >
               <Menu size={20} />
             </button>
-
-            {/* Logo + business name */}
             <Link to="/" className="flex items-center gap-2.5 min-w-0">
               {logoUrl ? (
-                <img
-                  src={logoUrl}
-                  alt="logo"
-                  className="w-8 h-8 rounded-xl object-cover flex-shrink-0"
-                  onError={e => e.target.style.display = 'none'}
-                />
+                <img src={logoUrl} alt="logo" className="w-8 h-8 rounded-xl object-cover flex-shrink-0" onError={e => e.target.style.display = 'none'} />
               ) : (
                 <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
                   <span className="text-white font-bold text-sm">{(businessName || 'B').charAt(0)}</span>
@@ -444,48 +483,36 @@ export default function Navbar({ onToggleSidebar, sidebarOpen }) {
             </Link>
           </div>
 
-          {/* ── Center: Breadcrumb (desktop) / Page title (mobile) ─────── */}
-          <div className="hidden lg:flex items-center gap-1 flex-1 min-w-0 text-sm text-gray-500 overflow-hidden">
-            <Link to="/" className="hover:text-blue-600 transition-colors flex-shrink-0">
-              <Home size={14} />
-            </Link>
-            {breadcrumbs.map(crumb => (
-              <span key={crumb.path} className="flex items-center gap-1 min-w-0">
-                <ChevronRight size={13} className="text-gray-300 flex-shrink-0" />
-                {crumb.isLast ? (
-                  <span className="text-gray-900 font-medium truncate">{crumb.label}</span>
-                ) : (
-                  <Link to={crumb.path} className="hover:text-blue-600 transition-colors truncate">{crumb.label}</Link>
-                )}
-              </span>
-            ))}
-          </div>
-
-          {/* Mobile: page title */}
-          <div className="flex-1 lg:hidden min-w-0 px-1">
-            {breadcrumbs.length > 0 ? (
-              <span className="text-sm font-semibold text-gray-900 truncate block">
-                {breadcrumbs[breadcrumbs.length - 1].label}
-              </span>
-            ) : (
-              <span className="text-sm font-semibold text-gray-900">Dashboard</span>
-            )}
-          </div>
-
-          {/* ── Right: Search + Notifications + User + Hamburger (mobile) */}
-          <div className="flex items-center gap-1 flex-shrink-0">
+          {/* ── Center: Breadcrumb (desktop) / Search (md) ───────────── */}
+          <div className="flex-1 min-w-0 flex items-center px-3">
+            <div className="hidden lg:flex items-center gap-1 w-full text-sm text-gray-500 overflow-hidden">
+              <Link to="/" className="hover:text-blue-600 transition-colors flex-shrink-0"><Home size={14} /></Link>
+              {breadcrumbs.map(crumb => (
+                <span key={crumb.path} className="flex items-center gap-1 min-w-0">
+                  <ChevronRight size={13} className="text-gray-300 flex-shrink-0" />
+                  {crumb.isLast
+                    ? <span className="text-gray-900 font-medium truncate">{crumb.label}</span>
+                    : <Link to={crumb.path} className="hover:text-blue-600 transition-colors truncate">{crumb.label}</Link>}
+                </span>
+              ))}
+            </div>
             <SearchBar items={visibleItems} />
-            <NotificationBell />
-            <UserMenu
-              user={user}
-              userProfile={userProfile}
-              onOpenAccount={() => setShowAccount(true)}
-              onLogout={logout}
-            />
-            {/* Mobile hamburger — always on the far right */}
+          </div>
+
+          {/* ── Right: desktop controls + mobile hamburger ────────────── */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <div className="hidden lg:flex items-center gap-1">
+              <NotificationBell />
+              <UserMenu
+                user={user}
+                userProfile={userProfile}
+                onOpenAccount={() => setShowAccount(true)}
+                onLogout={logout}
+              />
+            </div>
             <button
               onClick={() => setMobileOpen(true)}
-              className="lg:hidden p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors"
+              className="lg:hidden p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors" style={{ marginLeft: '370px' }}
               aria-label="Open menu"
             >
               <Menu size={22} />

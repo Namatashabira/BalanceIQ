@@ -28,11 +28,13 @@ export function AuthProvider({ children }) {
 
   const login = (userData) => {
     setUser(userData);
+    window.dispatchEvent(new Event('auth-changed'));
   };
 
   const logout = async () => {
     await logoutUser();
     setUser(null);
+    window.dispatchEvent(new Event('auth-changed'));
   };
 
   return (
