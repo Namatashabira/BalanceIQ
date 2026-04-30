@@ -12,17 +12,25 @@
     <meta name="keywords" content="business, management, inventory, orders, analytics" />
     
     <!-- PWA Meta Tags -->
-    <link rel="manifest" href="/BalanceIQ/manifest.json" />
+    <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/svg+xml" href="https://www.oraka-dgia.com/web/image/website/1/logo/Oraka-dgia?unique=3f8e18b" />
-    <link rel="apple-touch-icon" href="/BalanceIQ/icons/icon-192x192.png" />
-    <link rel="mask-icon" href="/BalanceIQ/icons/icon-maskable-192x192.png" color="#1890ff" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+    <link rel="mask-icon" href="/icons/icon-maskable-192x192.png" color="#1890ff" />
     
     <title>Oraka - Business Management System</title>
-    <script type="module" crossorigin src="/BalanceIQ/assets/index-RgVsds8H.js"></script>
-    <link rel="modulepreload" crossorigin href="/BalanceIQ/assets/vendor-Bhr9VUnr.js">
-    <link rel="modulepreload" crossorigin href="/BalanceIQ/assets/charts-C5cPOXX6.js">
-    <link rel="modulepreload" crossorigin href="/BalanceIQ/assets/ui-CWWqsw43.js">
-    <link rel="stylesheet" crossorigin href="/BalanceIQ/assets/index-CQgf4APS.css">
+    <script>
+      // Handle redirect from 404.html for SPA routing
+      const redirect = sessionStorage.redirect;
+      delete sessionStorage.redirect;
+      if (redirect && redirect !== window.location.pathname) {
+        window.history.replaceState(null, null, redirect);
+      }
+    </script>
+    <script type="module" crossorigin src="/assets/index-RgVsds8H.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-Bhr9VUnr.js">
+    <link rel="modulepreload" crossorigin href="/assets/charts-C5cPOXX6.js">
+    <link rel="modulepreload" crossorigin href="/assets/ui-CWWqsw43.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-CQgf4APS.css">
   </head>
   <body>
     <div id="root"></div>
