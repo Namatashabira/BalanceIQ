@@ -8,8 +8,14 @@ const BASE = self.registration.scope;
 // Only precache the SW's own scope root — avoids 404s on missing files
 const PRECACHE_URLS = [BASE, `${BASE}index.html`].filter(Boolean);
 
-// API origin to cache GET responses from
-const API_ORIGIN = 'https://web-production-36021.up.railway.app';
+// API origins to cache GET responses from
+const API_ORIGINS = [
+  'https://web-production-36021.up.railway.app',
+  'http://127.0.0.1:8000',
+  'http://localhost:8000',
+];
+const isApiRequest = (url) =>
+  API_ORIGINS.some((o) => url.origin === o) || url.pathname.startsWith('/api/');
 
 // ── Install ───────────────────────────────────────────────────────────────────
 self.addEventListener('install', (event) => {
@@ -39,10 +45,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
 
   // ── Offline mutation queuing (POST / PATCH / PUT / DELETE to API) ──────────
-  if (
-    request.method !== 'GET' &&
-    (url.origin === API_ORIGIN || url.pathname.startsWith('/api/'))
-  ) {
+  if (request.method !== 'GET' && isApiRequest(url)) {
     event.respondWith(
       fetch(request.clone()).catch(async () => {
         // Store the failed mutation in IndexedDB queue via the page
@@ -64,7 +67,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // ── API GET — network first, cache fallback ────────────────────────────────
-  if (url.origin === API_ORIGIN || url.pathname.startsWith('/api/')) {
+  if (isApiRequest(url)) {
     event.respondWith(
       fetch(request)
         .then((res) => {

@@ -2,7 +2,7 @@
 import { fetchWithAuth } from '../api';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Edit, Trash2, Upload, Save, X, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, Save, X } from 'lucide-react';
 import { CloudCheck } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import {
@@ -12,7 +12,6 @@ import {
   updateProduct,
   updateProductStatus,
 } from '../services/productAPI';
-import { ProductImageDisplay } from '../components/ImageDisplayStyles';
 import Spinner from '../components/Spinner';
 // Search input and dropdown styles
 import '../styles/ProductSearch.css';
@@ -191,8 +190,6 @@ export default function Products() {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [previewMobileIndex, setPreviewMobileIndex] = useState(0);
-  const [previewDesktopIndex, setPreviewDesktopIndex] = useState(0);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -202,12 +199,13 @@ export default function Products() {
     retailPrice: '',
     wholesalePrice: '',
     category: '',
-    images: [],      // array of preview URLs
-    imageFiles: [],  // actual files to send
+    images: [],      // existing server image URLs
+    imageFiles: [],  // new files to upload
     stock: '',
     status: 'active',
     expiryDate: '',
     manufactureDate: '',
+    dateStocked: '',
     batchNumber: '',
     supplier: '',
     benefitsText: '',
@@ -219,7 +217,6 @@ export default function Products() {
   });
   const [saving, setSaving] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
   const { pricingSettings } = useConfig();
   const fmt = useCallback((value) => formatCurrency(value, pricingSettings), [pricingSettings]);
   const currencyCode = getCurrencyCode(pricingSettings);
@@ -318,6 +315,7 @@ export default function Products() {
       status: 'active',
       expiryDate: '',
       manufactureDate: '',
+      dateStocked: '',
       batchNumber: '',
       supplier: '',
       benefitsText: '',
@@ -329,8 +327,6 @@ export default function Products() {
     });
     setEditingProduct(null);
     setShowForm(false);
-    setPreviewMobileIndex(0);
-    setPreviewDesktopIndex(0);
   };
 
   // Submit form with FormData
@@ -339,59 +335,24 @@ export default function Products() {
     setSaving(true);
     setShowSaved(false);
     try {
-      // Normalize list-like fields from textareas
-      const splitLines = (text) =>
-        text
-          .split('\n')
-          .map((line) => line.trim())
-          .filter(Boolean);
+      const existingImages = formData.images.slice(0, formData.images.length - formData.imageFiles.length);
+      const hasImages = formData.imageFiles.length > 0;
 
-      const benefits = splitLines(formData.benefitsText);
-      const growingRequirements = splitLines(formData.growingRequirementsText);
-      const ingredients = splitLines(formData.ingredientsText);
-      const directions = splitLines(formData.directionsText).map((line) => {
-        const parts = line.split(/[:-]/);
-        if (parts.length >= 2) {
-          return {
-            method: parts.shift().trim(),
-            instructions: parts.join(':').trim(),
-          };
-        }
-        return { method: 'Use', instructions: line };
-      });
+      if (hasImages) {
+        // --- FormData path (multipart) for image uploads ---
+        const payload = new FormData();
+        payload.append('name', formData.name);
+        payload.append('full_description', formData.fullDescription);
+        payload.append('retail_price', formData.retailPrice || '0');
+        payload.append('wholesale_price', formData.wholesalePrice || '0');
+        payload.append('category', formData.category);
+        payload.append('stock', formData.stock);
+        payload.append('status', formData.status);
+        if (formData.manufactureDate) payload.append('manufacture_date', formData.manufactureDate);
+        if (formData.dateStocked) payload.append('date_stocked', formData.dateStocked);
+        if (formData.expiryDate) payload.append('expiry_date', formData.expiryDate);
+        payload.append('existing_images', JSON.stringify(existingImages));
 
-      const payload = new FormData();
-      payload.append('name', formData.name);
-      payload.append('description', formData.description || formData.shortDescription);
-      payload.append('short_description', formData.shortDescription);
-      payload.append('full_description', formData.fullDescription);
-      payload.append('price', formData.price || formData.retailPrice || '0');
-      payload.append('retail_price', formData.retailPrice || formData.price || '0');
-      payload.append('wholesale_price', formData.wholesalePrice || '0');
-      payload.append('category', formData.category);
-      payload.append('stock', formData.stock);
-      payload.append('status', formData.status);
-      
-      // Inventory fields
-      if (formData.expiryDate) payload.append('expiry_date', formData.expiryDate);
-      if (formData.manufactureDate) payload.append('manufacture_date', formData.manufactureDate);
-      if (formData.batchNumber) payload.append('batch_number', formData.batchNumber);
-      if (formData.supplier) payload.append('supplier', formData.supplier);
-      
-      payload.append('benefits', JSON.stringify(benefits));
-      payload.append('growing_requirements', JSON.stringify(growingRequirements));
-      payload.append('ingredients', JSON.stringify(ingredients));
-      payload.append('directions', JSON.stringify(directions));
-      payload.append('display_settings', JSON.stringify(formData.displaySettings || {}));
-      const customFieldsObj = (formData.customFields || []).reduce((acc, cf) => {
-        if (cf.key && cf.key.trim()) acc[cf.key.trim()] = cf.value || '';
-        return acc;
-      }, {});
-      payload.append('custom_fields', JSON.stringify(customFieldsObj));
-      
-      // Handle multiple images - send with indexed field names: images[0], images[1], etc.
-      // Do NOT duplicate the first image as 'image' to keep payload small and avoid hitting upload limits.
-      if (formData.imageFiles && formData.imageFiles.length > 0) {
         for (let index = 0; index < formData.imageFiles.length; index++) {
           const file = formData.imageFiles[index];
           if (!file) continue;
@@ -399,7 +360,6 @@ export default function Products() {
             throw new Error(`Image ${file.name} is too large (${(file.size / 1024 / 1024).toFixed(2)} MB). Please upload images under 5MB.`);
           }
           let fileToSend = file;
-          // Compress if above target to avoid hitting backend limits
           if (file.size > TARGET_COMPRESS_BYTES) {
             fileToSend = await compressImage(file, TARGET_COMPRESS_BYTES, 1400);
             if (fileToSend.size > MAX_IMAGE_BYTES) {
@@ -408,12 +368,33 @@ export default function Products() {
           }
           payload.append(`images[${index}]`, fileToSend);
         }
-      }
 
-      if (editingProduct) {
-        await updateProduct(editingProduct.id, payload);
+        if (editingProduct) {
+          await updateProduct(editingProduct.id, payload);
+        } else {
+          await createProduct(payload);
+        }
       } else {
-        await createProduct(payload);
+        // --- JSON path (no new images) ---
+        const payload = {
+          name: formData.name,
+          full_description: formData.fullDescription,
+          retail_price: formData.retailPrice || '0',
+          wholesale_price: formData.wholesalePrice || '0',
+          category: formData.category,
+          stock: formData.stock,
+          status: formData.status,
+          ...(formData.manufactureDate && { manufacture_date: formData.manufactureDate }),
+          ...(formData.dateStocked && { date_stocked: formData.dateStocked }),
+          ...(formData.expiryDate && { expiry_date: formData.expiryDate }),
+          existing_images: existingImages,
+        };
+
+        if (editingProduct) {
+          await updateProduct(editingProduct.id, payload);
+        } else {
+          await createProduct(payload);
+        }
       }
       await new Promise((resolve) => setTimeout(resolve, 3000)); // Ensure spinner for 3s
       await loadProducts();
@@ -510,6 +491,7 @@ export default function Products() {
       imageFiles: [],
       expiryDate: product.expiry_date || product.expiryDate || '',
       manufactureDate: product.manufacture_date || product.manufactureDate || '',
+      dateStocked: product.date_stocked || product.dateStocked || '',
       batchNumber: product.batch_number || product.batchNumber || '',
       supplier: product.supplier || '',
       benefitsText: toText(product.benefits),
@@ -524,8 +506,6 @@ export default function Products() {
     });
     setEditingProduct(product);
     setShowForm(true);
-    setPreviewMobileIndex(0);
-    setPreviewDesktopIndex(0);
   };
 
   const updateDisplaySetting = (key, value) => {
@@ -566,39 +546,30 @@ export default function Products() {
   // Handle multiple image uploads
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files || []);
-    const newImages = [];
-    const newImageFiles = [];
-    
-    files.forEach((file) => {
-      newImages.push(URL.createObjectURL(file));
-      newImageFiles.push(file);
-    });
-
     setFormData((prev) => ({
       ...prev,
-      images: [...(prev.images || []), ...newImages],
-      imageFiles: [...(prev.imageFiles || []), ...newImageFiles],
+      images: [...prev.images, ...files.map(f => URL.createObjectURL(f))],
+      imageFiles: [...prev.imageFiles, ...files],
     }));
   };
 
   const removeImage = (index) => {
-    setFormData((prev) => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index),
-      imageFiles: prev.imageFiles.filter((_, i) => i !== index),
-    }));
-    if (previewMobileIndex >= formData.images.length - 1 && previewMobileIndex > 0) {
-      setPreviewMobileIndex(previewMobileIndex - 1);
-    }
-    if (previewDesktopIndex >= formData.images.length - 1 && previewDesktopIndex > 0) {
-      setPreviewDesktopIndex(previewDesktopIndex - 1);
-    }
+    setFormData((prev) => {
+      const isExisting = index < prev.images.length - prev.imageFiles.length;
+      if (isExisting) {
+        // Remove from existing server images
+        return { ...prev, images: prev.images.filter((_, i) => i !== index) };
+      } else {
+        // Remove from new files
+        const fileIndex = index - (prev.images.length - prev.imageFiles.length);
+        return {
+          ...prev,
+          images: prev.images.filter((_, i) => i !== index),
+          imageFiles: prev.imageFiles.filter((_, i) => i !== fileIndex),
+        };
+      }
+    });
   };
-
-  // Helpers used for preview rendering
-  // Removed unused previewSplitLines
-
-  // Removed unused previewDirections, formatCurrency, displaySettings
 
 
   if (saving || showSaved) {
@@ -806,16 +777,6 @@ export default function Products() {
 
                   {/* Descriptions */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Short Description</label>
-                    <textarea
-                      value={formData.shortDescription}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, shortDescription: e.target.value }))}
-                      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      rows="3"
-                    />
-                  </div>
-
-                  <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Description</label>
                     <textarea
                       value={formData.fullDescription}
@@ -862,49 +823,52 @@ export default function Products() {
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
                       <input
                         type="text"
+                        list="category-suggestions"
                         value={formData.category}
                         onChange={(e) => setFormData((prev) => ({ ...prev, category: e.target.value }))}
                         className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        placeholder="Type or select a category"
                       />
+                      <datalist id="category-suggestions">
+                        {[...new Set(products.map(p => p.category).filter(Boolean))].map(cat => (
+                          <option key={cat} value={cat} />
+                        ))}
+                      </datalist>
                     </div>
                   </div>
 
                   {/* Inventory Management Fields */}
                   <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                     <h3 className="text-md font-semibold text-blue-900 dark:text-blue-100 mb-3">Inventory Management</h3>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Batch Number</label>
-                        <input
-                          type="text"
-                          value={formData.batchNumber}
-                          onChange={(e) => setFormData((prev) => ({ ...prev, batchNumber: e.target.value }))}
-                          placeholder="e.g., BATCH-2024-001"
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Supplier</label>
-                        <input
-                          type="text"
-                          value={formData.supplier}
-                          onChange={(e) => setFormData((prev) => ({ ...prev, supplier: e.target.value }))}
-                          placeholder="Supplier name"
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Manufacture Date</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Date Manufactured <span className="text-gray-500 text-xs">(Optional)</span>
+                        </label>
                         <input
                           type="date"
                           value={formData.manufactureDate}
                           onChange={(e) => setFormData((prev) => ({ ...prev, manufactureDate: e.target.value }))}
+                          max={new Date().toISOString().split('T')[0]}
                           className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Expiry Date <span className="text-red-500">*</span>
+                          Date Stocked <span className="text-red-500 text-xs">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={formData.dateStocked}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, dateStocked: e.target.value }))}
+                          max={new Date().toISOString().split('T')[0]}
+                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Expiry Date <span className="text-gray-500 text-xs">(Optional)</span>
                         </label>
                         <input
                           type="date"
@@ -913,11 +877,11 @@ export default function Products() {
                           min={new Date().toISOString().split('T')[0]}
                           className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         />
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          Products auto-deactivate when expired or out of stock
-                        </p>
                       </div>
                     </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                      Products auto-deactivate when expired or out of stock
+                    </p>
                   </div>
 
                   {/* Multiple Images Upload */}
@@ -941,202 +905,38 @@ export default function Products() {
                     {/* Image Thumbnails */}
                     {formData.images && formData.images.length > 0 && (
                       <div className="mt-4">
-                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Uploaded Images ({formData.images.length})</p>
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Images ({formData.images.length})</p>
                         <div className="grid grid-cols-4 gap-2">
-                          {formData.images.map((img, idx) => (
-                            <div key={idx} className="relative">
-                              <img 
-                                src={img} 
-                                alt={`Preview ${idx}`} 
-                                className="w-full h-24 object-cover rounded" 
-                                onError={(e) => {
-                                  console.error('Failed to load image:', img);
-                                  e.target.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23ddd%22 width=%22100%22 height=%22100%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2214%22 fill=%22%23999%22%3EImage Error%3C/text%3E%3C/svg%3E';
-                                }}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => removeImage(idx)}
-                                className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded hover:bg-red-700"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ))}
+                          {formData.images.map((img, idx) => {
+                            const existingCount = formData.images.length - formData.imageFiles.length;
+                            const isExisting = idx < existingCount;
+                            return (
+                              <div key={idx} className="relative">
+                                <img
+                                  src={img}
+                                  alt={`Image ${idx + 1}`}
+                                  className="w-full h-24 object-cover rounded"
+                                  onError={(e) => { e.target.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23ddd%22 width=%22100%22 height=%22100%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2214%22 fill=%22%23999%22%3ENo Image%3C/text%3E%3C/svg%3E'; }}
+                                />
+                                {isExisting && (
+                                  <span className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-1 rounded">saved</span>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => removeImage(idx)}
+                                  className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded hover:bg-red-700"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
                   </div>
 
-                  {/* Display Style */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Display Style on User Interface</label>
-                    <select
-                      value={formData.displaySettings?.display_style || 'carousel'}
-                      onChange={(e) => updateDisplaySetting('display_style', e.target.value)}
-                      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    >
-                      <option value="carousel">Carousel / Slider (Full-width auto-advancing)</option>
-                      <option value="grid">Thumbnail Grid (All images in grid)</option>
-                      <option value="card">Card-Based Layout (Stacked cards)</option>
-                      <option value="thumbnails">Image with Thumbnails (Main + preview)</option>
-                    </select>
-                  </div>
 
-                  {/* Customizable Labels Section */}
-                  <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700">
-                    <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4">Customize Display Labels</h3>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Short Description Label</label>
-                        <input
-                          type="text"
-                          value={formData.displaySettings?.label_short_description || ''}
-                          onChange={(e) => updateDisplaySetting('label_short_description', e.target.value)}
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-600 text-gray-900 dark:text-white text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Full Description Label</label>
-                        <input
-                          type="text"
-                          value={formData.displaySettings?.label_full_description || ''}
-                          onChange={(e) => updateDisplaySetting('label_full_description', e.target.value)}
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-600 text-gray-900 dark:text-white text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Retail Price Label</label>
-                        <input
-                          type="text"
-                          value={formData.displaySettings?.label_retail_price || ''}
-                          onChange={(e) => updateDisplaySetting('label_retail_price', e.target.value)}
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-600 text-gray-900 dark:text-white text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Wholesale Price Label</label>
-                        <input
-                          type="text"
-                          value={formData.displaySettings?.label_wholesale_price || ''}
-                          onChange={(e) => updateDisplaySetting('label_wholesale_price', e.target.value)}
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-600 text-gray-900 dark:text-white text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Benefits Label</label>
-                        <input
-                          type="text"
-                          value={formData.displaySettings?.label_benefits || ''}
-                          onChange={(e) => updateDisplaySetting('label_benefits', e.target.value)}
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-600 text-gray-900 dark:text-white text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Growing Requirements Label</label>
-                        <input
-                          type="text"
-                          value={formData.displaySettings?.label_growing_requirements || ''}
-                          onChange={(e) => updateDisplaySetting('label_growing_requirements', e.target.value)}
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-600 text-gray-900 dark:text-white text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Ingredients Label</label>
-                        <input
-                          type="text"
-                          value={formData.displaySettings?.label_ingredients || ''}
-                          onChange={(e) => updateDisplaySetting('label_ingredients', e.target.value)}
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-600 text-gray-900 dark:text-white text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Directions Label</label>
-                        <input
-                          type="text"
-                          value={formData.displaySettings?.label_directions || ''}
-                          onChange={(e) => updateDisplaySetting('label_directions', e.target.value)}
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-600 text-gray-900 dark:text-white text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Retail Button Label</label>
-                        <input
-                          type="text"
-                          value={formData.displaySettings?.label_retail_button || ''}
-                          onChange={(e) => updateDisplaySetting('label_retail_button', e.target.value)}
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-600 text-gray-900 dark:text-white text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Wholesale Button Label</label>
-                        <input
-                          type="text"
-                          value={formData.displaySettings?.label_wholesale_button || ''}
-                          onChange={(e) => updateDisplaySetting('label_wholesale_button', e.target.value)}
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-600 text-gray-900 dark:text-white text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Out of Stock Label</label>
-                        <input
-                          type="text"
-                          value={formData.displaySettings?.label_out_of_stock || ''}
-                          onChange={(e) => updateDisplaySetting('label_out_of_stock', e.target.value)}
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-600 text-gray-900 dark:text-white text-sm"
-                        />
-                      </div>
-                    </div>
-                    <div className="col-span-2 flex justify-end pt-2">
-                      <button
-                        type="button"
-                        onClick={() => document.getElementById('image-upload').click()}
-                        className="bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-blue-700 text-sm"
-                      >
-                        <Plus className="w-4 h-4" /> Add New Images
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Details Fields */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Benefits (one per line)</label>
-                      <textarea
-                        value={formData.benefitsText}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, benefitsText: e.target.value }))}
-                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        rows="3"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Growing Requirements (one per line)</label>
-                      <textarea
-                        value={formData.growingRequirementsText}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, growingRequirementsText: e.target.value }))}
-                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        rows="3"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ingredients (one per line)</label>
-                      <textarea
-                        value={formData.ingredientsText}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, ingredientsText: e.target.value }))}
-                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        rows="3"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Directions (Method: instruction per line)</label>
-                      <textarea
-                        value={formData.directionsText}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, directionsText: e.target.value }))}
-                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        rows="3"
-                      />
-                    </div>
-                  </div>
 
                   {/* Status */}
                   <div>
@@ -1159,67 +959,11 @@ export default function Products() {
                     >
                       <Save className="w-4 h-4" /> {editingProduct ? 'Update' : 'Save'} Product
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowPreview(true)}
-                      className="bg-purple-600 text-white px-6 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700"
-                    >
-                      <Eye className="w-4 h-4" /> Preview
-                    </button>
                     <button type="button" onClick={handleCancel} className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400">
                       Cancel
                     </button>
                   </div>
                 </form>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-
-      {/* Preview Modal */}
-      {showPreview && (
-        <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-2 sm:p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-6xl flex flex-col shadow-2xl" style={{maxHeight: '95vh'}}>
-            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <h3 className="text-base font-bold text-gray-900 dark:text-white">Product Preview</h3>
-              <button onClick={() => setShowPreview(false)} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
-              <div className="flex flex-col items-center justify-start bg-gray-100 dark:bg-gray-800 px-6 py-6 lg:w-80 flex-shrink-0 border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-gray-700">
-                <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-4">Mobile Preview</span>
-                <div className="relative bg-gray-900 rounded-[2.5rem] border-[6px] border-gray-800 shadow-2xl w-64 flex-shrink-0" style={{height: '520px'}}>
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-5 bg-gray-900 rounded-b-xl z-10" />
-                  <div className="absolute inset-0 rounded-[2rem] overflow-hidden bg-white dark:bg-gray-900">
-                    <div className="h-full overflow-y-auto">
-                      <PreviewContent formData={formData} displaySettings={formData.displaySettings || defaultDisplaySettings()} isMobile fmt={fmt} />
-                    </div>
-                  </div>
-                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-16 h-1 bg-gray-600 rounded-full z-10" />
-                </div>
-              </div>
-              <div className="flex flex-col flex-1 bg-gray-50 dark:bg-gray-800 overflow-hidden min-h-0">
-                <div className="flex-shrink-0 px-4 pt-4 pb-2">
-                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Desktop Preview</span>
-                </div>
-                <div className="mx-4 mb-4 flex-1 flex flex-col rounded-xl overflow-hidden border border-gray-300 dark:border-gray-600 shadow-lg min-h-0">
-                  <div className="flex items-center gap-2 px-3 py-2 bg-gray-200 dark:bg-gray-700 flex-shrink-0">
-                    <div className="flex gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-red-400" />
-                      <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                      <div className="w-3 h-3 rounded-full bg-green-400" />
-                    </div>
-                    <div className="flex-1 bg-white dark:bg-gray-600 rounded px-3 py-0.5 text-xs text-gray-400 truncate">
-                      store.com/products/{formData.name ? formData.name.toLowerCase().replace(/\s+/g, '-') : 'product'}
-                    </div>
-                  </div>
-                  <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-900">
-                    <PreviewContent formData={formData} displaySettings={formData.displaySettings || defaultDisplaySettings()} isMobile={false} fmt={fmt} />
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -1391,126 +1135,6 @@ function ProductReviews({ productId }) {
           <div className="mt-1">{r.feedback}</div>
         </div>
       ))}
-    </div>
-  );
-}
-
-// Preview Component - Shows how the product will look to users
-function PreviewContent({ formData, displaySettings, isMobile, fmt }) {
-  const displayStyle = displaySettings.display_style || 'carousel';
-  const previewImages = formData.images && formData.images.length > 0 ? formData.images : [];
-
-  return (
-    <div className={`${isMobile ? 'p-4' : 'p-6'} space-y-4 text-gray-900 dark:text-gray-100 overflow-y-auto`}>
-      {/* Image Display Styles */}
-      {previewImages.length > 0 ? (
-        <ProductImageDisplay
-          images={previewImages}
-          displayStyle={displayStyle}
-          isMobile={isMobile}
-        />
-      ) : (
-        <div className="w-full h-64 md:h-96 bg-gray-200 dark:bg-gray-600 rounded-lg flex items-center justify-center">
-          <span className="text-gray-400">Upload images to see preview</span>
-        </div>
-      )}
-
-      {/* Product Info */}
-      {displayStyle !== 'list' && (
-        <div>
-          <h2 className="text-xl font-bold">{formData.name || 'Product Name'}</h2>
-          {!displaySettings.hide_short_description && formData.shortDescription && (
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{formData.shortDescription}</p>
-          )}
-        </div>
-      )}
-
-      {/* Pricing */}
-      <div className="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-4">
-        {!displaySettings.hide_retail_button && (
-          <div>
-            <span className="font-semibold text-sm">{displaySettings.label_retail_price || 'Retail Price'}:</span>
-            <span className="ml-2 text-sm">{fmt ? fmt(parseFloat(formData.retailPrice || formData.price || 0)) : parseFloat(formData.retailPrice || formData.price || 0)}</span>
-          </div>
-        )}
-        {!displaySettings.hide_wholesale_button && (
-          <div>
-            <span className="font-semibold text-sm">{displaySettings.label_wholesale_price || 'Wholesale Price'}:</span>
-            <span className="ml-2 text-sm">{fmt ? fmt(parseFloat(formData.wholesalePrice || formData.price || 0)) : parseFloat(formData.wholesalePrice || formData.price || 0)}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Benefits */}
-      {!displaySettings.hide_benefits && formData.benefitsText && (
-        <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-          <h3 className="font-semibold text-sm mb-2">{displaySettings.label_benefits || 'Benefits'}</h3>
-          <ul className="text-xs space-y-1 list-disc pl-5">
-            {formData.benefitsText.split('\n').map((benefit, idx) => (
-              benefit.trim() && <li key={idx}>{benefit.trim()}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Growing Requirements */}
-      {!displaySettings.hide_growing_requirements && formData.growingRequirementsText && (
-        <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-          <h3 className="font-semibold text-sm mb-2">{displaySettings.label_growing_requirements || 'Growing Requirements'}</h3>
-          <ul className="text-xs space-y-1 list-disc pl-5">
-            {formData.growingRequirementsText.split('\n').map((req, idx) => (
-              req.trim() && <li key={idx}>{req.trim()}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Ingredients */}
-      {!displaySettings.hide_ingredients && formData.ingredientsText && (
-        <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-          <h3 className="font-semibold text-sm mb-2">{displaySettings.label_ingredients || 'Ingredients'}</h3>
-          <ul className="text-xs space-y-1 list-disc pl-5">
-            {formData.ingredientsText.split('\n').map((ingredient, idx) => (
-              ingredient.trim() && <li key={idx}>{ingredient.trim()}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Directions */}
-      {!displaySettings.hide_directions && formData.directionsText && (
-        <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-          <h3 className="font-semibold text-sm mb-2">{displaySettings.label_directions || 'Directions'}</h3>
-          <ol className="text-xs space-y-1 list-decimal pl-5">
-            {formData.directionsText.split('\n').map((direction, idx) => (
-              direction.trim() && <li key={idx}>{direction.trim()}</li>
-            ))}
-          </ol>
-        </div>
-      )}
-
-      {/* Stock Status */}
-      <div className={`${isMobile ? 'py-2' : 'py-3'} px-3 rounded text-center font-semibold text-sm ${
-        formData.stock > 0 
-          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-          : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
-      }`}>
-        {formData.stock > 0 ? `${formData.stock} in stock` : displaySettings.label_out_of_stock || 'Out of stock'}
-      </div>
-
-      {/* Buy Buttons */}
-      <div className={`flex gap-2 pt-2 ${isMobile ? 'flex-col' : ''}`}>
-        {!displaySettings.hide_retail_button && (
-          <button className={`${isMobile ? 'w-full' : 'flex-1'} bg-blue-600 text-white py-2 rounded font-semibold text-xs hover:bg-blue-700`}>
-            {displaySettings.label_retail_button || 'Buy Retail'}
-          </button>
-        )}
-        {!displaySettings.hide_wholesale_button && (
-          <button className={`${isMobile ? 'w-full' : 'flex-1'} bg-green-600 text-white py-2 rounded font-semibold text-xs hover:bg-green-700`}>
-            {displaySettings.label_wholesale_button || 'Buy Wholesale'}
-          </button>
-        )}
-      </div>
     </div>
   );
 }

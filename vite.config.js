@@ -10,10 +10,22 @@ const isElectron = process.env.VITE_ELECTRON === 'true';
 
 export default defineConfig({
   base: isElectron ? './' : '/BalanceIQ/',
-  plugins: [react()],
+  plugins: [
+    react({
+      // Disable FastRefresh for now to avoid RefreshRuntime errors
+      fastRefresh: false
+    })
+  ],
   server: {
     host: '127.0.0.1',
     port: 5173,
+    hmr: {
+      host: '127.0.0.1',
+      port: 5173,
+      protocol: 'ws',
+      // For dev server behind a proxy or with a base path, don't include the path in HMR
+      path: '/hmr'
+    }
   },
   build: {
     outDir: 'dist',

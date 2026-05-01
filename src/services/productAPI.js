@@ -35,56 +35,40 @@ export const fetchProducts = async (options = {}) => {
   }
 };
 
-// Create new product (multipart, supports image upload)
-export const createProduct = async (formData) => {
+// Create new product — JSON if no images, multipart if images present
+export const createProduct = async (payload) => {
   try {
-    console.log('[productAPI.createProduct] Sending FormData with fields:', Array.from(formData.keys()));
+    const isFormData = payload instanceof FormData;
     const response = await fetchWithAuth(`${API_BASE_URL}/products/`, {
       method: 'POST',
-      body: formData,
+      headers: isFormData ? undefined : { 'Content-Type': 'application/json' },
+      body: isFormData ? payload : JSON.stringify(payload),
     });
     if (!response || !response.ok) {
-      const status = response?.status ?? 'unknown';
       const text = response ? await response.text() : 'no response';
-      throw new Error(`Create failed ${status}: ${text}`);
+      throw new Error(`Create failed ${response?.status}: ${text}`);
     }
-    const data = await response.json();
-    console.log('[productAPI.createProduct] Response data:', {
-      id: data.id,
-      name: data.name,
-      hasImages: !!data.images,
-      imagesCount: data.images?.length || 0,
-      images: data.images
-    });
-    return data;
+    return await response.json();
   } catch (error) {
     console.error('Error creating product:', error);
     throw error;
   }
 };
 
-// Update product (multipart, supports image upload)
-export const updateProduct = async (productId, formData) => {
+// Update product — JSON if no images, multipart if images present
+export const updateProduct = async (productId, payload) => {
   try {
-    console.log('[productAPI.updateProduct] Sending FormData for product', productId, 'with fields:', Array.from(formData.keys()));
+    const isFormData = payload instanceof FormData;
     const response = await fetchWithAuth(`${API_BASE_URL}/products/${productId}/`, {
       method: 'PATCH',
-      body: formData,
+      headers: isFormData ? undefined : { 'Content-Type': 'application/json' },
+      body: isFormData ? payload : JSON.stringify(payload),
     });
     if (!response || !response.ok) {
-      const status = response?.status ?? 'unknown';
       const text = response ? await response.text() : 'no response';
-      throw new Error(`Update failed ${status}: ${text}`);
+      throw new Error(`Update failed ${response?.status}: ${text}`);
     }
-    const data = await response.json();
-    console.log('[productAPI.updateProduct] Response data:', {
-      id: data.id,
-      name: data.name,
-      hasImages: !!data.images,
-      imagesCount: data.images?.length || 0,
-      images: data.images
-    });
-    return data;
+    return await response.json();
   } catch (error) {
     console.error('Error updating product:', error);
     throw error;
