@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 import { FaUserCircle } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
 import { useConfig, useLabels, useFeatures, useAllowedPages } from "../context/ConfigContext";
+import { usePlan } from "../context/PlanContext";
 import AccountPopup from "./AccountPopup";
 import axios from "axios";
 import { getNavigationItems } from '../config/navigationConfig';
@@ -129,6 +130,7 @@ export default function Sidebar({ isOpen, onToggle, sidebarWidth = 256 }) {
 
   // Use shared navigation config
   const navigationItems = getNavigationItems(labels, features, allowedPages, businessType, isAdmin);
+  const { isPageAllowed, trialExpired } = usePlan();
   const visibleItems = navigationItems.filter(item => item.enabled);
 
   return (
@@ -170,6 +172,7 @@ export default function Sidebar({ isOpen, onToggle, sidebarWidth = 256 }) {
               <>
                 {visibleItems.map((item) => {
                   const Icon = item.icon;
+                  const locked = trialExpired || !isPageAllowed(item.path.replace('/', '') + '_enabled') && !isPageAllowed(item.path.replace('/', ''));
                   return (
                     <NavLink
                       key={item.path}
@@ -183,7 +186,8 @@ export default function Sidebar({ isOpen, onToggle, sidebarWidth = 256 }) {
                       }
                     >
                       <Icon size={18} className="flex-shrink-0" />
-                      <span>{item.label}</span>
+                      <span className="flex-1">{item.label}</span>
+                      {locked && <span className="text-[10px] bg-purple-500/30 text-purple-300 px-1.5 py-0.5 rounded-full">Pro</span>}
                     </NavLink>
                   );
                 })}

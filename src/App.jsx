@@ -4,9 +4,12 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ConfigProvider, useAllowedPages, useFeatures, useConfig } from "./context/ConfigContext";
 import { AccountingProvider } from "./context/AccountingContext";
 import { ToastProvider, useToast } from "./context/ToastContext";
+import { PlanProvider, usePlan } from "./context/PlanContext";
+import UpgradeWall from "./components/UpgradeWall";
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
 import OfflineBanner from "./components/OfflineBanner";
+import TrialBanner from "./components/TrialBanner";
 import useSync from "./hooks/useSync";
 import HomePage from "./pages/HomePage";
 import Login from "./pages/Login";
@@ -16,6 +19,8 @@ import ResetPassword from "./pages/ResetPassword";
 import Pricing from "./pages/Pricing";
 import About from "./pages/About";
 import DownloadPage from "./pages/DownloadPage";
+import UpgradePage from "./pages/UpgradePage";
+import PaymentPage from "./pages/PaymentPage";
 import MyOrganizations from "./pages/MyOrganizations";
 import CreateOrganization from "./pages/CreateOrganization";
 
@@ -52,6 +57,21 @@ import PaymentsPage from "./pages/enrollment/Payments";
 import Reports from "./pages/enrollment/Reports";
 import BusinessReport from "./pages/Reports/BusinessReport";
 import WebsiteBuilder from "./pages/WebsiteBuilder/WebsiteBuilder";
+
+// Plan-based page guard
+function PlanGuard({ pageKey, children }) {
+  const { isPageAllowed, trialExpired, planReady } = usePlan();
+  if (!planReady) {
+    return (
+      <div className="flex items-center justify-center h-full py-20">
+        <div className="w-6 h-6 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+  if (trialExpired) return <UpgradeWall reason="trial" />;
+  if (pageKey && !isPageAllowed(pageKey)) return <UpgradeWall reason="page" />;
+  return children;
+}
 
 // Simple access guard that defers to allowedPages. If allowedPages is null/undefined,
 // we assume no page-level restrictions.
@@ -247,35 +267,35 @@ function AppContent() {
             style={{ flex: 1, minWidth: 0 }}
           >
             <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} sidebarOpen={sidebarOpen} />
+            <TrialBanner />
             <main className="flex-1 p-4 sm:p-6 overflow-auto">
               <Routes>
                 <Route path="/" element={<DefaultRoute />} />
-                <Route path="/dashboard" element={<AccessGuard pageKey="dashboard_enabled"><Dashboard /></AccessGuard>} />
+                <Route path="/dashboard" element={<PlanGuard pageKey="dashboard_enabled"><AccessGuard pageKey="dashboard_enabled"><Dashboard /></AccessGuard></PlanGuard>} />
                 <Route path="/my-organizations" element={<AccessGuard pageKey="organizations_enabled"><MyOrganizations /></AccessGuard>} />
                 <Route path="/create-organization" element={<AccessGuard pageKey="organizations_enabled"><CreateOrganization /></AccessGuard>} />
-                <Route path="/product" element={<AccessGuard pageKey="product_enabled"><Product /></AccessGuard>} />
-                <Route path="/inventory" element={<AccessGuard pageKey="inventory_enabled"><Inventory /></AccessGuard>} />
-                <Route path="/analytics" element={<AccessGuard pageKey="analytics_enabled"><Analytics /></AccessGuard>} />
-                <Route path="/ai-insights" element={<AccessGuard pageKey="analytics_enabled"><AIInsights /></AccessGuard>} />
-                <Route path="/forecast" element={<AccessGuard pageKey="analytics_enabled"><Forecast /></AccessGuard>} />
-                <Route path="/manual-entry" element={<AccessGuard pageKey="manual_entry_enabled"><ManualOrderEntry /></AccessGuard>} />
-                <Route path="/appointments" element={<AccessGuard pageKey="scheduling_enabled"><Appointments /></AccessGuard>} />
-                {/* ManualEntry page removed from protected routes */}
-                <Route path="/receipt-lookup" element={<AccessGuard pageKey="payments_enabled"><ReceiptLookup /></AccessGuard>} />
-                <Route path="/abandoned-carts" element={<AccessGuard pageKey="orders_enabled"><AbandonedCarts /></AccessGuard>} />
+                <Route path="/product" element={<PlanGuard pageKey="product_enabled"><AccessGuard pageKey="product_enabled"><Product /></AccessGuard></PlanGuard>} />
+                <Route path="/inventory" element={<PlanGuard pageKey="inventory_enabled"><AccessGuard pageKey="inventory_enabled"><Inventory /></AccessGuard></PlanGuard>} />
+                <Route path="/analytics" element={<PlanGuard pageKey="analytics_enabled"><AccessGuard pageKey="analytics_enabled"><Analytics /></AccessGuard></PlanGuard>} />
+                <Route path="/ai-insights" element={<PlanGuard pageKey="ai_insights_enabled"><AccessGuard pageKey="analytics_enabled"><AIInsights /></AccessGuard></PlanGuard>} />
+                <Route path="/forecast" element={<PlanGuard pageKey="analytics_enabled"><AccessGuard pageKey="analytics_enabled"><Forecast /></AccessGuard></PlanGuard>} />
+                <Route path="/manual-entry" element={<PlanGuard pageKey="manual_entry_enabled"><AccessGuard pageKey="manual_entry_enabled"><ManualOrderEntry /></AccessGuard></PlanGuard>} />
+                <Route path="/appointments" element={<PlanGuard pageKey="scheduling_enabled"><AccessGuard pageKey="scheduling_enabled"><Appointments /></AccessGuard></PlanGuard>} />
+                <Route path="/receipt-lookup" element={<PlanGuard pageKey="payments_enabled"><AccessGuard pageKey="payments_enabled"><ReceiptLookup /></AccessGuard></PlanGuard>} />
+                <Route path="/abandoned-carts" element={<PlanGuard pageKey="orders_enabled"><AccessGuard pageKey="orders_enabled"><AbandonedCarts /></AccessGuard></PlanGuard>} />
                 <Route path="/settings" element={<Settings />} />
-                <Route path="/orders" element={<AccessGuard pageKey="orders_enabled"><Orders /></AccessGuard>} />
-                <Route path="/sales" element={<AccessGuard pageKey="sales_enabled"><Sales /></AccessGuard>} />
-                <Route path="/customers" element={<AccessGuard pageKey="customers_enabled"><Customers /></AccessGuard>} />
-                <Route path="/accounting" element={<AccountingDashboard />} />
-                <Route path="/accounting/expenses" element={<Expenses />} />
-                <Route path="/accounting/payments" element={<Payments />} />
-                <Route path="/accounting/taxes" element={<TaxesEnhanced />} />
-                <Route path="/accounting/profit-loss" element={<ProfitAndLoss />} />
-                <Route path="/accounting/balance-sheet" element={<BalanceSheet />} />
-                <Route path="/accounting/assets" element={<AccessGuard pageKey="accounting_enabled"><Assets /></AccessGuard>} />
-                <Route path="/reports/business" element={<BusinessReport />} />
-                <Route path="/website-builder" element={<AccessGuard pageKey="website_builder_enabled"><WebsiteBuilder /></AccessGuard>} />
+                <Route path="/orders" element={<PlanGuard pageKey="orders_enabled"><AccessGuard pageKey="orders_enabled"><Orders /></AccessGuard></PlanGuard>} />
+                <Route path="/sales" element={<PlanGuard pageKey="sales_enabled"><AccessGuard pageKey="sales_enabled"><Sales /></AccessGuard></PlanGuard>} />
+                <Route path="/customers" element={<PlanGuard pageKey="customers_enabled"><AccessGuard pageKey="customers_enabled"><Customers /></AccessGuard></PlanGuard>} />
+                <Route path="/accounting" element={<PlanGuard pageKey="accounting_enabled"><AccountingDashboard /></PlanGuard>} />
+                <Route path="/accounting/expenses" element={<PlanGuard pageKey="accounting_enabled"><Expenses /></PlanGuard>} />
+                <Route path="/accounting/payments" element={<PlanGuard pageKey="accounting_enabled"><Payments /></PlanGuard>} />
+                <Route path="/accounting/taxes" element={<PlanGuard pageKey="accounting_enabled"><TaxesEnhanced /></PlanGuard>} />
+                <Route path="/accounting/profit-loss" element={<PlanGuard pageKey="accounting_enabled"><ProfitAndLoss /></PlanGuard>} />
+                <Route path="/accounting/balance-sheet" element={<PlanGuard pageKey="accounting_enabled"><BalanceSheet /></PlanGuard>} />
+                <Route path="/accounting/assets" element={<PlanGuard pageKey="accounting_enabled"><AccessGuard pageKey="accounting_enabled"><Assets /></AccessGuard></PlanGuard>} />
+                <Route path="/reports/business" element={<PlanGuard pageKey="analytics_enabled"><BusinessReport /></PlanGuard>} />
+                <Route path="/website-builder" element={<PlanGuard pageKey="website_builder_enabled"><AccessGuard pageKey="website_builder_enabled"><WebsiteBuilder /></AccessGuard></PlanGuard>} />
                 <Route path="/enrollment" element={<EnrollmentIndex />}> 
                   <Route path="overview" element={<Overview />} />
                   <Route path="new" element={<NewEnrollment />} />
@@ -287,6 +307,9 @@ function AppContent() {
                   <Route index element={<Overview />} />
                 </Route>
                 <Route path="/login" element={<Navigate to="/" replace />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/upgrade" element={<UpgradePage />} />
+                <Route path="/payment/:planKey" element={<PaymentPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </main>
@@ -319,7 +342,9 @@ export default function App() {
       <ConfigProvider>
         <AccountingProvider>
           <ToastProvider>
-            <AppContent />
+            <PlanProvider>
+              <AppContent />
+            </PlanProvider>
           </ToastProvider>
         </AccountingProvider>
       </ConfigProvider>

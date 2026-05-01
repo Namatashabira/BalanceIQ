@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '../context/ToastContext';
-import { Plus, Edit, Trash2, Save, X, Eye, Monitor, Smartphone } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Eye, Monitor, Smartphone, Lock } from 'lucide-react';
 import { fetchProducts, createProduct, updateProduct, deleteProduct } from '../services/productAPI';
 import { useConfig } from '../context/ConfigContext';
+import { usePlan } from '../context/PlanContext';
 import { formatCurrency, getCurrencyCode } from '../utils/pricingHelpers';
+import { Link } from 'react-router-dom';
 
 export default function Products() {
   const toast = useToast();
@@ -25,8 +27,11 @@ export default function Products() {
   const [showPreview, setShowPreview] = useState(false);
   const [previewMode, setPreviewMode] = useState('desktop');
   const { pricingSettings } = useConfig();
+  const { canAddProduct, planDef, trialExpired } = usePlan();
   const fmt = useCallback((value) => formatCurrency(value, pricingSettings), [pricingSettings]);
   const currencyCode = getCurrencyCode(pricingSettings);
+  const productLimit = planDef?.product_limit ?? 7;
+  const atLimit = !canAddProduct(products.length);
 
   // Load products from backend
   const loadProducts = async () => {
@@ -68,6 +73,7 @@ export default function Products() {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!editingProduct && atLimit) return;
     try {
       const payload = {
         name: formData.name,
@@ -130,14 +136,51 @@ export default function Products() {
       <div className="flex flex-col gap-4 mb-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Products Management</h1>
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="bg-primary text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:brightness-90 transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            Add Product
-          </button>
+          <div className="flex items-center gap-3">
+            {productLimit !== -1 && (
+              <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
+                atLimit ? 'bg-red-100 text-red-700' : 'bg-purple-100 text-purple-700'
+              }`}>
+                {products.length} / {productLimit} products
+              </span>
+            )}
+            <button
+              onClick={() => {
+                if (atLimit) return;
+                setShowAddForm(true);
+              }}
+              disabled={atLimit}
+              className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm font-semibold ${
+                atLimit
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-primary text-white hover:brightness-90'
+              }`}
+            >
+              {atLimit ? <Lock className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              {atLimit ? 'Limit Reached' : 'Add Product'}
+            </button>
+          </div>
         </div>
+
+        {/* Plan limit banner */}
+        {atLimit && (
+          <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+            <div className="flex items-center gap-2">
+              <Lock className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <p className="text-sm text-amber-800 font-medium">
+                {trialExpired
+                  ? 'Your free trial has ended. Upgrade to add more products.'
+                  : `You've reached the ${productLimit}-product limit on the ${planDef?.name} plan.`}
+              </p>
+            </div>
+            <Link
+              to="/upgrade"
+              className="ml-4 flex-shrink-0 text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 px-3 py-1.5 rounded-lg transition"
+            >
+              Upgrade
+            </Link>
+          </div>
+        )}
         {/* Search Input */}
         <div className="relative w-full max-w-lg">
           <input

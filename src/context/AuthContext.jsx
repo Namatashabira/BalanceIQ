@@ -28,12 +28,17 @@ export function AuthProvider({ children }) {
 
   const login = (userData) => {
     setUser(userData);
+    // Seed trial start if not already set (used by plan enforcement offline)
+    if (!localStorage.getItem('trialStart')) {
+      localStorage.setItem('trialStart', String(Date.now()));
+    }
     window.dispatchEvent(new Event('auth-changed'));
   };
 
   const logout = async () => {
     await logoutUser();
     setUser(null);
+    ['cachedSubscription','selectedPlan','trialStart'].forEach(k => localStorage.removeItem(k));
     window.dispatchEvent(new Event('auth-changed'));
   };
 

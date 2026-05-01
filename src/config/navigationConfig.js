@@ -20,7 +20,7 @@ export const getNavigationItems = (labels, features, allowedPages, businessType,
   };
   return [
     { path: "/", label: "Dashboard", icon: LayoutDashboard, enabled: isEnabled('dashboard_enabled') && hasAccess('dashboard_enabled') },
-    { path: "/my-organizations", label: "My Organizations", icon: Building2, enabled: isEnabled('organizations_enabled') && hasAccess('organizations_enabled') },
+    { path: "/my-organizations", label: "My Organizations", icon: Building2, enabled: false },
     { path: "/product", label: labels.resources, icon: Package, enabled: isEnabled('product_enabled') && hasAccess('product_enabled') },
     { path: "/inventory", label: labels.inventory, icon: Warehouse, enabled: isEnabled('inventory_enabled') && hasAccess('inventory_enabled') },
     { path: "/orders", label: labels.transactions, icon: FileText, enabled: isEnabled('orders_enabled') && hasAccess('orders_enabled') },

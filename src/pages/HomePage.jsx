@@ -317,58 +317,41 @@ const features = [
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-950 text-gray-400 py-16">
+      <footer className="bg-gray-950 text-gray-400 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 mb-12">
-            <div className="lg:col-span-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
+            {/* Brand */}
+            <div className="col-span-2 md:col-span-2">
               <div className="flex items-center space-x-2 mb-4">
                 <BIQLogo size={32} />
                 <span className="text-xl font-bold text-white">BusinessIQ</span>
               </div>
-              <p className="text-sm leading-relaxed mb-6">
-                All-in-one business management platform for retail, restaurants, healthcare, education, and growing businesses worldwide.
+              <p className="text-sm leading-relaxed">
+                All-in-one business management platform built in Fort Portal, Uganda — for every business, no exclusions.
               </p>
-              <div className="text-xs text-gray-500">
-                © 2026 BusinessIQ. All rights reserved.
-              </div>
             </div>
+            {/* Product */}
             <div>
-              <h3 className="text-white font-semibold mb-6 text-sm">Product</h3>
+              <h3 className="text-white font-semibold mb-4 text-sm">Product</h3>
               <ul className="space-y-3 text-sm">
-                <li><a href="#features" className="hover:text-blue-400 transition">Features</a></li>
-                <li><Link to="/pricing" className="hover:text-blue-400 transition">Pricing</Link></li>
-                <li><a href="#" className="hover:text-blue-400 transition">Security</a></li>
-                <li><a href="#" className="hover:text-blue-400 transition">Roadmap</a></li>
+                <li><a href="#features" className="hover:text-purple-400 transition">Features</a></li>
+                <li><Link to="/pricing" className="hover:text-purple-400 transition">Pricing</Link></li>
+                <li><Link to="/download" className="hover:text-purple-400 transition">Download</Link></li>
               </ul>
             </div>
+            {/* Company */}
             <div>
-              <h3 className="text-white font-semibold mb-6 text-sm">Company</h3>
+              <h3 className="text-white font-semibold mb-4 text-sm">Company</h3>
               <ul className="space-y-3 text-sm">
-                <li><a href="#" className="hover:text-blue-400 transition">About</a></li>
-                <li><a href="#" className="hover:text-blue-400 transition">Blog</a></li>
-                <li><a href="#" className="hover:text-blue-400 transition">Careers</a></li>
-                <li><a href="#" className="hover:text-blue-400 transition">Contact</a></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-white font-semibold mb-6 text-sm">Support</h3>
-              <ul className="space-y-3 text-sm">
-                <li><a href="#" className="hover:text-blue-400 transition">Help Center</a></li>
-                <li><a href="#" className="hover:text-blue-400 transition">Documentation</a></li>
-                <li><a href="#" className="hover:text-blue-400 transition">API Docs</a></li>
-                <li><a href="#" className="hover:text-blue-400 transition">Status</a></li>
+                <li><Link to="/about" className="hover:text-purple-400 transition">About Us</Link></li>
+                <li><Link to="/login" className="hover:text-purple-400 transition">Sign In</Link></li>
+                <li><Link to="/register" className="hover:text-purple-400 transition">Get Started</Link></li>
               </ul>
             </div>
           </div>
-          
-          <div className="border-t border-gray-800 pt-8">
-            <div className="flex flex-col md:flex-row justify-between items-center text-sm text-gray-500">
-              <div className="flex space-x-6">
-                <a href="#" className="hover:text-gray-300 transition">Privacy Policy</a>
-                <a href="#" className="hover:text-gray-300 transition">Terms of Service</a>
-                <a href="#" className="hover:text-gray-300 transition">Cookie Policy</a>
-              </div>
-            </div>
+
+          <div className="border-t border-gray-800 pt-6 text-sm text-gray-500 text-center">
+            © 2025 BusinessIQ. Built with ❤️ in Fort Portal, Uganda.
           </div>
         </div>
       </footer>
