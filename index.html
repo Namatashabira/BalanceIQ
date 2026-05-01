@@ -26,24 +26,17 @@
         }
       })();
     </script>
-    <script type="module" crossorigin src="/BalanceIQ/assets/index-CA7k4MyU.js"></script>
-    <link rel="stylesheet" crossorigin href="/BalanceIQ/assets/index-Du7GfioN.css">
+    <script type="module" crossorigin src="/BalanceIQ/assets/index-D8mfdSNE.js"></script>
+    <link rel="modulepreload" crossorigin href="/BalanceIQ/assets/vendor-react-Db_Ggr8Q.js">
+    <link rel="modulepreload" crossorigin href="/BalanceIQ/assets/vendor-charts-D0sz9MQY.js">
+    <link rel="modulepreload" crossorigin href="/BalanceIQ/assets/vendor-antd-BiTydxoO.js">
+    <link rel="modulepreload" crossorigin href="/BalanceIQ/assets/vendor-utils-BuW5NqA_.js">
+    <link rel="modulepreload" crossorigin href="/BalanceIQ/assets/vendor-ui-CwZYhXiF.js">
+    <link rel="stylesheet" crossorigin href="/BalanceIQ/assets/index-B1UbJERF.css">
   </head>
   <body>
     <div id="root"></div>
     
-    <!-- Unregister service workers and clear all caches -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for (var r of registrations) { r.unregister(); }
-        });
-      }
-      if ('caches' in window) {
-        caches.keys().then(function(names) {
-          for (var name of names) { caches.delete(name); }
-        });
-      }
-    </script>
+    <!-- Service worker is handled in main.jsx -->
   </body>
 </html>

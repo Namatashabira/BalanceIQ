@@ -1,8 +1,9 @@
 """
-Generate PNG icons from logo.svg.
+Generate PNG icons and icon.ico from logo.svg.
 Run from the public/ directory:  python gen_icons.py
 
 Requires cairosvg:  pip install cairosvg
+Requires Pillow:    pip install Pillow   (for .ico generation)
 Falls back to a solid-colour placeholder if cairosvg is unavailable.
 """
 import os, struct, zlib
@@ -55,3 +56,51 @@ except ImportError:
 for name, size in SIZES:
     path = make_icon(name, size)
     print(f"  {path}  ({os.path.getsize(path):,} bytes)")
+
+# --- Generate icon.ico (BMP-only, rcedit-compatible) for Electron/Windows ---
+ico_path = os.path.join(OUT_DIR, "icon.ico")
+try:
+    from PIL import Image
+    import io
+
+    ICO_SIZES = [16, 32, 48, 64, 128, 256]
+    src = os.path.join(OUT_DIR, "icon-512x512.png")
+    base = Image.open(src).convert("RGBA")
+
+    frames = []
+    for s in ICO_SIZES:
+        frame = base.resize((s, s), Image.LANCZOS)
+        # Convert RGBA -> BGRA BMP data that rcedit understands
+        buf = io.BytesIO()
+        # Save as BMP via a temporary RGBA image
+        frame.save(buf, format="BMP")
+        frames.append((s, buf.getvalue()))
+
+    # Build ICO manually: all BMP frames (no PNG compression)
+    # ICO header: reserved(2) + type(2) + count(2)
+    count = len(frames)
+    header = struct.pack("<HHH", 0, 1, count)
+    # Each directory entry: width(1) height(1) colorCount(1) reserved(1)
+    #                        planes(2) bitCount(2) bytesInRes(4) imageOffset(4)
+    dir_size = count * 16
+    offset = 6 + dir_size
+    directory = b""
+    image_data = b""
+    for s, bmp in frames:
+        # Strip the 14-byte BMP file header, keep DIB header + pixel data
+        dib = bmp[14:]
+        w = s if s < 256 else 0   # 0 means 256 in ICO spec
+        h = w
+        directory += struct.pack("<BBBBHHII", w, h, 0, 0, 1, 32, len(dib), offset)
+        offset += len(dib)
+        image_data += dib
+
+    with open(ico_path, "wb") as f:
+        f.write(header + directory + image_data)
+
+    print(f"  {ico_path}  ({os.path.getsize(ico_path):,} bytes)  [BMP/rcedit-compatible]")
+except ImportError:
+    print("Pillow not found – skipping icon.ico generation.")
+    print("Install with:  pip install Pillow")
+except Exception as e:
+    print(f"icon.ico generation failed: {e}")
