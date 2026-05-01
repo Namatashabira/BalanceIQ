@@ -2,7 +2,7 @@
 import { fetchWithAuth } from '../api';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Edit, Trash2, Upload, Save, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X } from 'lucide-react';
 import { CloudCheck } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import {
@@ -19,52 +19,6 @@ import { useConfig } from '../context/ConfigContext';
 import { formatCurrency, getCurrencyCode } from '../utils/pricingHelpers';
 
 const BACKEND_URL = (import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api').replace(/\/api$/, '');
-
-// Simple client-side image compression to stay under backend limits
-const compressImage = (file, maxBytes = 2 * 1024 * 1024, maxDimension = 1600) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let { width, height } = img;
-        if (width > height && width > maxDimension) {
-          height = Math.round((height * maxDimension) / width);
-          width = maxDimension;
-        } else if (height >= width && height > maxDimension) {
-          width = Math.round((width * maxDimension) / height);
-          height = maxDimension;
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        // Start with 0.8 quality, reduce if still large
-        let quality = 0.8;
-        const attempt = () => {
-          canvas.toBlob(
-            (blob) => {
-              if (!blob) return reject(new Error('Compression failed'));
-              if (blob.size <= maxBytes || quality <= 0.4) {
-                resolve(new File([blob], file.name, { type: blob.type }));
-              } else {
-                quality -= 0.1;
-                attempt();
-              }
-            },
-            'image/jpeg',
-            quality
-          );
-        };
-        attempt();
-      };
-      img.onerror = () => reject(new Error('Invalid image data'));
-      img.src = e.target.result;
-    };
-    reader.onerror = () => reject(new Error('Failed to read image file'));
-    reader.readAsDataURL(file);
-  });
 
 const defaultDisplaySettings = () => ({
   label_short_description: 'Short Description',
@@ -151,8 +105,6 @@ export default function Products() {
       }
     };
   const toast = useToast();
-  const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // hard cap per image (user-facing)
-  const TARGET_COMPRESS_BYTES = 2 * 1024 * 1024; // target to stay under backend limit
   const location = useLocation();
   const navigate = useNavigate();
   const originStateRef = useRef(location.state || null);
@@ -199,8 +151,6 @@ export default function Products() {
     retailPrice: '',
     wholesalePrice: '',
     category: '',
-    images: [],      // existing server image URLs
-    imageFiles: [],  // new files to upload
     stock: '',
     status: 'active',
     expiryDate: '',
@@ -309,8 +259,6 @@ export default function Products() {
       retailPrice: '',
       wholesalePrice: '',
       category: '',
-      images: [],
-      imageFiles: [],
       stock: '',
       status: 'active',
       expiryDate: '',
@@ -329,72 +277,29 @@ export default function Products() {
     setShowForm(false);
   };
 
-  // Submit form with FormData
+  // Submit form
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
     setShowSaved(false);
     try {
-      const existingImages = formData.images.slice(0, formData.images.length - formData.imageFiles.length);
-      const hasImages = formData.imageFiles.length > 0;
+      const payload = {
+        name: formData.name,
+        full_description: formData.fullDescription,
+        retail_price: formData.retailPrice || '0',
+        wholesale_price: formData.wholesalePrice || '0',
+        category: formData.category,
+        stock: formData.stock,
+        status: formData.status,
+        ...(formData.manufactureDate && { manufacture_date: formData.manufactureDate }),
+        ...(formData.dateStocked && { date_stocked: formData.dateStocked }),
+        ...(formData.expiryDate && { expiry_date: formData.expiryDate }),
+      };
 
-      if (hasImages) {
-        // --- FormData path (multipart) for image uploads ---
-        const payload = new FormData();
-        payload.append('name', formData.name);
-        payload.append('full_description', formData.fullDescription);
-        payload.append('retail_price', formData.retailPrice || '0');
-        payload.append('wholesale_price', formData.wholesalePrice || '0');
-        payload.append('category', formData.category);
-        payload.append('stock', formData.stock);
-        payload.append('status', formData.status);
-        if (formData.manufactureDate) payload.append('manufacture_date', formData.manufactureDate);
-        if (formData.dateStocked) payload.append('date_stocked', formData.dateStocked);
-        if (formData.expiryDate) payload.append('expiry_date', formData.expiryDate);
-        payload.append('existing_images', JSON.stringify(existingImages));
-
-        for (let index = 0; index < formData.imageFiles.length; index++) {
-          const file = formData.imageFiles[index];
-          if (!file) continue;
-          if (file.size > MAX_IMAGE_BYTES) {
-            throw new Error(`Image ${file.name} is too large (${(file.size / 1024 / 1024).toFixed(2)} MB). Please upload images under 5MB.`);
-          }
-          let fileToSend = file;
-          if (file.size > TARGET_COMPRESS_BYTES) {
-            fileToSend = await compressImage(file, TARGET_COMPRESS_BYTES, 1400);
-            if (fileToSend.size > MAX_IMAGE_BYTES) {
-              throw new Error(`Image ${file.name} is still too large after compression (${(fileToSend.size / 1024 / 1024).toFixed(2)} MB).`);
-            }
-          }
-          payload.append(`images[${index}]`, fileToSend);
-        }
-
-        if (editingProduct) {
-          await updateProduct(editingProduct.id, payload);
-        } else {
-          await createProduct(payload);
-        }
+      if (editingProduct) {
+        await updateProduct(editingProduct.id, payload);
       } else {
-        // --- JSON path (no new images) ---
-        const payload = {
-          name: formData.name,
-          full_description: formData.fullDescription,
-          retail_price: formData.retailPrice || '0',
-          wholesale_price: formData.wholesalePrice || '0',
-          category: formData.category,
-          stock: formData.stock,
-          status: formData.status,
-          ...(formData.manufactureDate && { manufacture_date: formData.manufactureDate }),
-          ...(formData.dateStocked && { date_stocked: formData.dateStocked }),
-          ...(formData.expiryDate && { expiry_date: formData.expiryDate }),
-          existing_images: existingImages,
-        };
-
-        if (editingProduct) {
-          await updateProduct(editingProduct.id, payload);
-        } else {
-          await createProduct(payload);
-        }
+        await createProduct(payload);
       }
       await new Promise((resolve) => setTimeout(resolve, 3000)); // Ensure spinner for 3s
       await loadProducts();
@@ -447,38 +352,6 @@ export default function Products() {
             .join('\n')
         : '';
 
-    // Prepare images array - handle both relative and absolute URLs
-    const prepareImageUrls = (images, fallbackImage) => {
-      const imageList = images || [];
-      let urls = Array.isArray(imageList) ? imageList : [];
-      
-      // Add fallback image if no images exist
-      if (urls.length === 0 && fallbackImage) {
-        urls = [fallbackImage];
-      }
-      
-      // Ensure all URLs are properly formatted
-      return urls.map(url => {
-        if (!url) return null;
-        // If it's a relative URL (starts with /), convert to absolute pointing to backend
-        if (typeof url === 'string' && url.startsWith('/')) {
-          // Use backend API URL instead of current window location
-          return BACKEND_URL + url;
-        }
-        return url;
-      }).filter(Boolean);
-    };
-
-    const imageUrls = prepareImageUrls(product.images, product.image);
-    console.log('Product loaded for editing:', { 
-      productId: product.id, 
-      productName: product.name,
-      rawImages: product.images,
-      rawImage: product.image,
-      processedImageUrls: imageUrls,
-      timestamp: new Date().toISOString()
-    });
-
     setFormData({
       ...product,
       description: product.description || product.short_description || '',
@@ -487,8 +360,6 @@ export default function Products() {
       price: product.price || '',
       retailPrice: product.retail_price || product.retailPrice || product.price || '',
       wholesalePrice: product.wholesale_price || product.wholesalePrice || '',
-      images: imageUrls,
-      imageFiles: [],
       expiryDate: product.expiry_date || product.expiryDate || '',
       manufactureDate: product.manufacture_date || product.manufactureDate || '',
       dateStocked: product.date_stocked || product.dateStocked || '',
@@ -543,33 +414,6 @@ export default function Products() {
     }
   };
 
-  // Handle multiple image uploads
-  const handleImageUpload = (e) => {
-    const files = Array.from(e.target.files || []);
-    setFormData((prev) => ({
-      ...prev,
-      images: [...prev.images, ...files.map(f => URL.createObjectURL(f))],
-      imageFiles: [...prev.imageFiles, ...files],
-    }));
-  };
-
-  const removeImage = (index) => {
-    setFormData((prev) => {
-      const isExisting = index < prev.images.length - prev.imageFiles.length;
-      if (isExisting) {
-        // Remove from existing server images
-        return { ...prev, images: prev.images.filter((_, i) => i !== index) };
-      } else {
-        // Remove from new files
-        const fileIndex = index - (prev.images.length - prev.imageFiles.length);
-        return {
-          ...prev,
-          images: prev.images.filter((_, i) => i !== index),
-          imageFiles: prev.imageFiles.filter((_, i) => i !== fileIndex),
-        };
-      }
-    });
-  };
 
 
   if (saving || showSaved) {
@@ -883,60 +727,6 @@ export default function Products() {
                       Products auto-deactivate when expired or out of stock
                     </p>
                   </div>
-
-                  {/* Multiple Images Upload */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Product Images (upload multiple)</label>
-                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center cursor-pointer hover:border-blue-500">
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                        id="image-upload"
-                      />
-                      <label htmlFor="image-upload" className="cursor-pointer">
-                        <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Click to upload or drag and drop</p>
-                      </label>
-                    </div>
-
-                    {/* Image Thumbnails */}
-                    {formData.images && formData.images.length > 0 && (
-                      <div className="mt-4">
-                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Images ({formData.images.length})</p>
-                        <div className="grid grid-cols-4 gap-2">
-                          {formData.images.map((img, idx) => {
-                            const existingCount = formData.images.length - formData.imageFiles.length;
-                            const isExisting = idx < existingCount;
-                            return (
-                              <div key={idx} className="relative">
-                                <img
-                                  src={img}
-                                  alt={`Image ${idx + 1}`}
-                                  className="w-full h-24 object-cover rounded"
-                                  onError={(e) => { e.target.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23ddd%22 width=%22100%22 height=%22100%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2214%22 fill=%22%23999%22%3ENo Image%3C/text%3E%3C/svg%3E'; }}
-                                />
-                                {isExisting && (
-                                  <span className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-1 rounded">saved</span>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => removeImage(idx)}
-                                  className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded hover:bg-red-700"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-
 
                   {/* Status */}
                   <div>

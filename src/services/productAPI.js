@@ -35,14 +35,13 @@ export const fetchProducts = async (options = {}) => {
   }
 };
 
-// Create new product — JSON if no images, multipart if images present
+// Create new product
 export const createProduct = async (payload) => {
   try {
-    const isFormData = payload instanceof FormData;
     const response = await fetchWithAuth(`${API_BASE_URL}/products/`, {
       method: 'POST',
-      headers: isFormData ? undefined : { 'Content-Type': 'application/json' },
-      body: isFormData ? payload : JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
     });
     if (!response || !response.ok) {
       const text = response ? await response.text() : 'no response';
@@ -55,14 +54,13 @@ export const createProduct = async (payload) => {
   }
 };
 
-// Update product — JSON if no images, multipart if images present
+// Update product
 export const updateProduct = async (productId, payload) => {
   try {
-    const isFormData = payload instanceof FormData;
     const response = await fetchWithAuth(`${API_BASE_URL}/products/${productId}/`, {
       method: 'PATCH',
-      headers: isFormData ? undefined : { 'Content-Type': 'application/json' },
-      body: isFormData ? payload : JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
     });
     if (!response || !response.ok) {
       const text = response ? await response.text() : 'no response';
@@ -78,20 +76,15 @@ export const updateProduct = async (productId, payload) => {
 // Partial update for status toggles
 export const updateProductStatus = async (productId, nextStatus) => {
   try {
-    const payload = new FormData();
-    payload.append('status', nextStatus);
-
     const response = await fetchWithAuth(`${API_BASE_URL}/products/${productId}/`, {
       method: 'PATCH',
-      body: payload,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: nextStatus }),
     });
-
     if (!response || !response.ok) {
-      const status = response?.status ?? 'unknown';
       const text = response ? await response.text() : 'no response';
-      throw new Error(`Status update failed ${status}: ${text}`);
+      throw new Error(`Status update failed ${response?.status}: ${text}`);
     }
-
     return await response.json();
   } catch (error) {
     console.error('Error updating product status:', error);
@@ -117,27 +110,6 @@ export const deleteProduct = async (productId) => {
   }
 };
 
-// Upload product image
-export const uploadProductImage = async (imageFile) => {
-  try {
-    const formData = new FormData();
-    formData.append('image', imageFile);
-    
-    const response = await fetchWithAuth(`${API_BASE_URL}/upload/`, {
-      method: 'POST',
-      body: formData,
-    });
-    
-    if (!response || !response.ok) {
-      const status = response?.status ?? 'unknown';
-      throw new Error(`HTTP error! status: ${status}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('Error uploading image:', error);
-    throw error;
-  }
-};
 
 // Get product by ID
 export const getProduct = async (productId) => {

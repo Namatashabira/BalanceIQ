@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '../context/ToastContext';
-import { Plus, Edit, Trash2, Upload, Save, X, Eye, Monitor, Smartphone } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Eye, Monitor, Smartphone } from 'lucide-react';
 import { fetchProducts, createProduct, updateProduct, deleteProduct } from '../services/productAPI';
 import { useConfig } from '../context/ConfigContext';
 import { formatCurrency, getCurrencyCode } from '../utils/pricingHelpers';
@@ -19,12 +19,9 @@ export default function Products() {
     description: '',
     price: '',
     category: '',
-    image: '',
     stock: '',
     status: 'active'
   });
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [previewMode, setPreviewMode] = useState('desktop');
   const { pricingSettings } = useConfig();
@@ -72,16 +69,14 @@ export default function Products() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const payload = new FormData();
-      payload.append('name', formData.name);
-      payload.append('description', formData.description);
-      payload.append('price', formData.price);
-      payload.append('category', formData.category);
-      payload.append('stock', formData.stock);
-      payload.append('status', formData.status);
-      if (imageFile) {
-        payload.append('image', imageFile);
-      }
+      const payload = {
+        name: formData.name,
+        description: formData.description,
+        price: formData.price,
+        category: formData.category,
+        stock: formData.stock,
+        status: formData.status,
+      };
 
       if (editingProduct) {
         await updateProduct(editingProduct.id, payload);
@@ -116,12 +111,9 @@ export default function Products() {
       description: '',
       price: '',
       category: '',
-      image: '',
       stock: '',
       status: 'active'
     });
-    setImageFile(null);
-    setImagePreview('');
     setShowAddForm(false);
     setEditingProduct(null);
   };
@@ -130,18 +122,7 @@ export default function Products() {
   const handleEdit = (product) => {
     setFormData(product);
     setEditingProduct(product);
-    setImageFile(null);
-    setImagePreview(product.image || '');
     setShowAddForm(true);
-  };
-
-  // Handle image upload
-  const handleImageUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
-    }
   };
 
   return (
@@ -296,36 +277,6 @@ export default function Products() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Product Image
-                </label>
-                <div className="flex items-center gap-4">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                    id="image-upload"
-                  />
-                  <label
-                    htmlFor="image-upload"
-                    className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 cursor-pointer flex items-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-600"
-                  >
-                    <Upload className="w-4 h-4" />
-                    Upload Image
-                  </label>
-                  {(imagePreview || formData.image) && (
-                    <img
-                      src={imagePreview || formData.image}
-                      alt="Preview"
-                      className="w-16 h-16 object-cover rounded"
-                      onError={(e) => { e.target.src = '/placeholder-product.png'; }}
-                    />
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Status
                 </label>
                 <select
@@ -403,11 +354,7 @@ export default function Products() {
                 /* Desktop Card */
                 <div className="w-full max-w-sm bg-white dark:bg-gray-700 rounded-xl shadow-md overflow-hidden border border-gray-200 dark:border-gray-600">
                   <div className="relative h-52 bg-gray-100 dark:bg-gray-600">
-                    {(imagePreview || formData.image) ? (
-                      <img src={imagePreview || formData.image} alt={formData.name || 'Product'} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">No Image</div>
-                    )}
+                    <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">No Image</div>
                     <span className={`absolute top-3 right-3 px-2 py-0.5 rounded-full text-xs font-semibold ${
                       formData.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
                     }`}>{formData.status || 'active'}</span>
@@ -426,11 +373,7 @@ export default function Products() {
                 /* Mobile Card — narrow phone frame */
                 <div className="w-72 bg-white dark:bg-gray-700 rounded-2xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-600">
                   <div className="relative h-44 bg-gray-100 dark:bg-gray-600">
-                    {(imagePreview || formData.image) ? (
-                      <img src={imagePreview || formData.image} alt={formData.name || 'Product'} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">No Image</div>
-                    )}
+                    <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">No Image</div>
                     <span className={`absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-semibold ${
                       formData.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
                     }`}>{formData.status || 'active'}</span>
@@ -470,7 +413,6 @@ export default function Products() {
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Image</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Category</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Price</th>
@@ -482,15 +424,6 @@ export default function Products() {
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {products.map((product) => (
                   <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-6 py-4">
-                      {product.image ? (
-                        <img src={product.image} alt={product.name} className="w-12 h-12 object-cover rounded" />
-                      ) : (
-                        <div className="w-12 h-12 bg-gray-200 dark:bg-gray-600 rounded flex items-center justify-center">
-                          <span className="text-gray-400 text-xs">No Image</span>
-                        </div>
-                      )}
-                    </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-gray-900 dark:text-white">{product.name}</div>
                       <div className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs">{product.description}</div>
