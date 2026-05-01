@@ -129,7 +129,7 @@ export default function Sidebar({ isOpen, onToggle, sidebarWidth = 256 }) {
   };
 
   // Use shared navigation config
-  const navigationItems = getNavigationItems(labels, features, allowedPages, businessType, isAdmin);
+  const navigationItems = getNavigationItems(labels, features, allowedPages, businessType, isAdmin, user);
   const { isPageAllowed, trialExpired } = usePlan();
   const visibleItems = navigationItems.filter(item => item.enabled);
 

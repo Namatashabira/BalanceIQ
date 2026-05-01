@@ -3,16 +3,20 @@ import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api';
-import { Settings as SettingsIcon, Tag, Sparkles, ShieldCheck, Coins, ToggleRight, Save, RefreshCw, Edit2, Check, Loader2, Palette, Upload, X, Building2, FileText } from 'lucide-react';
+import { Settings as SettingsIcon, Tag, Sparkles, ShieldCheck, Coins, ToggleRight, Save, RefreshCw, Edit2, Check, Loader2, Palette, Upload, X, Building2, FileText, CreditCard } from 'lucide-react';
 import { useConfig } from '../context/ConfigContext';
+import { useAuth } from '../context/AuthContext';
 import { defaultPricingSettings } from '../utils/pricingHelpers';
 import BusinessSettings from '../components/settings/BusinessSettings';
 import TemplatePage from './TemplatePage';
+import AdminPaymentRequests from './AdminPaymentRequests';
 import { applyThemeColors } from '../utils/themeUtils';
 import { useSavingAction } from '../hooks/useSavingAction';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('terminology');
+  const { user } = useAuth();
+  const isSuperAdmin = user?.is_staff || user?.is_superuser || user?.role === 'superadmin';
   const { 
     businessType: _businessType, 
     features, 
@@ -467,6 +471,7 @@ export default function SettingsPage() {
     { id: 'theme', label: 'Theme', icon: Palette },
     { id: 'business', label: 'Business Info', icon: Building2 },
     { id: 'template', label: 'Template', icon: FileText },
+    ...(isSuperAdmin ? [{ id: 'payments', label: 'Payment Requests', icon: CreditCard }] : []),
   ];
 
   const handlePricingSave = async () => {
@@ -1787,6 +1792,8 @@ export default function SettingsPage() {
         )}
         {/* Template Tab */}
         {activeTab === 'template' && <TemplatePage />}
+        {/* Payment Requests Tab — superadmin only */}
+        {activeTab === 'payments' && isSuperAdmin && <AdminPaymentRequests />}
       </div>
     </div>
   );

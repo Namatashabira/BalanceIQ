@@ -451,7 +451,7 @@ export default function Navbar({ onToggleSidebar, sidebarOpen }) {
     setShowAccount(false);
   };
 
-  const navigationItems = getNavigationItems(labels, featuresFromConfig, allowedPages, businessType, isAdmin);
+  const navigationItems = getNavigationItems(labels, featuresFromConfig, allowedPages, businessType, isAdmin, user);
   const visibleItems = navigationItems.filter(i => i.enabled);
 
   return (

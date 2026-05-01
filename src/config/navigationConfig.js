@@ -1,10 +1,10 @@
 // Shared navigation config for Sidebar and Navbar
 import {
   LayoutDashboard, Package, Warehouse, FileText, Receipt, BarChart3, Settings as SettingsIcon,
-  ShoppingCart, Calendar, DollarSign, Brain, Building2, Users, TrendingUp, Globe
+  ShoppingCart, Calendar, DollarSign, Brain, Building2, Users, TrendingUp, Globe, Lock
 } from "lucide-react";
 
-export const getNavigationItems = (labels, features, allowedPages, businessType, isAdmin) => {
+export const getNavigationItems = (labels, features, allowedPages, businessType, isAdmin, user) => {
   const contactLabel = labels.entity || (businessType === 'education' ? 'Student' : businessType === 'services' ? 'Client' : 'Customer');
   const contactLabelPlural = labels.entities || `${contactLabel}${contactLabel.endsWith('s') ? '' : 's'}`;
   const isEnabled = (key, defaultValue = true) => {
@@ -18,6 +18,7 @@ export const getNavigationItems = (labels, features, allowedPages, businessType,
     if (!Array.isArray(allowedPages)) return false;
     return allowedPages.includes(pageKey);
   };
+  const isSuperadmin = user?.is_superuser || user?.is_staff;
   return [
     { path: "/", label: "Dashboard", icon: LayoutDashboard, enabled: isEnabled('dashboard_enabled') && hasAccess('dashboard_enabled') },
     { path: "/my-organizations", label: "My Organizations", icon: Building2, enabled: false },
@@ -33,6 +34,7 @@ export const getNavigationItems = (labels, features, allowedPages, businessType,
     { path: "/ai-insights", label: "AI Insights", icon: Brain, enabled: isEnabled('ai_insights_enabled') && hasAccess('ai_insights_enabled') },
     { path: "/forecast", label: "Forecast", icon: TrendingUp, enabled: isEnabled('analytics_enabled') && hasAccess('analytics_enabled') },
     { path: "/settings", label: "Settings", icon: SettingsIcon, enabled: isAdmin },
+    { path: "/manage-users", label: "Manage Users", icon: Lock, enabled: isSuperadmin },
     { path: "/accounting", label: "Accounting", icon: Receipt, enabled: isEnabled('accounting_enabled') && hasAccess('accounting_enabled') },
     { path: "/enrollment", label: "Enrollment", icon: Calendar, enabled: isEnabled('enrollment_enabled') && hasAccess('enrollment_enabled') },
     { path: "/reports/business", label: "Business Report", icon: BarChart3, enabled: (typeof features?.business_report_enabled === 'undefined' || features.business_report_enabled === true) && hasAccess('business_report_enabled') },

@@ -23,7 +23,6 @@ import UpgradePage from "./pages/UpgradePage";
 import PaymentPage from "./pages/PaymentPage";
 import MyOrganizations from "./pages/MyOrganizations";
 import CreateOrganization from "./pages/CreateOrganization";
-
 import Dashboard from "./pages/Dashboard";
 import Product from "./pages/Product";
 import Inventory from "./pages/Inventory";
@@ -46,7 +45,7 @@ import ProfitAndLoss from "./pages/Accounting/ProfitAndLoss";
 import BalanceSheet from "./pages/Accounting/BalanceSheet";
 import Assets from "./pages/Accounting/Assets";
 import Customers from "./pages/Customers";
-import EnrollmentPage from "./pages/EnrollmentPage";
+import ManageUsers from "./pages/ManageUsers";
 import EnrollmentIndex from "./pages/EnrollmentIndex";
 import Overview from "./pages/enrollment/Overview";
 import NewEnrollment from "./pages/enrollment/NewEnrollment";
@@ -58,7 +57,7 @@ import Reports from "./pages/enrollment/Reports";
 import BusinessReport from "./pages/Reports/BusinessReport";
 import WebsiteBuilder from "./pages/WebsiteBuilder/WebsiteBuilder";
 
-// Plan-based page guard
+// ── Plan guard ────────────────────────────────────────────────────────────────
 function PlanGuard({ pageKey, children }) {
   const { isPageAllowed, trialExpired, planReady } = usePlan();
   if (!planReady) {
@@ -73,171 +72,158 @@ function PlanGuard({ pageKey, children }) {
   return children;
 }
 
-// Simple access guard that defers to allowedPages. If allowedPages is null/undefined,
-// we assume no page-level restrictions.
+// ── Role/feature access guard ─────────────────────────────────────────────────
 function AccessGuard({ pageKey, children }) {
   const allowedPages = useAllowedPages();
   const { user } = useAuth();
   const { loading: configLoading, features } = useConfig();
-
   const role = user?.role?.toLowerCase();
   const isAdmin = ['tenant_admin', 'superadmin'].includes(role) || user?.is_staff;
 
-  // For non-authenticated users, allow rendering (will redirect to login)
-  if (!user) {
-    return children;
-  }
-
-  // If config is still loading, wait a bit but don't block indefinitely
-  if (configLoading) {
-    return <div className="flex items-center justify-center py-10 text-gray-600">Loading…</div>;
-  }
-
-  // If we have a feature set (with defaults), proceed
-  if (!features) {
-    return <div className="flex items-center justify-center py-10 text-gray-600">Loading access…</div>;
-  }
-
+  if (!user) return children;
+  if (configLoading) return <div className="flex items-center justify-center py-10 text-gray-600">Loading…</div>;
+  if (!features) return <div className="flex items-center justify-center py-10 text-gray-600">Loading access…</div>;
   if (!pageKey) return children;
   if (isAdmin) return children;
   if (Array.isArray(allowedPages) && allowedPages.includes(pageKey)) return children;
 
-  const fallback = ["manager", "staff", "worker"].includes(role)
-    ? "/orders"
-    : "/dashboard";
-
+  const fallback = ["manager", "staff", "worker"].includes(role) ? "/orders" : "/dashboard";
   return <Navigate to={fallback} replace />;
 }
 
-// Role-based default route component
+// ── Default route ─────────────────────────────────────────────────────────────
 function DefaultRoute() {
   const { user } = useAuth();
   const allowedPages = useAllowedPages();
   const features = useFeatures();
   const { firstAccessiblePath, loading: configLoading, features: featuresFromConfig } = useConfig();
-
   const isAdmin = ['tenant_admin', 'superadmin'].includes(user?.role) || user?.is_staff;
-  const isEnabled = (key, defaultValue = true) => {
-    const value = features?.[key];
-    if (value === undefined) return defaultValue;
-    return value === true;
+
+  const isEnabled = (key, def = true) => {
+    const v = features?.[key];
+    return v === undefined ? def : v === true;
   };
 
   const navOrder = [
-    { path: '/dashboard', key: 'dashboard_enabled', adminOnly: false },
-    { path: '/my-organizations', key: 'organizations_enabled', adminOnly: false },
-    { path: '/product', key: 'product_enabled', adminOnly: false },
-    { path: '/inventory', key: 'inventory_enabled', adminOnly: false },
-    { path: '/orders', key: 'orders_enabled', adminOnly: false },
-    { path: '/sales', key: 'sales_enabled', adminOnly: false },
-    { path: '/customers', key: 'customers_enabled', adminOnly: false },
-    { path: '/appointments', key: 'scheduling_enabled', adminOnly: false },
-    { path: '/manual-entry', key: 'manual_entry_enabled', adminOnly: false },
-    { path: '/receipt-lookup', key: 'payments_enabled', adminOnly: false },
-    { path: '/analytics', key: 'analytics_enabled', adminOnly: false },
-    { path: '/ai-insights', key: 'ai_insights_enabled', adminOnly: false },
-    { path: '/forecast', key: 'analytics_enabled', adminOnly: false },
-    { path: '/accounting', key: 'accounting_enabled', adminOnly: false },
-    { path: '/enrollment', key: 'enrollment_enabled', adminOnly: false },
-    { path: '/website-builder', key: 'website_builder_enabled', adminOnly: false },
+    { path: '/dashboard', key: 'dashboard_enabled' },
+    { path: '/product', key: 'product_enabled' },
+    { path: '/inventory', key: 'inventory_enabled' },
+    { path: '/orders', key: 'orders_enabled' },
+    { path: '/sales', key: 'sales_enabled' },
+    { path: '/customers', key: 'customers_enabled' },
+    { path: '/appointments', key: 'scheduling_enabled' },
+    { path: '/manual-entry', key: 'manual_entry_enabled' },
+    { path: '/receipt-lookup', key: 'payments_enabled' },
+    { path: '/analytics', key: 'analytics_enabled' },
+    { path: '/accounting', key: 'accounting_enabled' },
   ];
 
-  const findFirstAccessible = () => {
+  const getDefaultRoute = () => {
+    if (configLoading || !featuresFromConfig) return null;
+    if (firstAccessiblePath) return firstAccessiblePath;
     for (const item of navOrder) {
-      if (item.adminOnly && !isAdmin) continue;
       if (!isEnabled(item.key)) continue;
       if (Array.isArray(allowedPages) && !allowedPages.includes(item.key)) continue;
       return item.path;
     }
-    return null;
-  };
-  
-  // Define default routes based on role
-  const getDefaultRoute = () => {
-    if (configLoading || !featuresFromConfig) return null;
-    if (!user) return firstAccessiblePath || '/dashboard';
-    const firstFromBackend = firstAccessiblePath;
-    if (firstFromBackend) return firstFromBackend;
-    const firstAccessible = findFirstAccessible();
-    if (firstAccessible) return firstAccessible;
-    
-    const role = user.role?.toLowerCase();
-    
-    console.log('DefaultRoute - User role:', role, 'Full user:', user);
-    
-    // Super admin and tenants go to Dashboard
-    if (role === 'admin' || role === 'superadmin' || role === 'super admin' || role === 'owner' || role === 'tenant') {
-      console.log('Redirecting to dashboard for role:', role);
-      return '/dashboard';
-    }
-    
-    // For workers/staff, redirect to first accessible page based on permissions
-    if (role === 'manager' || role === 'staff' || role === 'worker') {
-      console.log('Redirecting worker/staff to orders for role:', role);
-      return '/orders';
-    }
-    
-    // Default to dashboard for any other role
-    console.log('Redirecting to dashboard (default) for role:', role);
+    const role = user?.role?.toLowerCase();
+    if (["manager", "staff", "worker"].includes(role)) return '/orders';
     return '/dashboard';
   };
-  
+
   const route = getDefaultRoute();
-  if (route === null) {
-    return <div className="flex items-center justify-center py-10 text-gray-600">Loading…</div>;
-  }
-  console.log('DefaultRoute navigating to:', route);
+  if (route === null) return <div className="flex items-center justify-center py-10 text-gray-600">Loading…</div>;
   return <Navigate to={route} replace />;
 }
 
+// ── Sidebar layout (shared by all dashboard pages) ────────────────────────────
+function DashboardLayout({ sidebarOpen, setSidebarOpen, sidebarWidth, setSidebarWidth }) {
+  return (
+    <>
+      <Sidebar
+        isOpen={sidebarOpen}
+        onToggle={() => setSidebarOpen(!sidebarOpen)}
+        sidebarWidth={sidebarWidth}
+        setSidebarWidth={setSidebarWidth}
+      />
+      <div className="flex flex-col bg-gray-100" style={{ flex: 1, minWidth: 0 }}>
+        <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} sidebarOpen={sidebarOpen} />
+        <TrialBanner />
+        <main className="flex-1 p-4 sm:p-6 overflow-auto">
+          <Routes>
+            <Route path="/" element={<DefaultRoute />} />
+            <Route path="/dashboard" element={<PlanGuard pageKey="dashboard_enabled"><AccessGuard pageKey="dashboard_enabled"><Dashboard /></AccessGuard></PlanGuard>} />
+            <Route path="/my-organizations" element={<AccessGuard pageKey="organizations_enabled"><MyOrganizations /></AccessGuard>} />
+            <Route path="/create-organization" element={<AccessGuard pageKey="organizations_enabled"><CreateOrganization /></AccessGuard>} />
+            <Route path="/product" element={<PlanGuard pageKey="product_enabled"><AccessGuard pageKey="product_enabled"><Product /></AccessGuard></PlanGuard>} />
+            <Route path="/inventory" element={<PlanGuard pageKey="inventory_enabled"><AccessGuard pageKey="inventory_enabled"><Inventory /></AccessGuard></PlanGuard>} />
+            <Route path="/analytics" element={<PlanGuard pageKey="analytics_enabled"><AccessGuard pageKey="analytics_enabled"><Analytics /></AccessGuard></PlanGuard>} />
+            <Route path="/ai-insights" element={<PlanGuard pageKey="ai_insights_enabled"><AccessGuard pageKey="analytics_enabled"><AIInsights /></AccessGuard></PlanGuard>} />
+            <Route path="/forecast" element={<PlanGuard pageKey="analytics_enabled"><AccessGuard pageKey="analytics_enabled"><Forecast /></AccessGuard></PlanGuard>} />
+            <Route path="/manual-entry" element={<PlanGuard pageKey="manual_entry_enabled"><AccessGuard pageKey="manual_entry_enabled"><ManualOrderEntry /></AccessGuard></PlanGuard>} />
+            <Route path="/appointments" element={<PlanGuard pageKey="scheduling_enabled"><AccessGuard pageKey="scheduling_enabled"><Appointments /></AccessGuard></PlanGuard>} />
+            <Route path="/receipt-lookup" element={<PlanGuard pageKey="payments_enabled"><AccessGuard pageKey="payments_enabled"><ReceiptLookup /></AccessGuard></PlanGuard>} />
+            <Route path="/abandoned-carts" element={<PlanGuard pageKey="orders_enabled"><AccessGuard pageKey="orders_enabled"><AbandonedCarts /></AccessGuard></PlanGuard>} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/orders" element={<PlanGuard pageKey="orders_enabled"><AccessGuard pageKey="orders_enabled"><Orders /></AccessGuard></PlanGuard>} />
+            <Route path="/sales" element={<PlanGuard pageKey="sales_enabled"><AccessGuard pageKey="sales_enabled"><Sales /></AccessGuard></PlanGuard>} />
+            <Route path="/customers" element={<PlanGuard pageKey="customers_enabled"><AccessGuard pageKey="customers_enabled"><Customers /></AccessGuard></PlanGuard>} />
+            <Route path="/manage-users" element={<AccessGuard pageKey="superadmin"><ManageUsers /></AccessGuard>} />
+            <Route path="/accounting" element={<PlanGuard pageKey="accounting_enabled"><AccountingDashboard /></PlanGuard>} />
+            <Route path="/accounting/expenses" element={<PlanGuard pageKey="accounting_enabled"><Expenses /></PlanGuard>} />
+            <Route path="/accounting/payments" element={<PlanGuard pageKey="accounting_enabled"><Payments /></PlanGuard>} />
+            <Route path="/accounting/taxes" element={<PlanGuard pageKey="accounting_enabled"><TaxesEnhanced /></PlanGuard>} />
+            <Route path="/accounting/profit-loss" element={<PlanGuard pageKey="accounting_enabled"><ProfitAndLoss /></PlanGuard>} />
+            <Route path="/accounting/balance-sheet" element={<PlanGuard pageKey="accounting_enabled"><BalanceSheet /></PlanGuard>} />
+            <Route path="/accounting/assets" element={<PlanGuard pageKey="accounting_enabled"><AccessGuard pageKey="accounting_enabled"><Assets /></AccessGuard></PlanGuard>} />
+            <Route path="/reports/business" element={<PlanGuard pageKey="analytics_enabled"><BusinessReport /></PlanGuard>} />
+            <Route path="/website-builder" element={<PlanGuard pageKey="website_builder_enabled"><AccessGuard pageKey="website_builder_enabled"><WebsiteBuilder /></AccessGuard></PlanGuard>} />
+            <Route path="/enrollment" element={<EnrollmentIndex />}>
+              <Route path="overview" element={<Overview />} />
+              <Route path="new" element={<NewEnrollment />} />
+              <Route path="applications" element={<Applications />} />
+              <Route path="enrolled" element={<EnrolledStudents />} />
+              <Route path="documents" element={<Documents />} />
+              <Route path="payments" element={<PaymentsPage />} />
+              <Route path="reports" element={<Reports />} />
+              <Route index element={<Overview />} />
+            </Route>
+            <Route path="/login" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+      </div>
+    </>
+  );
+}
+
+// ── App content ───────────────────────────────────────────────────────────────
 function AppContent() {
   const { isAuthenticated, loading, login, user } = useAuth();
   const { isOnline, syncing, pendingCount } = useSync(isAuthenticated);
-  const [sidebarOpen, setSidebarOpen] = useState(() => {
-    // Open by default on desktop, closed on mobile
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 1024; // Tailwind's lg breakpoint is 1024px
-    }
-    return true;
-  });
-  // Sidebar width state (sync with Sidebar)
-  const [sidebarWidth, setSidebarWidth] = useState(256); // default 256px
+  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1024 : true);
+  const [sidebarWidth, setSidebarWidth] = useState(256);
   const toast = useToast();
 
-  // Responsive sidebar: open on desktop, closed on mobile
   useEffect(() => {
-    function handleResize() {
-      if (window.innerWidth >= 1024) {
-        setSidebarOpen(true);
-      } else {
-        setSidebarOpen(false);
-      }
-    }
+    const handleResize = () => setSidebarOpen(window.innerWidth >= 1024);
     window.addEventListener('resize', handleResize);
-    // Set initial state
     handleResize();
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Make toast available globally
-  useEffect(() => {
-    window.__toastContext = toast;
-  }, [toast]);
+  useEffect(() => { window.__toastContext = toast; }, [toast]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-lg">Loading...</div>
-      </div>
-    );
+    return <div className="flex items-center justify-center h-screen"><div className="text-lg">Loading...</div></div>;
   }
-  // Error fallback for missing/null user
+
   if (!loading && isAuthenticated && (!login || !('role' in (user || {})))) {
     return (
       <div className="flex items-center justify-center h-screen bg-red-50">
         <div className="text-red-700 text-center">
           <h2 className="font-bold text-xl mb-2">User Profile Error</h2>
-          <p>User data is missing or incomplete.<br/>Please <a href="/login" className="text-blue-600 underline">log in</a> again.</p>
+          <p>User data is missing or incomplete.<br />Please <a href="/login" className="text-blue-600 underline">log in</a> again.</p>
         </div>
       </div>
     );
@@ -254,71 +240,25 @@ function AppContent() {
           await syncOnReconnect();
         }}
       />
-      {isAuthenticated && (
-        <>
-          <Sidebar
-            isOpen={sidebarOpen}
-            onToggle={() => setSidebarOpen(!sidebarOpen)}
-            sidebarWidth={sidebarWidth}
-            setSidebarWidth={setSidebarWidth}
-          />
-          <div
-            className="flex flex-col bg-gray-100"
-            style={{ flex: 1, minWidth: 0 }}
-          >
-            <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} sidebarOpen={sidebarOpen} />
-            <TrialBanner />
-            <main className="flex-1 p-4 sm:p-6 overflow-auto">
-              <Routes>
-                <Route path="/" element={<DefaultRoute />} />
-                <Route path="/dashboard" element={<PlanGuard pageKey="dashboard_enabled"><AccessGuard pageKey="dashboard_enabled"><Dashboard /></AccessGuard></PlanGuard>} />
-                <Route path="/my-organizations" element={<AccessGuard pageKey="organizations_enabled"><MyOrganizations /></AccessGuard>} />
-                <Route path="/create-organization" element={<AccessGuard pageKey="organizations_enabled"><CreateOrganization /></AccessGuard>} />
-                <Route path="/product" element={<PlanGuard pageKey="product_enabled"><AccessGuard pageKey="product_enabled"><Product /></AccessGuard></PlanGuard>} />
-                <Route path="/inventory" element={<PlanGuard pageKey="inventory_enabled"><AccessGuard pageKey="inventory_enabled"><Inventory /></AccessGuard></PlanGuard>} />
-                <Route path="/analytics" element={<PlanGuard pageKey="analytics_enabled"><AccessGuard pageKey="analytics_enabled"><Analytics /></AccessGuard></PlanGuard>} />
-                <Route path="/ai-insights" element={<PlanGuard pageKey="ai_insights_enabled"><AccessGuard pageKey="analytics_enabled"><AIInsights /></AccessGuard></PlanGuard>} />
-                <Route path="/forecast" element={<PlanGuard pageKey="analytics_enabled"><AccessGuard pageKey="analytics_enabled"><Forecast /></AccessGuard></PlanGuard>} />
-                <Route path="/manual-entry" element={<PlanGuard pageKey="manual_entry_enabled"><AccessGuard pageKey="manual_entry_enabled"><ManualOrderEntry /></AccessGuard></PlanGuard>} />
-                <Route path="/appointments" element={<PlanGuard pageKey="scheduling_enabled"><AccessGuard pageKey="scheduling_enabled"><Appointments /></AccessGuard></PlanGuard>} />
-                <Route path="/receipt-lookup" element={<PlanGuard pageKey="payments_enabled"><AccessGuard pageKey="payments_enabled"><ReceiptLookup /></AccessGuard></PlanGuard>} />
-                <Route path="/abandoned-carts" element={<PlanGuard pageKey="orders_enabled"><AccessGuard pageKey="orders_enabled"><AbandonedCarts /></AccessGuard></PlanGuard>} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/orders" element={<PlanGuard pageKey="orders_enabled"><AccessGuard pageKey="orders_enabled"><Orders /></AccessGuard></PlanGuard>} />
-                <Route path="/sales" element={<PlanGuard pageKey="sales_enabled"><AccessGuard pageKey="sales_enabled"><Sales /></AccessGuard></PlanGuard>} />
-                <Route path="/customers" element={<PlanGuard pageKey="customers_enabled"><AccessGuard pageKey="customers_enabled"><Customers /></AccessGuard></PlanGuard>} />
-                <Route path="/accounting" element={<PlanGuard pageKey="accounting_enabled"><AccountingDashboard /></PlanGuard>} />
-                <Route path="/accounting/expenses" element={<PlanGuard pageKey="accounting_enabled"><Expenses /></PlanGuard>} />
-                <Route path="/accounting/payments" element={<PlanGuard pageKey="accounting_enabled"><Payments /></PlanGuard>} />
-                <Route path="/accounting/taxes" element={<PlanGuard pageKey="accounting_enabled"><TaxesEnhanced /></PlanGuard>} />
-                <Route path="/accounting/profit-loss" element={<PlanGuard pageKey="accounting_enabled"><ProfitAndLoss /></PlanGuard>} />
-                <Route path="/accounting/balance-sheet" element={<PlanGuard pageKey="accounting_enabled"><BalanceSheet /></PlanGuard>} />
-                <Route path="/accounting/assets" element={<PlanGuard pageKey="accounting_enabled"><AccessGuard pageKey="accounting_enabled"><Assets /></AccessGuard></PlanGuard>} />
-                <Route path="/reports/business" element={<PlanGuard pageKey="analytics_enabled"><BusinessReport /></PlanGuard>} />
-                <Route path="/website-builder" element={<PlanGuard pageKey="website_builder_enabled"><AccessGuard pageKey="website_builder_enabled"><WebsiteBuilder /></AccessGuard></PlanGuard>} />
-                <Route path="/enrollment" element={<EnrollmentIndex />}> 
-                  <Route path="overview" element={<Overview />} />
-                  <Route path="new" element={<NewEnrollment />} />
-                  <Route path="applications" element={<Applications />} />
-                  <Route path="enrolled" element={<EnrolledStudents />} />
-                  <Route path="documents" element={<Documents />} />
-                  <Route path="payments" element={<PaymentsPage />} />
-                  <Route path="reports" element={<Reports />} />
-                  <Route index element={<Overview />} />
-                </Route>
-                <Route path="/login" element={<Navigate to="/" replace />} />
-                <Route path="/pricing" element={<Pricing />} />
-                <Route path="/upgrade" element={<UpgradePage />} />
-                <Route path="/payment/:planKey" element={<PaymentPage />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </main>
-          </div>
-        </>
-      )}
 
-      {/* Public routes rendered only when not authenticated */}
-      {!isAuthenticated && (
+      {isAuthenticated ? (
+        <Routes>
+          {/* ── Fullscreen pages (no sidebar/navbar) ── */}
+          <Route path="/upgrade" element={<div style={{position:'fixed',inset:0,zIndex:50,overflowY:'auto',width:'100vw'}}><UpgradePage /></div>} />
+          <Route path="/payment/:planKey" element={<div style={{position:'fixed',inset:0,zIndex:50,overflowY:'auto',width:'100vw'}}><PaymentPage /></div>} />
+          <Route path="/pricing" element={<div style={{position:'fixed',inset:0,zIndex:50,overflowY:'auto',width:'100vw'}}><Pricing /></div>} />
+
+          {/* ── All dashboard pages (with sidebar/navbar) ── */}
+          <Route path="*" element={
+            <DashboardLayout
+              sidebarOpen={sidebarOpen}
+              setSidebarOpen={setSidebarOpen}
+              sidebarWidth={sidebarWidth}
+              setSidebarWidth={setSidebarWidth}
+            />
+          } />
+        </Routes>
+      ) : (
         <Routes>
           <Route path="/manual-entry-old" element={<ManualEntry />} />
           <Route path="/" element={<HomePage />} />
