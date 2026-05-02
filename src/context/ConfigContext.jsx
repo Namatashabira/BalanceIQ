@@ -83,6 +83,7 @@ export function ConfigProvider({ children }) {
     },
     theme: null,
     logo: localStorage.getItem('cachedLogo') || null,
+    schoolInfo: (() => { try { return JSON.parse(localStorage.getItem('cachedSchoolInfo') || 'null'); } catch { return null; } })(),
     pricingSettings: null,
     allowedPages: null,
     firstAccessiblePath: null,
@@ -124,6 +125,25 @@ export function ConfigProvider({ children }) {
         loading: false,
         error: null
       });
+
+      // Fetch school info only when business type is school
+      if (response.data.business_type === 'school') {
+        try {
+          const bsRes = await axios.get(`${API_BASE}/core/business-settings/`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const bs = bsRes.data;
+          const schoolInfo = {
+            name: bs.businessName || '',
+            address: [bs.location, bs.town, bs.district, bs.country].filter(Boolean).join(', '),
+            poBox: bs.poBox || '',
+            logo: bs.businessLogoUrl || response.data.theme?.logo_url || null,
+            motto: bs.motto || '',
+          };
+          localStorage.setItem('cachedSchoolInfo', JSON.stringify(schoolInfo));
+          setConfig(prev => ({ ...prev, schoolInfo }));
+        } catch { /* keep cached */ }
+      }
 
       // Apply theme colors if available and cache to reduce page flash on reload
       if (response.data.theme) {

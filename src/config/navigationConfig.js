@@ -1,8 +1,9 @@
 // Shared navigation config for Sidebar and Navbar
 import {
   LayoutDashboard, Package, Warehouse, FileText, Receipt, BarChart3, Settings as SettingsIcon,
-  ShoppingCart, Calendar, DollarSign, Brain, Building2, Users, TrendingUp, Globe, Lock
+  ShoppingCart, Calendar, DollarSign, Brain, Building2, Users, TrendingUp, Globe, Lock, BookOpen, ClipboardList
 } from "lucide-react";
+import { UsergroupAddOutlined } from '@ant-design/icons';
 
 export const getNavigationItems = (labels, features, allowedPages, businessType, isAdmin, user) => {
   const contactLabel = labels.entity || (businessType === 'education' ? 'Student' : businessType === 'services' ? 'Client' : 'Customer');
@@ -37,7 +38,32 @@ export const getNavigationItems = (labels, features, allowedPages, businessType,
     { path: "/manage-users", label: "Manage Users", icon: Lock, enabled: isSuperadmin },
     { path: "/accounting", label: "Accounting", icon: Receipt, enabled: isEnabled('accounting_enabled') && hasAccess('accounting_enabled') },
     { path: "/enrollment", label: "Enrollment", icon: Calendar, enabled: isEnabled('enrollment_enabled') && hasAccess('enrollment_enabled') },
+    { path: "/student-reports", label: "Student Reports", icon: BookOpen, enabled: businessType === 'school' && isEnabled('enrollment_enabled') },
     { path: "/reports/business", label: "Business Report", icon: BarChart3, enabled: (typeof features?.business_report_enabled === 'undefined' || features.business_report_enabled === true) && hasAccess('business_report_enabled') },
     { path: "/website-builder", label: "Website Builder", icon: Globe, enabled: isEnabled('website_builder_enabled') && hasAccess('website_builder_enabled') },
+    {
+      path: '/student-management',
+      label: 'Student Management',
+      icon: UsergroupAddOutlined,
+      enabled: businessType === 'school',
+    },
+    {
+      path: '/marks-entry',
+      label: 'Marks Entry',
+      icon: ClipboardList,
+      enabled: businessType === 'school',
+    },
+    {
+      path: '/report-templates',
+      label: 'Report Templates',
+      icon: FileText,
+      enabled: businessType === 'school',
+    },
+    {
+      path: '/fees',
+      label: 'Fees',
+      icon: DollarSign,
+      enabled: businessType === 'school',
+    }
   ];
 };

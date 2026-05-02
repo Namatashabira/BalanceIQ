@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { ReportTemplateProvider } from "./context/ReportTemplateContext";
 import { ConfigProvider, useAllowedPages, useFeatures, useConfig } from "./context/ConfigContext";
 import { AccountingProvider } from "./context/AccountingContext";
 import { ToastProvider, useToast } from "./context/ToastContext";
@@ -46,6 +47,7 @@ import BalanceSheet from "./pages/Accounting/BalanceSheet";
 import Assets from "./pages/Accounting/Assets";
 import Customers from "./pages/Customers";
 import ManageUsers from "./pages/ManageUsers";
+import StudentReportPage from "./pages/StudentReportPage";
 import EnrollmentIndex from "./pages/EnrollmentIndex";
 import Overview from "./pages/enrollment/Overview";
 import NewEnrollment from "./pages/enrollment/NewEnrollment";
@@ -56,6 +58,10 @@ import PaymentsPage from "./pages/enrollment/Payments";
 import Reports from "./pages/enrollment/Reports";
 import BusinessReport from "./pages/Reports/BusinessReport";
 import WebsiteBuilder from "./pages/WebsiteBuilder/WebsiteBuilder";
+import StudentManagementPage from "./pages/StudentManagementPage";
+import FeesPage from "./pages/FeesPage";
+import ReportTemplatesPage from "./pages/ReportTemplatesPage";
+import MarksEntryPage from "./pages/MarksEntryPage";
 
 // ── Plan guard ────────────────────────────────────────────────────────────────
 function PlanGuard({ pageKey, children }) {
@@ -188,6 +194,11 @@ function DashboardLayout({ sidebarOpen, setSidebarOpen, sidebarWidth, setSidebar
               <Route path="reports" element={<Reports />} />
               <Route index element={<Overview />} />
             </Route>
+            <Route path="/student-reports" element={<StudentReportPage />} />
+            <Route path="/student-management" element={<StudentManagementPage />} />
+            <Route path="/marks-entry" element={<MarksEntryPage />} />
+            <Route path="/fees" element={<FeesPage />} />
+            <Route path="/report-templates" element={<ReportTemplatesPage />} />
             <Route path="/login" element={<Navigate to="/" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
@@ -283,7 +294,9 @@ export default function App() {
         <AccountingProvider>
           <ToastProvider>
             <PlanProvider>
-              <AppContent />
+              <ReportTemplateProvider>
+                <AppContent />
+              </ReportTemplateProvider>
             </PlanProvider>
           </ToastProvider>
         </AccountingProvider>

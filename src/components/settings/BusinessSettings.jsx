@@ -152,6 +152,7 @@ export default function BusinessSettings() {
 
         // Refresh global config so sidebar/navbar pick up the new logo if exposed there
         if (reloadConfig) {
+          localStorage.removeItem('cachedSchoolInfo'); // force fresh fetch on next config load
           reloadConfig();
         }
       });

@@ -26,6 +26,7 @@ const ROUTE_LABELS = {
   'balance-sheet': 'Balance Sheet', assets: 'Assets', enrollment: 'Enrollment',
   reports: 'Reports', business: 'Business Report', 'website-builder': 'Website Builder',
   'my-organizations': 'My Organizations',
+  fees: 'Fees',
 };
 
 function useBreadcrumbs() {

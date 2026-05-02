@@ -10,6 +10,7 @@ import {
 import { Line, Doughnut } from 'react-chartjs-2';
 import { fetchWithAuth } from '../api';
 import { useConfig } from '../context/ConfigContext';
+import SchoolDashboard from './SchoolDashboard';
 import { getAll, bulkUpsert } from '../services/localStore';
 import { formatCurrency, getCurrencyCode } from '../utils/pricingHelpers';
 import {
@@ -52,7 +53,11 @@ export default function Dashboard() {
   const [unreadCount, setUnreadCount] = useState(0);
   const wsRef = useRef(null);
   const notificationRef = useRef(null);
-  const { pricingSettings } = useConfig();
+  const { pricingSettings, businessType } = useConfig();
+
+  if (businessType && ['school', 'schools', 'education'].includes(String(businessType).toLowerCase())) {
+    return <SchoolDashboard />;
+  }
   const currencyCode = getCurrencyCode(pricingSettings);
   const fmt = useCallback((value) => formatCurrency(value, pricingSettings), [pricingSettings]);
 
