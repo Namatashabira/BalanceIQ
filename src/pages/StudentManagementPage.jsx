@@ -24,6 +24,7 @@ function calcAge(dob) {
 function resolvePhoto(photo) {
   if (!photo) return null;
   if (photo.startsWith('http')) return photo;
+  // local dev fallback
   return `${BASE_URL.replace('/api', '')}${photo}`;
 }
 
