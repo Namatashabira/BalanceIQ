@@ -29,11 +29,11 @@ function resolvePhoto(photo) {
 }
 
 function Avatar({ src, name, size = 'sm' }) {
-  const dim = size === 'lg' ? 'w-20 h-20 text-2xl' : 'w-8 h-8 text-xs';
+  const dim = size === 'lg' ? 'w-20 h-20 text-2xl' : 'w-10 h-10 text-xs';
   const initials = name ? name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : '?';
   return src
-    ? <img src={src} alt={name} className={`${dim} rounded-full object-cover border-2 border-white shadow`} />
-    : <div className={`${dim} rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center font-bold text-white shadow`}>{initials}</div>;
+    ? <img src={src} alt={name} className={`${dim} object-cover border-2 border-white shadow`} style={{ borderRadius: '50%' }} />
+    : <div className={`${dim} bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center font-bold text-white shadow`} style={{ borderRadius: '50%' }}>{initials}</div>;
 }
 
 function Modal({ title, onClose, children, wide }) {
@@ -611,8 +611,8 @@ export default function StudentManagementPage() {
               <div className="flex items-start gap-4">
                 <div className="shrink-0">
                   {resolvePhoto(selected.photo)
-                    ? <img src={resolvePhoto(selected.photo)} alt="" className="w-20 h-20 rounded-2xl object-cover border-4 border-white/30 shadow-xl" />
-                    : <div className="w-20 h-20 rounded-2xl bg-white/20 border-4 border-white/30 flex items-center justify-center text-3xl font-bold text-white shadow-xl">
+                    ? <img src={resolvePhoto(selected.photo)} alt="" className="w-20 h-20 object-cover border-4 border-white/30 shadow-xl" style={{ borderRadius: '50%' }} />
+                    : <div className="w-20 h-20 bg-white/20 border-4 border-white/30 flex items-center justify-center text-3xl font-bold text-white shadow-xl" style={{ borderRadius: '50%' }}>
                         {`${selected.first_name[0]}${selected.last_name[0]}`.toUpperCase()}
                       </div>
                   }
