@@ -59,41 +59,41 @@ function buildStudentInvoiceHTML(student, school, sig, term, year, compact = fal
         <table style="width:100%;border-collapse:collapse">
           <tr>
             <td style="padding:2px 0;width:50%">
-              <span style="color:#6b7280;font-size:9px;text-transform:uppercase;letter-spacing:0.4px">Name: </span>
+              <span style="color:#6b7280;font-size:${bodySize};text-transform:uppercase;letter-spacing:0.4px">Name: </span>
               <strong style="color:#111;text-transform:uppercase">${student.student_name}</strong>
             </td>
             <td style="padding:2px 0;width:50%">
-              <span style="color:#6b7280;font-size:9px;text-transform:uppercase;letter-spacing:0.4px">Class: </span>
+              <span style="color:#6b7280;font-size:${bodySize};text-transform:uppercase;letter-spacing:0.4px">Class: </span>
               <strong style="color:#111">${student.class_assigned}</strong>
             </td>
           </tr>
           <tr>
             <td style="padding:2px 0">
-              <span style="color:#6b7280;font-size:9px;text-transform:uppercase;letter-spacing:0.4px">Term: </span>
+              <span style="color:#6b7280;font-size:${bodySize};text-transform:uppercase;letter-spacing:0.4px">Term: </span>
               <strong style="color:#111">${term}</strong>
             </td>
             <td style="padding:2px 0">
-              <span style="color:#6b7280;font-size:9px;text-transform:uppercase;letter-spacing:0.4px">Year: </span>
+              <span style="color:#6b7280;font-size:${bodySize};text-transform:uppercase;letter-spacing:0.4px">Year: </span>
               <strong style="color:#111">${year}</strong>
             </td>
           </tr>
           <tr>
             <td style="padding:2px 0">
-              <span style="color:#6b7280;font-size:9px;text-transform:uppercase;letter-spacing:0.4px">Adm No: </span>
+              <span style="color:#6b7280;font-size:${bodySize};text-transform:uppercase;letter-spacing:0.4px">Adm No: </span>
               <strong style="color:#111">${student.admission_number || '—'}</strong>
             </td>
             <td style="padding:2px 0">
-              <span style="color:#6b7280;font-size:9px;text-transform:uppercase;letter-spacing:0.4px">${isCandidate ? 'Index No: ' : 'Stream: '}</span>
+              <span style="color:#6b7280;font-size:${bodySize};text-transform:uppercase;letter-spacing:0.4px">${isCandidate ? 'Index No: ' : 'Stream: '}</span>
               <strong style="color:#111">${isCandidate ? (student.index_number || '——————————') : (student.stream_name || '—')}</strong>
             </td>
           </tr>
           <tr>
             <td style="padding:2px 0">
-              <span style="color:#6b7280;font-size:9px;text-transform:uppercase;letter-spacing:0.4px">Status: </span>
+              <span style="color:#6b7280;font-size:${bodySize};text-transform:uppercase;letter-spacing:0.4px">Status: </span>
               <strong style="color:${statusColor}">${statusLabel}</strong>
             </td>
             <td style="padding:2px 0;text-align:right">
-              <span style="color:#9ca3af;font-size:9px;font-style:italic">Issued: ${new Date().toLocaleDateString()}</span>
+              <span style="color:#9ca3af;font-size:${bodySize};font-style:italic">Issued: ${new Date().toLocaleDateString()}</span>
             </td>
           </tr>
         </table>

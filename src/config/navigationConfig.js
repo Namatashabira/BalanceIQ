@@ -6,7 +6,7 @@ import {
 import { UsergroupAddOutlined } from '@ant-design/icons';
 
 export const getNavigationItems = (labels, features, allowedPages, businessType, isAdmin, user) => {
-  const contactLabel = labels.entity || (businessType === 'education' ? 'Student' : businessType === 'services' ? 'Client' : 'Customer');
+  const contactLabel = labels.entity || (businessType === 'school' ? 'Student' : businessType === 'services' ? 'Client' : 'Customer');
   const contactLabelPlural = labels.entities || `${contactLabel}${contactLabel.endsWith('s') ? '' : 's'}`;
   const isEnabled = (key, defaultValue = true) => {
     const value = features?.[key];
@@ -37,7 +37,7 @@ export const getNavigationItems = (labels, features, allowedPages, businessType,
     { path: "/settings", label: "Settings", icon: SettingsIcon, enabled: isAdmin },
     { path: "/manage-users", label: "Manage Users", icon: Lock, enabled: isSuperadmin },
     { path: "/accounting", label: "Accounting", icon: Receipt, enabled: isEnabled('accounting_enabled') && hasAccess('accounting_enabled') },
-    { path: "/enrollment", label: "Enrollment", icon: Calendar, enabled: isEnabled('enrollment_enabled') && hasAccess('enrollment_enabled') },
+    { path: "/enrollment", label: "Enrollment", icon: Calendar, enabled: false },
     { path: "/student-reports", label: "Student Reports", icon: BookOpen, enabled: businessType === 'school' && isEnabled('enrollment_enabled') },
     { path: "/reports/business", label: "Business Report", icon: BarChart3, enabled: (typeof features?.business_report_enabled === 'undefined' || features.business_report_enabled === true) && hasAccess('business_report_enabled') },
     { path: "/website-builder", label: "Website Builder", icon: Globe, enabled: isEnabled('website_builder_enabled') && hasAccess('website_builder_enabled') },

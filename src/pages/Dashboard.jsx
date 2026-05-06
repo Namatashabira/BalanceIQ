@@ -54,10 +54,6 @@ export default function Dashboard() {
   const wsRef = useRef(null);
   const notificationRef = useRef(null);
   const { pricingSettings, businessType } = useConfig();
-
-  if (businessType && ['school', 'schools', 'education'].includes(String(businessType).toLowerCase())) {
-    return <SchoolDashboard />;
-  }
   const currencyCode = getCurrencyCode(pricingSettings);
   const fmt = useCallback((value) => formatCurrency(value, pricingSettings), [pricingSettings]);
 
@@ -316,6 +312,10 @@ export default function Dashboard() {
   };
 
   if (loading || !dashboardData) {
+    // School type check — must be after all hooks
+    if (businessType && ['school', 'schools', 'education', 'School'].includes(String(businessType))) {
+      return <SchoolDashboard />;
+    }
     if (error) {
       return (
         <div className="flex items-center justify-center h-screen">
@@ -349,6 +349,11 @@ export default function Dashboard() {
     recent_activity = {},
     summary = {},
   } = dashboardData || {};
+
+  // School type — render school dashboard instead
+  if (businessType && ['school', 'schools', 'education', 'School'].includes(String(businessType))) {
+    return <SchoolDashboard />;
+  }
 
   // Defensive fallbacks for nested payloads so the UI never crashes on missing fields
   const stockMetrics = {

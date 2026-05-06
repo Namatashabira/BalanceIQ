@@ -256,6 +256,7 @@ export default function BusinessSettings() {
                   <option value="Clothing">Clothing</option>
                   <option value="Hardware">Hardware</option>
                   <option value="Services">Services</option>
+                  <option value="School">School / Education</option>
                   <option value="Other">Other</option>
                 </select>
               </div>
@@ -443,7 +444,8 @@ export default function BusinessSettings() {
             </div>
           </div>
 
-          {/* Legal Information Section */}
+          {/* Legal Information Section — Business */}
+          {businessInfo.businessType !== 'School' && (
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
               <Mail size={20} />
@@ -479,6 +481,83 @@ export default function BusinessSettings() {
               </div>
             </div>
           </div>
+          )}
+
+          {/* School-specific fields */}
+          {businessInfo.businessType === 'School' && (
+          <div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <Building2 size={20} />
+              School Information
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Head Teacher / Principal Name
+                </label>
+                <input
+                  type="text"
+                  name="taxId"
+                  value={businessInfo.taxId}
+                  onChange={handleChange}
+                  placeholder="e.g. Mr. John Okello"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  School Motto
+                </label>
+                <input
+                  type="text"
+                  name="registrationNumber"
+                  value={businessInfo.registrationNumber}
+                  onChange={handleChange}
+                  placeholder="e.g. Excellence in Education"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  School Level
+                </label>
+                <select
+                  name="poBox"
+                  value={businessInfo.poBox}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Select level</option>
+                  <option value="Primary">Primary School (P.1 – P.7)</option>
+                  <option value="Secondary">Secondary School (S.1 – S.6)</option>
+                  <option value="Primary & Secondary">Primary & Secondary</option>
+                  <option value="Tertiary">Tertiary / College</option>
+                  <option value="Nursery">Nursery / Pre-school</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ownership Type
+                </label>
+                <select
+                  name="country"
+                  value={businessInfo.country}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="Government">Government / Public</option>
+                  <option value="Private">Private</option>
+                  <option value="Community">Community</option>
+                  <option value="Religious">Religious / Faith-based</option>
+                  <option value="Uganda">Other</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          )}
 
           {/* Save Button */}
           <div className="flex justify-end pt-4 border-t">

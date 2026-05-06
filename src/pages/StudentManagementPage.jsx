@@ -29,11 +29,11 @@ function resolvePhoto(photo) {
 }
 
 function Avatar({ src, name, size = 'sm' }) {
-  const dim = size === 'lg' ? 'w-20 h-20 text-2xl' : 'w-10 h-10 text-xs';
+  const dim = size === 'lg' ? 'w-28 h-28 text-3xl' : 'w-10 h-10 text-xs';
   const initials = name ? name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : '?';
   return src
-    ? <img src={src} alt={name} className={`${dim} object-cover border-2 border-white shadow`} style={{ borderRadius: '50%' }} />
-    : <div className={`${dim} bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center font-bold text-white shadow`} style={{ borderRadius: '50%' }}>{initials}</div>;
+    ? <img src={src} alt={name} className={`${dim} rounded-full object-cover border-2 border-white shadow`} />
+    : <div className={`${dim} rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center font-bold text-white shadow`}>{initials}</div>;
 }
 
 function Modal({ title, onClose, children, wide }) {
@@ -74,6 +74,23 @@ export default function StudentManagementPage() {
   const [error, setError] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
+
+  const compressPhoto = (file, maxWidth = 400, quality = 0.75) =>
+    new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(blob => resolve(new File([blob], file.name, { type: 'image/jpeg' })), 'image/jpeg', quality);
+      };
+      img.onerror = () => resolve(file);
+      img.src = url;
+    });
   const [formGuardians, setFormGuardians] = useState([]);
   const [formHistory, setFormHistory] = useState([]);
 
@@ -310,11 +327,12 @@ export default function StudentManagementPage() {
                 <Avatar src={photoPreview} name={`${form.first_name} ${form.last_name}`} size="lg" />
                 <label className="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-700 shadow">
                   <Plus className="w-3.5 h-3.5 text-white" />
-                  <input type="file" accept="image/*" className="hidden" onChange={e => {
+                  <input type="file" accept="image/*" className="hidden" onChange={async e => {
                     const file = e.target.files[0];
                     if (!file) return;
-                    setPhotoFile(file);
-                    setPhotoPreview(URL.createObjectURL(file));
+                    const compressed = await compressPhoto(file);
+                    setPhotoFile(compressed);
+                    setPhotoPreview(URL.createObjectURL(compressed));
                   }} />
                 </label>
               </div>

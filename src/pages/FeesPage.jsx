@@ -287,22 +287,43 @@ function ReceiptSettingsTab() {
     || stampRotate !== s.stampRotate
     || stampCircular !== s.stampCircular;
 
+  const compressImage = (dataUrl, maxWidth = 400, quality = 0.7) =>
+    new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+
   const handleSave = async () => {
     let finalSigImage = sigImage;
     let finalSigMode  = sigMode;
 
     if (sigMode === 'draw' && canvasRef.current) {
-      finalSigImage = canvasRef.current.toDataURL();
+      finalSigImage = canvasRef.current.toDataURL('image/jpeg', 0.8);
       finalSigMode  = 'image';
       setSigImage(finalSigImage);
+    } else if (finalSigMode === 'image' && finalSigImage) {
+      finalSigImage = await compressImage(finalSigImage);
     }
+
+    const rawStamp = localStorage.getItem('schoolStampRaw') || '';
+    const compressedStamp = rawStamp ? await compressImage(rawStamp, 600, 0.8) : '';
+    if (compressedStamp) localStorage.setItem('schoolStampRaw', compressedStamp);
 
     const payload = {
       sig_mode:       finalSigMode,
       sig_image:      finalSigMode === 'image' ? finalSigImage : '',
       sig_name:       sigMode === 'type' ? sigName : '',
       sig_label:      sigLabel || 'Bursar',
-      stamp_raw:      localStorage.getItem('schoolStampRaw') || '',
+      stamp_raw:      compressedStamp || rawStamp,
       stamp_offset_x: stampOffsetX,
       stamp_offset_y: stampOffsetY,
       stamp_rotate:   stampRotate,
@@ -314,10 +335,8 @@ function ReceiptSettingsTab() {
     savedRef.current = { sigMode: finalSigMode, sigName, sigLabel, sigImage: finalSigImage, stampOffsetX, stampOffsetY, stampRotate, stampCircular };
     setCanvasDirty(false);
     setUploadDirty(false);
-    setTimeout(() => {
-      setSaveState('success');
-      setTimeout(() => setSaveState(null), 2000);
-    }, 3000);
+    setSaveState('success');
+    setTimeout(() => setSaveState(null), 2000);
   };
 
   return (

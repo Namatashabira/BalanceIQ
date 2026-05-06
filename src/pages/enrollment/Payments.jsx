@@ -39,7 +39,7 @@ export default function Payments() {
       <div className="sticky top-0 z-10 bg-white border-b pb-2 mb-4 flex items-center gap-4">
         <div className="w-12 h-12 rounded-full overflow-hidden border flex items-center justify-center bg-gray-100">
           {selectedStudent?.student_photo ? (
-            <img src={selectedStudent.student_photo} alt="Avatar" className="w-full h-full object-cover" />
+            <img src={selectedStudent.student_photo} alt="Avatar" className="w-full h-full object-cover rounded-full" />
           ) : (
             <FaUserCircle className="text-gray-400 text-3xl" />
           )}
