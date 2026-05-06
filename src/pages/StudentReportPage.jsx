@@ -25,6 +25,14 @@ const REMARK_MAP = { A: 'Excellent', B: 'Good', C: 'Satisfactory', D: 'Needs Imp
 
 const TEMPLATE_MAP = { classic: ClassicPreview, modern: ModernPreview, minimal: MinimalPreview };
 
+const BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace('/api', '');
+
+function resolvePhoto(photo) {
+  if (!photo) return null;
+  if (photo.startsWith('http://') || photo.startsWith('https://')) return photo;
+  return `${BASE_URL}${photo.startsWith('/') ? '' : '/'}${photo}`;
+}
+
 async function buildReportData(student, term, academicYear, logo, schoolInfo) {
   const markParams = new URLSearchParams({ student: student.id, term, academic_year: academicYear });
   const marksRes = await fetchWithAuth(`${SCHOOL_API}/marks/?${markParams}`);
@@ -65,7 +73,7 @@ async function buildReportData(student, term, academicYear, logo, schoolInfo) {
       previous_school: student.previous_school || '',
       fees_balance: student.fees_balance ?? 0,
       payment_status: student.payment_status || 'not_paid',
-      photo: student.photo || null,
+      photo: resolvePhoto(student.photo) || null,
       guardians,
     },
     subjects,

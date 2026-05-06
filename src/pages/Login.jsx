@@ -90,13 +90,13 @@ export default function Login() {
   return (
     <>
       {loading && (
-        <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
-          <div className="rainbow-wheel"></div>
-          <div className="loading-dots mt-6">
-            <span className="dot dot1">.</span>
-            <span className="dot dot2">.</span>
-            <span className="dot dot3">.</span>
+        <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center gap-5">
+          <div className="relative w-16 h-16">
+            <div className="absolute inset-0 rounded-full border-4 border-gray-200" />
+            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-purple-600 border-r-purple-400 animate-spin" />
+            <div className="absolute inset-2 rounded-full border-4 border-transparent border-t-indigo-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '0.6s' }} />
           </div>
+          <p className="text-gray-500 text-sm font-semibold tracking-widest uppercase">Signing in…</p>
         </div>
       )}
       
@@ -252,78 +252,7 @@ export default function Login() {
       </div>
     </div>
 
-      <style jsx>{`
-        @keyframes rainbow-spin {
-          0% {
-            transform: rotate(0deg);
-            border-top-color: #ff0000;
-          }
-          16.67% {
-            border-top-color: #ff7f00;
-          }
-          33.33% {
-            border-top-color: #ffff00;
-          }
-          50% {
-            border-top-color: #00ff00;
-          }
-          66.67% {
-            border-top-color: #0000ff;
-          }
-          83.33% {
-            border-top-color: #4b0082;
-          }
-          100% {
-            transform: rotate(360deg);
-            border-top-color: #ff0000;
-          }
-        }
 
-        @keyframes dot-fill {
-          0%, 20% {
-            opacity: 0.3;
-          }
-          40%, 100% {
-            opacity: 1;
-          }
-        }
-
-        .rainbow-wheel {
-          width: 60px;
-          height: 60px;
-          border: 6px solid rgba(0, 0, 0, 0.1);
-          border-top-color: #ff0000;
-          background-color: white;
-          animation: rainbow-spin 1s linear infinite;
-        }
-
-        .loading-dots {
-          display: flex;
-          gap: 12px;
-          font-size: 32px;
-          font-weight: bold;
-        }
-
-        .dot {
-          opacity: 0.3;
-          color: #333;
-        }
-
-        .dot1 {
-          animation: dot-fill 1.5s ease-in-out infinite;
-          animation-delay: 0s;
-        }
-
-        .dot2 {
-          animation: dot-fill 1.5s ease-in-out infinite;
-          animation-delay: 0.3s;
-        }
-
-        .dot3 {
-          animation: dot-fill 1.5s ease-in-out infinite;
-          animation-delay: 0.6s;
-        }
-      `}</style>
     </>
   );
 }

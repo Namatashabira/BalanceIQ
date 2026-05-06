@@ -12,6 +12,7 @@ import Navbar from "./components/Navbar";
 import OfflineBanner from "./components/OfflineBanner";
 import TrialBanner from "./components/TrialBanner";
 import useSync from "./hooks/useSync";
+import { syncPendingReceiptSettings } from "./services/receiptSettingsService";
 import HomePage from "./pages/HomePage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -60,6 +61,9 @@ import BusinessReport from "./pages/Reports/BusinessReport";
 import WebsiteBuilder from "./pages/WebsiteBuilder/WebsiteBuilder";
 import StudentManagementPage from "./pages/StudentManagementPage";
 import FeesPage from "./pages/FeesPage";
+import FeeReceipt from "./pages/fees/FeeReceipt";
+import FeeInvoice from "./pages/fees/FeeInvoice";
+import SchoolReceiptLookup from "./pages/SchoolReceiptLookup";
 import ReportTemplatesPage from "./pages/ReportTemplatesPage";
 import MarksEntryPage from "./pages/MarksEntryPage";
 
@@ -198,6 +202,9 @@ function DashboardLayout({ sidebarOpen, setSidebarOpen, sidebarWidth, setSidebar
             <Route path="/student-management" element={<StudentManagementPage />} />
             <Route path="/marks-entry" element={<MarksEntryPage />} />
             <Route path="/fees" element={<FeesPage />} />
+            <Route path="/fees/receipt" element={<FeeReceipt />} />
+            <Route path="/fees/invoice" element={<FeeInvoice />} />
+            <Route path="/school-receipt-lookup" element={<SchoolReceiptLookup />} />
             <Route path="/report-templates" element={<ReportTemplatesPage />} />
             <Route path="/login" element={<Navigate to="/" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
@@ -224,6 +231,10 @@ function AppContent() {
   }, []);
 
   useEffect(() => { window.__toastContext = toast; }, [toast]);
+
+  useEffect(() => {
+    if (isAuthenticated) syncPendingReceiptSettings();
+  }, [isAuthenticated]);
 
   if (loading) {
     return <div className="flex items-center justify-center h-screen"><div className="text-lg">Loading...</div></div>;
