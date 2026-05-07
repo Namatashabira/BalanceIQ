@@ -2,6 +2,7 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'https://web-production-36021.u
 const API = `${BASE_URL}/fees/receipt-settings/`;
 
 const LS_KEYS = {
+  logo:          'schoolLogo',
   sigMode:       'bursarSigMode',
   sigImage:      'bursarSigImage',
   sigName:       'bursarSigName',
@@ -22,6 +23,7 @@ function getHeaders() {
 
 /** Map DB row → localStorage keys */
 function dbToLocal(data) {
+  if (data.logo       !== undefined) localStorage.setItem(LS_KEYS.logo,        data.logo);
   if (data.sig_mode   !== undefined) localStorage.setItem(LS_KEYS.sigMode,      data.sig_mode);
   if (data.sig_image  !== undefined) localStorage.setItem(LS_KEYS.sigImage,     data.sig_image);
   if (data.sig_name   !== undefined) localStorage.setItem(LS_KEYS.sigName,      data.sig_name);
@@ -36,6 +38,7 @@ function dbToLocal(data) {
 /** Map localStorage → DB payload */
 function localToDb() {
   return {
+    logo:           localStorage.getItem(LS_KEYS.logo)         || '',
     sig_mode:       localStorage.getItem(LS_KEYS.sigMode)      || '',
     sig_image:      localStorage.getItem(LS_KEYS.sigImage)     || '',
     sig_name:       localStorage.getItem(LS_KEYS.sigName)      || '',

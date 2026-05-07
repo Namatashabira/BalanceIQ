@@ -26,6 +26,20 @@ const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm foc
 const fmt = (n) => `UGX ${Number(n || 0).toLocaleString()}`;
 const currentYear = () => String(new Date().getFullYear());
 
+function Avatar({ name, photo }) {
+  const [err, setErr] = useState(false);
+  const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const colors = ['bg-blue-400', 'bg-indigo-400', 'bg-emerald-400', 'bg-amber-400', 'bg-rose-400', 'bg-purple-400'];
+  const color = colors[name.charCodeAt(0) % colors.length];
+  if (photo && !err)
+    return <img src={photo} alt={name} onError={() => setErr(true)} className="w-7 h-7 rounded-full object-cover flex-shrink-0 ring-2 ring-white" />;
+  return (
+    <div className={`w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-white text-[10px] font-bold ring-2 ring-white ${color}`}>
+      {initials}
+    </div>
+  );
+}
+
 function Field({ label, children }) {
   return (
     <div>
@@ -117,7 +131,7 @@ function StudentSearch({ value, onChange, onSelect }) {
   );
 }
 
-function StudentPaymentRow({ student, term, year, onAddPayment, onEditPayment, onDeletePayment, onReceipt }) {
+function StudentPaymentRow({ student, term, year, onAddPayment, onEditPayment, onDeletePayment, onReceipt, onInvoice, onSingleReceipt }) {
   const [expanded, setExpanded] = useState(false);
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -141,6 +155,7 @@ function StudentPaymentRow({ student, term, year, onAddPayment, onEditPayment, o
         <td className="px-4 py-3">
           <div className="flex items-center gap-2">
             {expanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            <Avatar name={student.student_name} photo={student.photo || null} />
             <span className="font-medium text-gray-900">{student.student_name}</span>
           </div>
         </td>
@@ -151,17 +166,22 @@ function StudentPaymentRow({ student, term, year, onAddPayment, onEditPayment, o
         <td className="px-4 py-3 text-red-500 font-semibold text-sm">{fmt(student.balance)}</td>
         <td className="px-4 py-3"><StatusBadge status={student.payment_status} /></td>
         <td className="px-4 py-3">
-          <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-            <button
-              onClick={() => onAddPayment(student)}
-              className="p-1.5 rounded hover:bg-blue-50 text-blue-600"
-              title="Add payment"
-            ><Plus className="w-4 h-4" /></button>
-            <button
-              onClick={() => onReceipt(student)}
-              className="p-1.5 rounded hover:bg-green-50 text-green-600"
-              title="View receipt"
-            ><Receipt className="w-4 h-4" /></button>
+          <div className="flex flex-col gap-1">
+            <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+              <button onClick={() => onAddPayment(student)} className="p-1.5 rounded hover:bg-blue-50 text-blue-600" title="Add payment"><Plus className="w-4 h-4" /></button>
+              <button onClick={() => onReceipt(student)} className="p-1.5 rounded hover:bg-green-50 text-green-600" title="Print receipt (all payments)"><Receipt className="w-4 h-4" /></button>
+              <button onClick={() => onInvoice(student)} className="p-1.5 rounded hover:bg-purple-50 text-purple-600" title="Print invoice"><FileText className="w-4 h-4" /></button>
+            </div>
+            {/* Unpaid items badges */}
+            {student.unpaid_items?.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-0.5" onClick={e => e.stopPropagation()}>
+                {student.unpaid_items.map(it => (
+                  <span key={it.id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-red-50 text-red-600 border border-red-100">
+                    {it.name}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </td>
       </tr>
@@ -194,6 +214,7 @@ function StudentPaymentRow({ student, term, year, onAddPayment, onEditPayment, o
                       <td className="py-1.5 pr-4 font-mono text-gray-400">{p.reference || '—'}</td>
                       <td className="py-1.5">
                         <div className="flex gap-1">
+                          <button onClick={() => onSingleReceipt({ ...p, student_obj: student })} className="p-1 rounded hover:bg-green-50 text-green-600" title="Print this payment receipt"><Receipt className="w-3.5 h-3.5" /></button>
                           <button onClick={() => onEditPayment(p)} className="p-1 rounded hover:bg-yellow-50 text-yellow-600"><Pencil className="w-3.5 h-3.5" /></button>
                           <button onClick={() => onDeletePayment(p.id, loadPayments)} className="p-1 rounded hover:bg-red-50 text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
                         </div>
@@ -222,6 +243,37 @@ export default function PaymentTab({ onOpenReceipt, onOpenInvoice }) {
   const [error, setError] = useState('');
   const [form, setForm] = useState({});
 
+  // ── Fee items state ───────────────────────────────────────────────────────
+  const [structureItems, setStructureItems] = useState([]);   // [{id, name, amount, is_optional}]
+  const [paidItemIds, setPaidItemIds]       = useState([]);   // item ids already paid by this student
+  const [checkedItems, setCheckedItems]     = useState({});   // { [itemId]: true/false }
+  const [itemsLoading, setItemsLoading]     = useState(false);
+
+  const loadStructureItems = async (classAssigned, term, academicYear, studentId) => {
+    if (!classAssigned || !term || !academicYear) { setStructureItems([]); return; }
+    setItemsLoading(true);
+    try {
+      const [structRes, paidRes] = await Promise.all([
+        fetchWithAuth(`${API}/structures/?class_assigned=${classAssigned}&term=${encodeURIComponent(term)}&academic_year=${academicYear}`),
+        studentId ? fetchWithAuth(`${API}/item-payments/?student=${studentId}`) : Promise.resolve(null),
+      ]);
+      const structs = structRes?.ok ? await structRes.json() : [];
+      const items = (Array.isArray(structs) ? structs : structs.results || [])
+        .flatMap(s => s.items || []);
+      setStructureItems(items);
+
+      const paid = paidRes?.ok ? await paidRes.json() : [];
+      const paidIds = (Array.isArray(paid) ? paid : paid.results || []).map(p => p.item);
+      setPaidItemIds(paidIds);
+
+      // Pre-check unpaid items
+      const checks = {};
+      items.forEach(it => { checks[it.id] = !paidIds.includes(it.id); });
+      setCheckedItems(checks);
+    } catch { setStructureItems([]); }
+    finally { setItemsLoading(false); }
+  };
+
   const EMPTY_FORM = {
     student: null, term: filters.term, academic_year: filters.academic_year,
     amount_paid: '', payment_date: new Date().toISOString().slice(0, 10),
@@ -244,14 +296,17 @@ export default function PaymentTab({ onOpenReceipt, onOpenInvoice }) {
   const openAdd = (student) => {
     setSelectedStudent(student);
     setSelectedPayment(null);
-    setForm({ ...EMPTY_FORM, student: { id: student.student_id, first_name: student.student_name.split(' ')[0], last_name: student.student_name.split(' ').slice(1).join(' '), admission_number: student.admission_number, class_assigned: student.class_assigned } });
+    const studentObj = { id: student.student_id, first_name: student.student_name.split(' ')[0], last_name: student.student_name.split(' ').slice(1).join(' '), admission_number: student.admission_number, class_assigned: student.class_assigned };
+    setForm({ ...EMPTY_FORM, student: studentObj });
     setError('');
     setModal('form');
+    loadStructureItems(student.class_assigned, filters.term, filters.academic_year, student.student_id);
   };
 
   const openEdit = (payment) => {
     setSelectedPayment(payment);
     setSelectedStudent(null);
+    setStructureItems([]); setPaidItemIds([]); setCheckedItems({});
     setForm({
       student: { id: payment.student, first_name: payment.student_name?.split(' ')[0] || '', last_name: payment.student_name?.split(' ').slice(1).join(' ') || '', admission_number: payment.admission_number, class_assigned: payment.student_class },
       term: payment.term, academic_year: payment.academic_year,
@@ -273,7 +328,21 @@ export default function PaymentTab({ onOpenReceipt, onOpenInvoice }) {
       const method = selectedPayment ? 'PUT' : 'POST';
       const url = selectedPayment ? `${API}/payments/${selectedPayment.id}/` : `${API}/payments/`;
       const res = await fetchWithAuth(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      if (!res?.ok) { const d = await res.json(); setError(JSON.stringify(d)); return; }
+      if (!res?.ok) {
+        const d = await res.json();
+        setError(d.detail || JSON.stringify(d));
+        return;
+      }
+      const saved = await res.json();
+      // Mark checked items as paid
+      const toMark = structureItems.filter(it => checkedItems[it.id] && !paidItemIds.includes(it.id)).map(it => it.id);
+      if (toMark.length) {
+        await fetchWithAuth(`${API}/item-payments/bulk-mark/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ student: form.student.id, item_ids: toMark, payment_id: saved.id }),
+        });
+      }
       setModal(null); load();
     } catch { setError('Network error.'); }
     finally { setSaving(false); }
@@ -338,7 +407,8 @@ export default function PaymentTab({ onOpenReceipt, onOpenInvoice }) {
       </div>
 
       {totals && (
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <div className="overflow-x-auto -mx-1 px-1">
+          <div className="flex gap-3">
           {[
             { label: 'Total Required', value: fmt(totals.required), color: 'text-gray-800' },
             { label: 'Total Collected', value: fmt(totals.paid), color: 'text-emerald-600' },
@@ -346,11 +416,12 @@ export default function PaymentTab({ onOpenReceipt, onOpenInvoice }) {
             { label: 'Fully Paid', value: `${totals.count_paid}`, color: 'text-blue-600' },
             { label: 'Partial / Unpaid', value: `${totals.count_partial} / ${totals.count_not_paid}`, color: 'text-amber-600' },
           ].map(({ label, value, color }) => (
-            <div key={label} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-              <p className="text-xs text-gray-400 mb-1">{label}</p>
-              <p className={`text-base font-bold ${color}`}>{value}</p>
+            <div key={label} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex-1 min-w-[120px]">
+              <p className="text-xs text-gray-400 mb-1 whitespace-nowrap">{label}</p>
+              <p className={`text-base font-bold ${color} whitespace-nowrap`}>{value}</p>
             </div>
           ))}
+          </div>
         </div>
       )}
 
@@ -383,6 +454,8 @@ export default function PaymentTab({ onOpenReceipt, onOpenInvoice }) {
                 onEditPayment={openEdit}
                 onDeletePayment={handleDelete}
                 onReceipt={(st) => onOpenReceipt({ studentId: st.student_id, term: filters.term, academic_year: filters.academic_year })}
+                onInvoice={(st) => onOpenInvoice({ studentId: st.student_id, term: filters.term, academic_year: filters.academic_year, class_assigned: st.class_assigned })}
+                onSingleReceipt={(p) => onOpenReceipt({ studentId: p.student, term: p.term || filters.term, academic_year: p.academic_year || filters.academic_year, paymentId: p.id })}
               />
             ))}
           </tbody>
@@ -414,6 +487,59 @@ export default function PaymentTab({ onOpenReceipt, onOpenInvoice }) {
                 <input required className={inputCls} value={form.academic_year} onChange={e => setForm(f => ({ ...f, academic_year: e.target.value }))} />
               </Field>
             </div>
+
+            {/* ── Structure items ── */}
+            {!selectedPayment && (
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
+                  <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Fee Items</span>
+                  {itemsLoading && <span className="text-xs text-gray-400">Loading…</span>}
+                </div>
+                {structureItems.length === 0 && !itemsLoading ? (
+                  <p className="text-xs text-gray-400 px-3 py-3">No items defined in fee structure for this class/term.</p>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500 w-8"></th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">Item</th>
+                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Amount</th>
+                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-500">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {structureItems.map(it => {
+                        const alreadyPaid = paidItemIds.includes(it.id);
+                        return (
+                          <tr key={it.id} className={alreadyPaid ? 'bg-emerald-50/50' : ''}>
+                            <td className="px-3 py-2">
+                              <input
+                                type="checkbox"
+                                checked={!!checkedItems[it.id]}
+                                disabled={alreadyPaid}
+                                onChange={e => setCheckedItems(c => ({ ...c, [it.id]: e.target.checked }))}
+                                className="rounded accent-blue-600"
+                              />
+                            </td>
+                            <td className="px-3 py-2 font-medium text-gray-800">
+                              {it.name}
+                              {it.is_optional && <span className="ml-1.5 text-[10px] text-gray-400">(optional)</span>}
+                            </td>
+                            <td className="px-3 py-2 text-right font-semibold text-gray-700">{fmt(it.amount)}</td>
+                            <td className="px-3 py-2 text-center">
+                              {alreadyPaid
+                                ? <span className="text-xs font-semibold text-emerald-600">✓ Paid</span>
+                                : <span className="text-xs text-red-500">Unpaid</span>}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <Field label="Amount Paid (UGX)">
                 <input required type="number" min="1" className={inputCls} value={form.amount_paid} onChange={e => setForm(f => ({ ...f, amount_paid: e.target.value }))} placeholder="e.g. 150000" />

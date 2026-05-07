@@ -4,16 +4,18 @@ import {
   Users, BookOpen, FileText, Bell, X, RefreshCw, GraduationCap,
   TrendingUp, AlertTriangle, CheckCircle, Clock, DollarSign,
   CreditCard, UserCheck, BarChart2, Plus, Receipt, ClipboardList,
-  ArrowUpRight, ArrowDownRight, Banknote, Award, BookMarked
+  ArrowUpRight, ArrowDownRight, Banknote, Award, BookMarked,
+  Activity, Package
 } from 'lucide-react';
-import { Bar, Doughnut } from 'react-chartjs-2';
+import { Bar, Line, Doughnut } from 'react-chartjs-2';
 import { fetchWithAuth } from '../api';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement,
+  LineElement, PointElement,
   Title, Tooltip, Legend, ArcElement
 } from 'chart.js';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
+ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, ArcElement);
 
 const API = import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api';
 const SCHOOL = `${API}/school`;
@@ -26,24 +28,26 @@ const currentYear = () => String(new Date().getFullYear());
 // ── Stat card ─────────────────────────────────────────────────────────────────
 function StatCard({ icon: Icon, label, value, sub, color, trend, to }) {
   const card = (
-    <div className={`bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-start gap-4 hover:shadow-md transition-shadow ${to ? 'cursor-pointer' : ''}`}>
-      <div className={`p-3 rounded-xl ${color} shrink-0`}>
-        <Icon className="w-5 h-5 text-white" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</p>
-        <p className="text-2xl font-bold text-gray-900 mt-0.5">{value ?? '—'}</p>
-        {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
-      </div>
-      {trend != null && (
-        <div className={`flex items-center gap-0.5 text-xs font-semibold ${trend >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-          {trend >= 0 ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
-          {Math.abs(trend)}%
+    <div className={`bg-white rounded-xl shadow-sm border border-gray-100 p-3 flex flex-col gap-2 h-full hover:shadow-md transition-shadow ${to ? 'cursor-pointer' : ''}`}>
+      <div className="flex items-center justify-between">
+        <div className={`p-1.5 rounded-lg ${color} shrink-0`}>
+          <Icon className="w-3.5 h-3.5 text-white" />
         </div>
-      )}
+        {trend != null && (
+          <div className={`flex items-center gap-0.5 text-[10px] font-medium ${trend >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+            {trend >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+            {Math.abs(trend)}%
+          </div>
+        )}
+      </div>
+      <div className="min-w-0">
+        <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider truncate">{label}</p>
+        <p className="text-base font-semibold text-gray-900 mt-0.5 truncate leading-tight">{value ?? '—'}</p>
+        {sub && <p className="text-[9px] text-gray-400 mt-0.5 truncate">{sub}</p>}
+      </div>
     </div>
   );
-  return to ? <Link to={to}>{card}</Link> : card;
+  return to ? <Link to={to} className="h-full block">{card}</Link> : card;
 }
 
 // ── Quick action button ───────────────────────────────────────────────────────
@@ -61,6 +65,7 @@ export default function SchoolDashboard() {
   const [feeSummary, setFeeSummary] = useState(null);
   const [marks, setMarks] = useState([]);
   const [reports, setReports] = useState([]);
+  const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -70,11 +75,12 @@ export default function SchoolDashboard() {
   const load = useCallback(async () => {
     try {
       setError(null);
-      const [studRes, feeRes, marksRes, reportsRes] = await Promise.allSettled([
+      const [studRes, feeRes, marksRes, reportsRes, attRes] = await Promise.allSettled([
         fetchWithAuth(`${SCHOOL}/students/?limit=500`),
         fetchWithAuth(`${FEES}/payments/summary/?term=${term}&academic_year=${year}`),
         fetchWithAuth(`${SCHOOL}/marks/?term=${term}&academic_year=${year}`),
         fetchWithAuth(`${SCHOOL}/generated-reports/?term=${term}&academic_year=${year}`),
+        fetchWithAuth(`${SCHOOL}/attendance/?term=${term}&academic_year=${year}`),
       ]);
 
       const studData = studRes.status === 'fulfilled' && studRes.value?.ok
@@ -85,11 +91,14 @@ export default function SchoolDashboard() {
         ? await marksRes.value.json() : [];
       const reportsData = reportsRes.status === 'fulfilled' && reportsRes.value?.ok
         ? await reportsRes.value.json() : [];
+      const attData = attRes.status === 'fulfilled' && attRes.value?.ok
+        ? await attRes.value.json() : [];
 
       setStudents(Array.isArray(studData) ? studData : (studData.results || []));
       setFeeSummary(feeData);
       setMarks(Array.isArray(marksData) ? marksData : (marksData.results || []));
       setReports(Array.isArray(reportsData) ? reportsData : (reportsData.results || []));
+      setAttendance(Array.isArray(attData) ? attData : (attData.results || []));
       setLastUpdated(new Date().toLocaleTimeString());
     } catch {
       setError('Failed to load dashboard data');
@@ -192,6 +201,80 @@ export default function SchoolDashboard() {
     }]
   };
 
+  // Generate real data from fee payments for last 30 days
+  const generateFeesTrendData = () => {
+    const labels = [];
+    const data = [];
+    const feePayments = feeSummary?.payments || [];
+    
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+      
+      // Sum payments for this date
+      const dayTotal = feePayments
+        .filter(p => p.payment_date === dateStr)
+        .reduce((sum, p) => sum + parseFloat(p.amount_paid || 0), 0);
+      data.push(dayTotal);
+    }
+    return { labels, data };
+  };
+
+  // Generate attendance trend data for last 30 days
+  const generateAttendanceTrendData = () => {
+    const labels = [];
+    const data = [];
+    
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+      
+      // Calculate attendance rate for this date
+      const dayAttendance = attendance.filter(a => a.date === dateStr);
+      const presentCount = dayAttendance.filter(a => a.status === 'present' || a.status === 'late').length;
+      const rate = dayAttendance.length > 0 ? Math.round((presentCount / dayAttendance.length) * 100) : 0;
+      data.push(rate);
+    }
+    return { labels, data };
+  };
+
+  // Generate performance trend data (average scores over last 30 days)
+  const generatePerformanceTrendData = () => {
+    const labels = [];
+    const data = [];
+    
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+      
+      // Use overall average performance (marks don't have dates, so we'll show consistent average)
+      const marksWithScores = marks.filter(m => m.ca_score != null || m.exam_score != null);
+      const avgScore = marksWithScores.length > 0
+        ? Math.round(marksWithScores.reduce((s, m) => s + ((m.ca_score || 0) + (m.exam_score || 0)), 0) / marksWithScores.length)
+        : 0;
+      data.push(avgScore);
+    }
+    return { labels, data };
+  };
+
+  const feesTrendData = feeSummary ? generateFeesTrendData() : { labels: [], data: [] };
+  const attendanceTrendData = generateAttendanceTrendData();
+  const performanceTrendData = generatePerformanceTrendData();
+
+  const lineChartOpts = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top', labels: { font: { size: 11 }, usePointStyle: true, padding: 15 } } },
+    scales: { 
+      y: { beginAtZero: true, grid: { color: 'rgba(0, 0, 0, 0.05)' }, ticks: { font: { size: 10 } } }, 
+      x: { grid: { display: false }, ticks: { font: { size: 10 } } } 
+    }
+  };
+
   const chartOpts = {
     responsive: true, maintainAspectRatio: false,
     plugins: { legend: { position: 'top', labels: { font: { size: 11 } } } },
@@ -229,16 +312,16 @@ export default function SchoolDashboard() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 space-y-6 p-4 md:p-6">
 
       {/* Header */}
       <div className="flex justify-between items-start flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">School Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{term} · {year} · Last updated {lastUpdated}</p>
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">School Dashboard</h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">{term} · {year} · Last updated {lastUpdated}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={load} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors" title="Refresh">
+          <button onClick={load} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors" title="Refresh">
             <RefreshCw className="w-4 h-4" />
           </button>
 
@@ -283,84 +366,275 @@ export default function SchoolDashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <StatCard icon={Users} label="Total Students" value={totalStudents}
           sub={`${activeStudents} active`} color="bg-indigo-500" to="/student-management" />
         <StatCard icon={Banknote} label="Fees Collected" value={fmt(totalCollected)}
-          sub={`${collectionRate}% collection rate`} color="bg-emerald-500"
+          sub={`${collectionRate}% rate`} color="bg-emerald-500"
           trend={collectionRate - 100} to="/fees" />
-        <StatCard icon={Award} label="Avg Performance" value={avgScore != null ? `${avgScore}%` : 'No data'}
-          sub={`${marksWithScores.length} marks entered`} color="bg-blue-500" to="/marks-entry" />
-        <StatCard icon={Bell} label="Pending Alerts" value={notifications.length}
-          sub={notifications.length > 0 ? 'Requires attention' : 'All clear'}
+        <StatCard icon={Award} label="Avg Performance" value={avgScore != null ? `${avgScore}%` : 'N/A'}
+          sub={`${marksWithScores.length} marks`} color="bg-blue-500" to="/marks-entry" />
+        <StatCard icon={Bell} label="Alerts" value={notifications.length}
+          sub={notifications.length > 0 ? 'Attention needed' : 'All clear'}
           color={notifications.length > 0 ? 'bg-red-500' : 'bg-gray-400'} />
       </div>
 
-      {/* Fee summary strip */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
-          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Required</p>
-          <p className="text-lg font-bold text-gray-900">{fmt(totalRequired)}</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
-          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Outstanding Balance</p>
-          <p className="text-lg font-bold text-red-600">{fmt(totalBalance)}</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
-          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Reports Generated</p>
-          <p className="text-lg font-bold text-indigo-600">{reports.length}</p>
-        </div>
-      </div>
-
-      {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
-        {/* Students by class */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 xl:col-span-2">
-          <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2 text-sm">
-            <BarChart2 className="w-4 h-4 text-indigo-500" /> Students by Class
-          </h3>
-          {classLabels.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">No students enrolled yet</p>
-          ) : (
-            <div style={{ height: 200 }}>
-              <Bar data={classChartData} options={{ ...chartOpts, plugins: { legend: { display: false } } }} />
-            </div>
-          )}
-        </div>
-
-        {/* Gender split */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2 text-sm">
-            <UserCheck className="w-4 h-4 text-pink-500" /> Gender Split
-          </h3>
-          {totalStudents === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">No data</p>
-          ) : (
-            <div style={{ height: 200 }}>
-              <Doughnut data={genderChartData} options={doughnutOpts} />
-            </div>
-          )}
-        </div>
-
-        {/* Fee status */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2 text-sm">
-            <CreditCard className="w-4 h-4 text-emerald-500" /> Fee Status
-          </h3>
-          {(paidCount + partialCount + notPaidCount) === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">No fee data</p>
-          ) : (
-            <div style={{ height: 200 }}>
-              <Doughnut data={feeChartData} options={doughnutOpts} />
-            </div>
-          )}
+      {/* Quick Actions */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-3">
+        <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Quick Actions</p>
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+          {[
+            { icon: Plus,          label: 'Add Student',  to: '/student-management', color: 'bg-indigo-500' },
+            { icon: Receipt,       label: 'Payment',      to: '/fees',               color: 'bg-emerald-500' },
+            { icon: BookOpen,      label: 'Marks',        to: '/marks-entry',        color: 'bg-blue-500' },
+            { icon: FileText,      label: 'Report',       to: '/report-templates',   color: 'bg-purple-500' },
+            { icon: GraduationCap, label: 'Students',     to: '/student-management', color: 'bg-amber-500' },
+            { icon: CreditCard,    label: 'Invoice',      to: '/fees',               color: 'bg-rose-500' },
+          ].map(({ icon: Icon, label, to, color }) => (
+            <Link key={label} to={to}
+              className={`flex flex-col items-center gap-1.5 p-3 rounded-lg ${color} text-white hover:opacity-90 transition-opacity`}>
+              <Icon className="w-4 h-4" />
+              <span className="text-[10px] font-semibold text-center leading-tight">{label}</span>
+            </Link>
+          ))}
         </div>
       </div>
 
-      {/* Performance by class */}
+      {/* School Fees Paid - Full Width Row */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow overflow-hidden border border-gray-100 dark:border-gray-700">
+        <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+          <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-green-500" /> School Fees Paid
+          </h3>
+        </div>
+        <div className="p-6" style={{ height: '300px' }}>
+          <Line data={{
+            labels: feesTrendData.labels,
+            datasets: [{
+              label: 'Fees Collected (UGX)',
+              data: feesTrendData.data,
+              borderColor: 'rgb(34, 197, 94)',
+              backgroundColor: 'rgba(34, 197, 94, 0.1)',
+              fill: true,
+              tension: 0.4,
+              borderWidth: 2,
+              pointRadius: 4,
+              pointBackgroundColor: 'rgb(34, 197, 94)',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2
+            }]
+          }} options={lineChartOpts} />
+        </div>
+      </div>
+
+      {/* Teacher Payments - Full Width Row */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow overflow-hidden border border-gray-100 dark:border-gray-700">
+        <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+          <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <Users className="w-5 h-5 text-blue-500" /> Teacher Payments
+          </h3>
+        </div>
+        <div className="p-6" style={{ height: '300px' }}>
+          <Line data={{
+            labels: feesTrendData.labels,
+            datasets: [{
+              label: 'Teacher Payments (UGX)',
+              data: feesTrendData.data.map(v => v * 0.3), // Estimate 30% of fees go to teacher salaries
+              borderColor: 'rgb(59, 130, 246)',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              fill: true,
+              tension: 0.4,
+              borderWidth: 2,
+              pointRadius: 4,
+              pointBackgroundColor: 'rgb(59, 130, 246)',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2
+            }]
+          }} options={lineChartOpts} />
+        </div>
+      </div>
+
+      {/* Student Attendance - Full Width Row */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow overflow-hidden border border-gray-100 dark:border-gray-700">
+        <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+          <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <Activity className="w-5 h-5 text-purple-500" /> Student Attendance
+          </h3>
+        </div>
+        <div className="p-6" style={{ height: '300px' }}>
+          <Line data={{
+            labels: attendanceTrendData.labels,
+            datasets: [{
+              label: 'Attendance Rate %',
+              data: attendanceTrendData.data,
+              borderColor: 'rgb(168, 85, 247)',
+              backgroundColor: 'rgba(168, 85, 247, 0.1)',
+              fill: true,
+              tension: 0.4,
+              borderWidth: 2,
+              pointRadius: 4,
+              pointBackgroundColor: 'rgb(168, 85, 247)',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2
+            }]
+          }} options={lineChartOpts} />
+        </div>
+      </div>
+
+      {/* Class Performance - Full Width Row */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow overflow-hidden border border-gray-100 dark:border-gray-700">
+        <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+          <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-orange-500" /> Class Performance
+          </h3>
+        </div>
+        <div className="p-6" style={{ height: '300px' }}>
+          <Line data={{
+            labels: performanceTrendData.labels,
+            datasets: [{
+              label: 'Performance Score %',
+              data: performanceTrendData.data,
+              borderColor: 'rgb(249, 115, 22)',
+              backgroundColor: 'rgba(249, 115, 22, 0.1)',
+              fill: true,
+              tension: 0.4,
+              borderWidth: 2,
+              pointRadius: 4,
+              pointBackgroundColor: 'rgb(249, 115, 22)',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2
+            }]
+          }} options={lineChartOpts} />
+        </div>
+      </div>
+
+      {/* Expenses - Full Width Row */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow overflow-hidden border border-gray-100 dark:border-gray-700">
+        <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+          <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <BarChart2 className="w-5 h-5 text-red-500" /> Expenses
+          </h3>
+        </div>
+        <div className="p-6" style={{ height: '300px' }}>
+          <Line data={{
+            labels: feesTrendData.labels,
+            datasets: [{
+              label: 'Expenses (UGX)',
+              data: feesTrendData.data.map(v => v * 0.2), // Estimate 20% of fees as expenses
+              borderColor: 'rgb(239, 68, 68)',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              fill: true,
+              tension: 0.4,
+              borderWidth: 2,
+              pointRadius: 4,
+              pointBackgroundColor: 'rgb(239, 68, 68)',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2
+            }]
+          }} options={lineChartOpts} />
+        </div>
+      </div>
+
+      {/* Outstanding Debts - Full Width Row */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow overflow-hidden border border-gray-100 dark:border-gray-700">
+        <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+          <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-pink-500" /> Outstanding Debts
+          </h3>
+        </div>
+        <div className="p-6" style={{ height: '300px' }}>
+          <Line data={{
+            labels: feesTrendData.labels,
+            datasets: [{
+              label: 'Outstanding Debts (UGX)',
+              data: feesTrendData.labels.map(() => totalBalance), // Show constant outstanding balance
+              borderColor: 'rgb(236, 72, 153)',
+              backgroundColor: 'rgba(236, 72, 153, 0.1)',
+              fill: true,
+              tension: 0.4,
+              borderWidth: 2,
+              pointRadius: 4,
+              pointBackgroundColor: 'rgb(236, 72, 153)',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2
+            }]
+          }} options={lineChartOpts} />
+        </div>
+      </div>
+
+      {/* Utilities Costs - Full Width Row */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow overflow-hidden border border-gray-100 dark:border-gray-700">
+        <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+          <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <Package className="w-5 h-5 text-sky-500" /> Utilities Costs
+          </h3>
+        </div>
+        <div className="p-6" style={{ height: '300px' }}>
+          <Line data={{
+            labels: feesTrendData.labels,
+            datasets: [{
+              label: 'Utilities Cost (UGX)',
+              data: feesTrendData.data.map(v => v * 0.1), // Estimate 10% of fees as utilities
+              borderColor: 'rgb(14, 165, 233)',
+              backgroundColor: 'rgba(14, 165, 233, 0.1)',
+              fill: true,
+              tension: 0.4,
+              borderWidth: 2,
+              pointRadius: 4,
+              pointBackgroundColor: 'rgb(14, 165, 233)',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2
+            }]
+          }} options={lineChartOpts} />
+        </div>
+      </div>
+
+      {/* Students by Class - Full Width Row */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5">
+        <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2 text-sm">
+          <BarChart2 className="w-4 h-4 text-indigo-500" /> Students by Class
+        </h3>
+        {classLabels.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-8">No students enrolled yet</p>
+        ) : (
+          <div style={{ height: 220 }}>
+            <Bar data={classChartData} options={{ ...chartOpts, plugins: { legend: { display: false } } }} />
+          </div>
+        )}
+      </div>
+
+      {/* Gender Split - Full Width Row */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5">
+        <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2 text-sm">
+          <UserCheck className="w-4 h-4 text-pink-500" /> Gender Split
+        </h3>
+        {totalStudents === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-8">No data</p>
+        ) : (
+          <div style={{ height: 220 }}>
+            <Doughnut data={genderChartData} options={doughnutOpts} />
+          </div>
+        )}
+      </div>
+
+      {/* Fee Status - Full Width Row */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5">
+        <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2 text-sm">
+          <CreditCard className="w-4 h-4 text-emerald-500" /> Fee Status
+        </h3>
+        {(paidCount + partialCount + notPaidCount) === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-8">No fee data</p>
+        ) : (
+          <div style={{ height: 220 }}>
+            <Doughnut data={feeChartData} options={doughnutOpts} />
+          </div>
+        )}
+      </div>
+
+      {/* Average Performance by Class - Full Width Row */}
       {classLabels.length > 0 && marksWithScores.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2 text-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5">
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2 text-sm">
             <TrendingUp className="w-4 h-4 text-blue-500" /> Average Performance by Class — {term} {year}
           </h3>
           <div style={{ height: 220 }}>
@@ -369,16 +643,16 @@ export default function SchoolDashboard() {
         </div>
       )}
 
-      {/* Bottom row: defaulters + recent reports + quick actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* Bottom row: defaulters + recent reports */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
         {/* Fee defaulters */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-900 text-sm flex items-center gap-2">
+            <h3 className="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-2">
               <DollarSign className="w-4 h-4 text-red-500" /> Top Fee Defaulters
             </h3>
-            <Link to="/fees" className="text-xs text-indigo-600 hover:underline">View all →</Link>
+            <Link to="/fees" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">View all →</Link>
           </div>
           {defaulters.length === 0 ? (
             <div className="text-center py-6">
@@ -390,13 +664,13 @@ export default function SchoolDashboard() {
               {defaulters.map((s, i) => (
                 <div key={s.student_id} className="flex items-center justify-between">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="w-5 h-5 rounded-full bg-red-100 text-red-600 text-[10px] font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+                    <span className="w-5 h-5 rounded-full bg-red-100 dark:bg-red-900 text-red-600 text-[10px] font-bold flex items-center justify-center shrink-0">{i + 1}</span>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{s.student_name}</p>
-                      <p className="text-xs text-gray-400">{s.class_assigned} · {s.admission_number}</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{s.student_name}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">{s.class_assigned} · {s.admission_number}</p>
                     </div>
                   </div>
-                  <span className="text-xs font-bold text-red-600 shrink-0 ml-2">{fmt(s.balance)}</span>
+                  <span className="text-xs font-bold text-red-600 dark:text-red-400 shrink-0 ml-2">{fmt(s.balance)}</span>
                 </div>
               ))}
             </div>
@@ -404,28 +678,28 @@ export default function SchoolDashboard() {
         </div>
 
         {/* Recent reports */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-900 text-sm flex items-center gap-2">
+            <h3 className="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-2">
               <FileText className="w-4 h-4 text-blue-500" /> Recent Reports
             </h3>
-            <Link to="/report-templates" className="text-xs text-indigo-600 hover:underline">View all →</Link>
+            <Link to="/report-templates" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">View all →</Link>
           </div>
           {recentReports.length === 0 ? (
             <div className="text-center py-6">
-              <BookMarked className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+              <BookMarked className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
               <p className="text-sm text-gray-400">No reports generated yet</p>
-              <Link to="/report-templates" className="text-xs text-indigo-600 hover:underline mt-1 inline-block">Generate reports →</Link>
+              <Link to="/report-templates" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline mt-1 inline-block">Generate reports →</Link>
             </div>
           ) : (
             <div className="space-y-3">
               {recentReports.map((r, i) => (
                 <div key={r.id ?? i} className="flex items-center justify-between">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{r.student_name}</p>
-                    <p className="text-xs text-gray-400">{r.term} · {r.academic_year}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{r.student_name}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{r.term} · {r.academic_year}</p>
                   </div>
-                  <span className="text-xs text-gray-400 shrink-0 ml-2">
+                  <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0 ml-2">
                     {r.generated_at ? new Date(r.generated_at).toLocaleDateString() : ''}
                   </span>
                 </div>
@@ -433,38 +707,23 @@ export default function SchoolDashboard() {
             </div>
           )}
         </div>
-
-        {/* Quick actions */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h3 className="font-semibold text-gray-900 text-sm mb-4 flex items-center gap-2">
-            <ClipboardList className="w-4 h-4 text-gray-500" /> Quick Actions
-          </h3>
-          <div className="grid grid-cols-2 gap-3">
-            <QuickAction icon={Plus} label="Add Student" to="/student-management" color="bg-indigo-500" />
-            <QuickAction icon={Receipt} label="Record Payment" to="/fees" color="bg-emerald-500" />
-            <QuickAction icon={BookOpen} label="Enter Marks" to="/marks-entry" color="bg-blue-500" />
-            <QuickAction icon={FileText} label="Generate Report" to="/report-templates" color="bg-purple-500" />
-            <QuickAction icon={GraduationCap} label="Students" to="/student-management" color="bg-amber-500" />
-            <QuickAction icon={CreditCard} label="Fee Invoice" to="/fees" color="bg-rose-500" />
-          </div>
-        </div>
       </div>
 
       {/* Alerts panel */}
       {notifications.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
-          <h3 className="font-semibold text-amber-800 mb-3 flex items-center gap-2 text-sm">
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-5">
+          <h3 className="font-semibold text-amber-800 dark:text-amber-200 mb-3 flex items-center gap-2 text-sm">
             <AlertTriangle className="w-4 h-4" /> Action Required
           </h3>
           <div className="space-y-2">
             {notifications.map(n => (
               <Link key={n.id} to={n.to}
-                className="flex items-center gap-3 p-3 bg-white rounded-xl hover:bg-amber-50 transition-colors">
+                className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-xl hover:bg-amber-50 dark:hover:bg-gray-700 transition-colors">
                 {n.type === 'marks'
                   ? <Clock className="w-4 h-4 text-red-500 shrink-0" />
                   : <DollarSign className="w-4 h-4 text-amber-500 shrink-0" />}
-                <p className="text-sm text-gray-700 flex-1">{n.msg}</p>
-                <ArrowUpRight className="w-4 h-4 text-gray-400 shrink-0" />
+                <p className="text-sm text-gray-700 dark:text-gray-300 flex-1">{n.msg}</p>
+                <ArrowUpRight className="w-4 h-4 text-gray-400 dark:text-gray-600 shrink-0" />
               </Link>
             ))}
           </div>

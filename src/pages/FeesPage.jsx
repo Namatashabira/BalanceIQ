@@ -558,10 +558,13 @@ function ReceiptSettingsTab() {
 function FeeStructureTab() {
   const [structures, setStructures] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [modal, setModal] = useState(null);
+  const [modal, setModal] = useState(null); // 'form' | 'items'
   const [selected, setSelected] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [itemForm, setItemForm] = useState({ name: '', amount: '', is_optional: false });
+  const [itemSaving, setItemSaving] = useState(false);
+  const [itemError, setItemError] = useState('');
 
   const EMPTY = { class_assigned: 'S.1', term: 'Term 1', academic_year: currentYear(), amount: '', description: '' };
   const [form, setForm] = useState(EMPTY);
@@ -582,6 +585,7 @@ function FeeStructureTab() {
     setForm({ class_assigned: s.class_assigned, term: s.term, academic_year: s.academic_year, amount: s.amount, description: s.description || '' });
     setSelected(s); setError(''); setModal('form');
   };
+  const openItems = (s) => { setSelected(s); setItemForm({ name: '', amount: '', is_optional: false }); setItemError(''); setModal('items'); };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -602,6 +606,34 @@ function FeeStructureTab() {
     load();
   };
 
+  const handleAddItem = async (e) => {
+    e.preventDefault();
+    if (!itemForm.name || !itemForm.amount) { setItemError('Name and amount are required.'); return; }
+    setItemSaving(true); setItemError('');
+    try {
+      const res = await fetchWithAuth(`${API}/items/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...itemForm, structure: selected.id }),
+      });
+      if (!res?.ok) { const d = await res.json(); setItemError(JSON.stringify(d)); return; }
+      setItemForm({ name: '', amount: '', is_optional: false });
+      load(); // reload to get updated items
+      // refresh selected
+      const updated = await fetchWithAuth(`${API}/structures/${selected.id}/`);
+      if (updated?.ok) setSelected(await updated.json());
+    } catch { setItemError('Network error.'); }
+    finally { setItemSaving(false); }
+  };
+
+  const handleDeleteItem = async (itemId) => {
+    if (!confirm('Remove this item?')) return;
+    await fetchWithAuth(`${API}/items/${itemId}/`, { method: 'DELETE' });
+    load();
+    const updated = await fetchWithAuth(`${API}/structures/${selected.id}/`);
+    if (updated?.ok) setSelected(await updated.json());
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex justify-end">
@@ -614,22 +646,29 @@ function FeeStructureTab() {
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead className="bg-gray-50">
             <tr>
-              {['Class', 'Term', 'Academic Year', 'Amount', 'Description', ''].map(h => (
+              {['Class', 'Term', 'Academic Year', 'Amount', 'Items', 'Description', ''].map(h => (
                 <th key={h} className="px-4 py-3 text-left font-semibold text-gray-600">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
-              <tr><td colSpan={6} className="text-center py-8 text-gray-400">Loading…</td></tr>
+              <tr><td colSpan={7} className="text-center py-8 text-gray-400">Loading…</td></tr>
             ) : !structures.length ? (
-              <tr><td colSpan={6} className="text-center py-8 text-gray-400">No fee structures defined yet.</td></tr>
+              <tr><td colSpan={7} className="text-center py-8 text-gray-400">No fee structures defined yet.</td></tr>
             ) : structures.map(s => (
               <tr key={s.id} className="hover:bg-gray-50">
                 <td className="px-4 py-3 font-semibold text-blue-700">{s.class_assigned}</td>
                 <td className="px-4 py-3 text-gray-600">{s.term}</td>
                 <td className="px-4 py-3 text-gray-600">{s.academic_year}</td>
                 <td className="px-4 py-3 font-semibold text-gray-900">{fmt(s.amount)}</td>
+                <td className="px-4 py-3">
+                  <button onClick={() => openItems(s)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-semibold hover:bg-indigo-100">
+                    <BookOpen className="w-3.5 h-3.5" />
+                    {s.items?.length || 0} items
+                  </button>
+                </td>
                 <td className="px-4 py-3 text-gray-400 text-xs">{s.description || '—'}</td>
                 <td className="px-4 py-3">
                   <div className="flex gap-1">
@@ -643,6 +682,7 @@ function FeeStructureTab() {
         </table>
       </div>
 
+      {/* Structure form modal */}
       {modal === 'form' && (
         <Modal title={selected ? 'Edit Fee Structure' : 'Add Fee Structure'} onClose={() => setModal(null)}>
           <form onSubmit={handleSave} className="space-y-3">
@@ -662,7 +702,7 @@ function FeeStructureTab() {
               <Field label="Academic Year">
                 <input required className={inputCls} value={form.academic_year} onChange={e => setForm(f => ({ ...f, academic_year: e.target.value }))} />
               </Field>
-              <Field label="Amount (UGX)">
+              <Field label="School Fees Amount (UGX)">
                 <input required type="number" min="0" className={inputCls} value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
               </Field>
             </div>
@@ -677,6 +717,58 @@ function FeeStructureTab() {
               </button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* Items modal */}
+      {modal === 'items' && selected && (
+        <Modal title={`Payment Items — ${selected.class_assigned} ${selected.term} ${selected.academic_year}`} onClose={() => setModal(null)}>
+          <div className="space-y-4">
+            <p className="text-xs text-gray-500">Add items like Uniform, Books, Transport that students must pay separately. These appear as unpaid items on each student's payment row.</p>
+
+            {/* Existing items */}
+            {selected.items?.length > 0 ? (
+              <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
+                {selected.items.map(it => (
+                  <div key={it.id} className="flex items-center justify-between px-4 py-2.5">
+                    <div>
+                      <span className="font-medium text-gray-800 text-sm">{it.name}</span>
+                      {it.is_optional && <span className="ml-2 text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">optional</span>}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-emerald-700">{fmt(it.amount)}</span>
+                      <button onClick={() => handleDeleteItem(it.id)} className="p-1 rounded hover:bg-red-50 text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400 text-center py-3">No items added yet.</p>
+            )}
+
+            {/* Add item form */}
+            <form onSubmit={handleAddItem} className="border-t pt-4 space-y-3">
+              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Add New Item</p>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Item Name">
+                  <input required className={inputCls} placeholder="e.g. Uniform, Books" value={itemForm.name} onChange={e => setItemForm(f => ({ ...f, name: e.target.value }))} />
+                </Field>
+                <Field label="Amount (UGX)">
+                  <input required type="number" min="0" className={inputCls} value={itemForm.amount} onChange={e => setItemForm(f => ({ ...f, amount: e.target.value }))} />
+                </Field>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                <input type="checkbox" checked={itemForm.is_optional} onChange={e => setItemForm(f => ({ ...f, is_optional: e.target.checked }))} className="rounded" />
+                Optional item (doesn't affect payment status)
+              </label>
+              <div className="flex justify-end gap-2">
+                {itemError && <p className="text-xs text-red-500 self-center mr-auto">{itemError}</p>}
+                <button type="submit" disabled={itemSaving} className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-60">
+                  {itemSaving ? 'Adding…' : 'Add Item'}
+                </button>
+              </div>
+            </form>
+          </div>
         </Modal>
       )}
     </div>
@@ -730,6 +822,7 @@ export default function FeesPage() {
           studentId={receiptCtx.studentId}
           term={receiptCtx.term}
           academic_year={receiptCtx.academic_year}
+          paymentId={receiptCtx.paymentId || null}
           onClose={() => setReceiptCtx(null)}
         />
       )}
@@ -740,6 +833,7 @@ export default function FeesPage() {
           term={invoiceCtx.term}
           academic_year={invoiceCtx.academic_year}
           class_assigned={invoiceCtx.class_assigned}
+          studentId={invoiceCtx.studentId || null}
           onClose={() => setInvoiceCtx(null)}
         />
       )}

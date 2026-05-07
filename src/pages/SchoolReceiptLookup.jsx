@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Search, FileText, WifiOff, Printer } from 'lucide-react';
+import { Search, FileText, WifiOff, Printer, Hash } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { buildStampWithDate } from '../utils/stampProcessor';
 import { loadReceiptSettings } from '../services/receiptSettingsService';
 import axios from 'axios';
+import { printHTML } from '../utils/printHTML';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api';
 const FEES_API = `${BASE_URL}/fees`;
@@ -14,7 +15,8 @@ const normalize = (d) => Array.isArray(d) ? d : (d?.results || []);
 
 function buildReceiptHTML(student, payments, summary, term, year, school = {}, sig = {}, compact = false) {
   const totalPaid = payments.reduce((s, p) => s + Number(p.amount_paid), 0);
-  const receiptNo = `RCP-${String(student.student_id || student.id || '0').padStart(4, '0')}-${term.replace(' ', '')}-${year}`;
+  const receiptNo = payments[0]?.receipt_number
+    || `RCP-${String(student.student_id || student.id || '0').padStart(4, '0')}-${term.replace(' ', '')}-${year}`;
   const isCandidate = ['S.4', 'S.6'].includes(student.class_assigned);
   const pad = compact ? '8px 10px' : '18px 24px';
   const bodySize = compact ? '9px' : '12px';
@@ -123,6 +125,7 @@ function buildReceiptHTML(student, payments, summary, term, year, school = {}, s
 }
 
 export default function SchoolReceiptLookup() {
+  const [tab, setTab] = useState('student');  // 'student' | 'number'
   const [query, setQuery] = useState('');
   const [term, setTerm] = useState('Term 1');
   const [year, setYear] = useState(String(new Date().getFullYear()));
@@ -131,6 +134,11 @@ export default function SchoolReceiptLookup() {
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
+  // Receipt number lookup
+  const [receiptInput, setReceiptInput] = useState('');
+  const [receiptLookupLoading, setReceiptLookupLoading] = useState(false);
+  const [receiptLookupError, setReceiptLookupError] = useState('');
+  const [receiptResult, setReceiptResult] = useState(null);
   const [school, setSchool] = useState({});
   const [sig, setSig] = useState({ mode: '', image: '', name: '', label: 'Bursar', stamp: '' });
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -172,6 +180,7 @@ export default function SchoolReceiptLookup() {
       } else {
         setSig(sigData);
       }
+      setSchool(s => ({ ...s, logo: data.logo || s.logo }));
     });
 
     return () => { window.removeEventListener('online', onOnline); window.removeEventListener('offline', onOffline); };
@@ -226,8 +235,33 @@ export default function SchoolReceiptLookup() {
     finally { setLoading(false); }
   };
 
-  const handlePrint = async () => {
-    if (!selected) return;
+  const lookupByReceiptNumber = async () => {
+    const rn = receiptInput.trim().toUpperCase();
+    if (!rn) { setReceiptLookupError('Enter a receipt number.'); return; }
+    setReceiptLookupLoading(true); setReceiptLookupError(''); setReceiptResult(null);
+    try {
+      const res = await fetchWithAuth(`${FEES_API}/receipt/${encodeURIComponent(rn)}/`);
+      if (res?.ok) {
+        const data = await res.json();
+        // Build selected-compatible shape for reuse of buildReceiptHTML
+        setReceiptResult({
+          student: data.student,
+          payments: data.all_payments,
+          summary: { required: null, balance: data.balance, paid: data.total_paid },
+          highlightReceipt: data.receipt_number,
+        });
+      } else if (res?.status === 404) {
+        setReceiptLookupError('Receipt not found. Check the number and try again.');
+      } else {
+        setReceiptLookupError('Lookup failed. Please try again.');
+      }
+    } catch { setReceiptLookupError('Network error — please try again.'); }
+    finally { setReceiptLookupLoading(false); }
+  };
+
+  const handlePrint = async (overrideSelected) => {
+    const src = overrideSelected || selected;
+    if (!src) return;
     let freshSig = sig;
     if (sig.stamp) {
       try {
@@ -240,10 +274,8 @@ export default function SchoolReceiptLookup() {
         freshSig = { ...sig, stamp: await buildStampWithDate(sig.stamp, opts) };
       } catch { /* use as-is */ }
     }
-    const html = buildReceiptHTML(selected.student, selected.payments, selected.summary, term, year, school, freshSig, false);
-    const win = window.open('', '_blank');
-    win.document.write(`<html><head><title>Fee Receipt</title><style>body{margin:0;padding:20px;background:#fff}.receipt{max-width:700px;margin:0 auto}@media print{body{padding:0}}</style></head><body>${html}</body></html>`);
-    win.document.close(); win.focus(); win.print(); win.close();
+    const html = buildReceiptHTML(src.student, src.payments, src.summary, term, year, school, freshSig, false);
+    await printHTML(html, 'Fee Receipt');
   };
 
   return (
@@ -258,66 +290,109 @@ export default function SchoolReceiptLookup() {
         )}
       </div>
 
-      {/* Search panel */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {/* Student search */}
-          <div className="relative sm:col-span-1">
-            <label className="block text-xs font-medium text-gray-600 mb-1">Student Name / Adm No.</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Type to search…"
-                value={query}
-                onChange={e => { setQuery(e.target.value); searchStudents(e.target.value); }}
-              />
-            </div>
-            {searchResults.length > 0 && (
-              <ul className="absolute z-20 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
-                {searchResults.map(s => (
-                  <li key={s.id}
-                    className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm"
-                    onClick={() => loadReceipt(s.id)}>
-                    <span className="font-medium">{s.first_name} {s.last_name}</span>
-                    <span className="text-gray-400 ml-2 text-xs">{s.admission_number} · {s.class_assigned}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {searching && <p className="text-xs text-gray-400 mt-1">Searching…</p>}
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Term</label>
-            <select
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-              value={term} onChange={e => setTerm(e.target.value)}>
-              {['Term 1', 'Term 2', 'Term 3'].map(t => <option key={t}>{t}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Academic Year</label>
-            <input
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-              value={year} onChange={e => setYear(e.target.value)} placeholder="e.g. 2025" />
-          </div>
-        </div>
-
-        {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">{error}</div>}
-        {loading && <p className="text-sm text-gray-400">Loading receipt…</p>}
+      {/* Tab switcher */}
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+        <button
+          onClick={() => { setTab('student'); setReceiptResult(null); setReceiptLookupError(''); }}
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            tab === 'student' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
+          }`}>
+          <Search className="w-4 h-4" /> Search by Student
+        </button>
+        <button
+          onClick={() => { setTab('number'); setSelected(null); setError(''); }}
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            tab === 'number' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
+          }`}>
+          <Hash className="w-4 h-4" /> Lookup by Receipt No.
+        </button>
       </div>
 
-      {/* Receipt preview */}
-      {selected && (
+      {/* ── Tab: Search by student ── */}
+      {tab === 'student' && (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="relative sm:col-span-1">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Student Name / Adm No.</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Type to search…"
+                  value={query}
+                  onChange={e => { setQuery(e.target.value); searchStudents(e.target.value); }}
+                />
+              </div>
+              {searchResults.length > 0 && (
+                <ul className="absolute z-20 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
+                  {searchResults.map(s => (
+                    <li key={s.id}
+                      className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm"
+                      onClick={() => loadReceipt(s.id)}>
+                      <span className="font-medium">{s.first_name} {s.last_name}</span>
+                      <span className="text-gray-400 ml-2 text-xs">{s.admission_number} · {s.class_assigned}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {searching && <p className="text-xs text-gray-400 mt-1">Searching…</p>}
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Term</label>
+              <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                value={term} onChange={e => setTerm(e.target.value)}>
+                {['Term 1', 'Term 2', 'Term 3'].map(t => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Academic Year</label>
+              <input className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                value={year} onChange={e => setYear(e.target.value)} placeholder="e.g. 2025" />
+            </div>
+          </div>
+          {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">{error}</div>}
+          {loading && <p className="text-sm text-gray-400">Loading receipt…</p>}
+        </div>
+      )}
+
+      {/* ── Tab: Lookup by receipt number ── */}
+      {tab === 'number' && (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-4">
+          <label className="block text-xs font-medium text-gray-600">Receipt Number</label>
+          <div className="flex gap-3">
+            <div className="relative flex-1">
+              <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500 uppercase"
+                placeholder="e.g. RCP-20250115-A3F9B2C1-4E8D2F"
+                value={receiptInput}
+                onChange={e => setReceiptInput(e.target.value.toUpperCase())}
+                onKeyDown={e => e.key === 'Enter' && lookupByReceiptNumber()}
+              />
+            </div>
+            <button
+              onClick={lookupByReceiptNumber}
+              disabled={receiptLookupLoading}
+              className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
+              {receiptLookupLoading ? 'Looking up…' : 'Find Receipt'}
+            </button>
+          </div>
+          <p className="text-xs text-gray-400">Receipt numbers are printed on every payment receipt in the format <span className="font-mono">RCP-YYYYMMDD-XXXXXXXX-XXXXXX</span></p>
+          {receiptLookupError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">{receiptLookupError}</div>
+          )}
+        </div>
+      )}
+
+      {/* Receipt preview — student search result */}
+      {tab === 'student' && selected && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-gray-700">
               Receipt for <span className="text-blue-700">{selected.student.first_name} {selected.student.last_name}</span> — {term}, {year}
             </p>
             <div className="flex gap-2">
-              <button onClick={handlePrint}
+              <button onClick={() => handlePrint(selected)}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-900">
                 <Printer className="w-4 h-4" /> Print Receipt
               </button>
@@ -330,6 +405,41 @@ export default function SchoolReceiptLookup() {
           <div
             className="border border-gray-200 rounded-xl bg-white overflow-hidden"
             dangerouslySetInnerHTML={{ __html: buildReceiptHTML(selected.student, selected.payments, selected.summary, term, year, school, sig, false) }}
+          />
+        </div>
+      )}
+
+      {/* Receipt preview — receipt number lookup result */}
+      {tab === 'number' && receiptResult && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-gray-700">
+                Receipt for <span className="text-blue-700">{receiptResult.student.first_name} {receiptResult.student.last_name}</span>
+              </p>
+              <p className="text-xs font-mono text-green-700 mt-0.5">✓ Valid receipt: {receiptResult.highlightReceipt}</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => handlePrint(receiptResult)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-900">
+                <Printer className="w-4 h-4" /> Print Receipt
+              </button>
+              <button onClick={() => { setReceiptResult(null); setReceiptInput(''); }}
+                className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200">
+                Clear
+              </button>
+            </div>
+          </div>
+          <div
+            className="border border-gray-200 rounded-xl bg-white overflow-hidden"
+            dangerouslySetInnerHTML={{ __html: buildReceiptHTML(
+              receiptResult.student,
+              receiptResult.payments,
+              receiptResult.summary,
+              receiptResult.payments[0]?.term || term,
+              receiptResult.payments[0]?.academic_year || year,
+              school, sig, false
+            ) }}
           />
         </div>
       )}

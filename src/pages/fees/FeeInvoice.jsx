@@ -162,7 +162,8 @@ function buildStudentInvoiceHTML(student, school, sig, term, year, compact = fal
     </div>`;
 }
 
-export default function FeeInvoice({ term: initTerm, academic_year: initYear, class_assigned: initClass, onClose }) {
+export default function FeeInvoice({ term: initTerm, academic_year: initYear, class_assigned: initClass, studentId: initStudentId, onClose }) {
+  const isSingleStudent = !!initStudentId;
   const [filters, setFilters] = useState({
     term: initTerm || 'Term 1',
     academic_year: initYear || String(new Date().getFullYear()),
@@ -228,6 +229,12 @@ export default function FeeInvoice({ term: initTerm, academic_year: initYear, cl
     });
   }, []);
 
+  // Auto-generate when opened for a specific student
+  useEffect(() => {
+    if (initStudentId) generate();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initStudentId]);
+
   // Load streams
   useEffect(() => {
     fetchWithAuth(`${STUDENTS_API.replace('/students', '')}/streams/`)
@@ -248,6 +255,14 @@ export default function FeeInvoice({ term: initTerm, academic_year: initYear, cl
       if (!res?.ok) return;
       const data = await res.json();
       let students = data.students || [];
+
+      // If opened for a specific student, filter immediately
+      if (initStudentId) {
+        students = students.filter(s => String(s.student_id) === String(initStudentId));
+        setInvoiceStudents(students);
+        setGenerated(true);
+        return;
+      }
 
       if (filters.scope === 'gender' && filters.gender) {
         const sRes = await fetchWithAuth(`${STUDENTS_API}/?gender=${filters.gender}&limit=500`);
@@ -498,7 +513,7 @@ export default function FeeInvoice({ term: initTerm, academic_year: initYear, cl
           <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white z-10">
             <div className="flex items-center gap-2">
               <FileText className="w-5 h-5 text-purple-600" />
-              <h2 className="font-semibold text-gray-800">Generate Invoices</h2>
+              <h2 className="font-semibold text-gray-800">{isSingleStudent ? 'Student Invoice' : 'Generate Invoices'}</h2>
             </div>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
           </div>

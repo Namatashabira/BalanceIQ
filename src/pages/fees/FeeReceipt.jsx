@@ -4,6 +4,7 @@ import { fetchWithAuth } from '../../api';
 import axios from 'axios';
 import { buildStampWithDate } from '../../utils/stampProcessor';
 import { loadReceiptSettings, syncPendingReceiptSettings } from '../../services/receiptSettingsService';
+import { printHTML } from '../../utils/printHTML';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api';
 const API = `${BASE_URL}/fees`;
@@ -16,7 +17,9 @@ const normalize = (d) => Array.isArray(d) ? d : (d?.results || []);
 // ── Single receipt HTML block ─────────────────────────────────────────────────
 function buildReceiptHTML(student, payments, summary, term, year, school = {}, sig = {}, compact = false) {
   const totalPaid = payments.reduce((s, p) => s + Number(p.amount_paid), 0);
-  const receiptNo = `RCP-${String(student.id || student.student_id || '0').padStart(4, '0')}-${term.replace(' ', '')}-${year}`;
+  // Use the stored receipt_number from the first payment if available, else fallback
+  const receiptNo = payments[0]?.receipt_number
+    || `RCP-${String(student.id || student.student_id || '0').padStart(4, '0')}-${term.replace(' ', '')}-${year}`;
   const isCandidate = ['S.4', 'S.6'].includes(student.class_assigned);
 
   const rows = payments.length === 0
@@ -54,43 +57,20 @@ const pad = compact ? '8px 10px' : '18px 24px';
       <div style="border:1px solid #e5e7eb;border-radius:4px;padding:6px 10px;margin-bottom:10px;font-size:${bodySize}">
         <table style="width:100%;border-collapse:collapse">
           <tr>
-            <td style="padding:2px 0;width:50%">
-              <span style="color:#6b7280;font-size:${bodySize};text-transform:uppercase;letter-spacing:0.4px">Name: </span>
-              <strong style="color:#111;text-transform:uppercase">${student.first_name} ${student.last_name}</strong>
-            </td>
-            <td style="padding:2px 0;width:50%">
-              <span style="color:#6b7280;font-size:${bodySize};text-transform:uppercase;letter-spacing:0.4px">Class: </span>
-              <strong style="color:#111">${student.class_assigned}</strong>
-            </td>
+            <td style="padding:3px 0;width:50%;font-size:${bodySize};font-weight:400;color:#111"><span style="color:#6b7280">Name:</span> ${student.first_name} ${student.last_name}</td>
+            <td style="padding:3px 0;width:50%;font-size:${bodySize};font-weight:400;color:#111"><span style="color:#6b7280">Class:</span> ${student.class_assigned}</td>
           </tr>
           <tr>
-            <td style="padding:2px 0">
-              <span style="color:#6b7280;font-size:${bodySize};text-transform:uppercase;letter-spacing:0.4px">Term: </span>
-              <strong style="color:#111">${term}</strong>
-            </td>
-            <td style="padding:2px 0">
-              <span style="color:#6b7280;font-size:${bodySize};text-transform:uppercase;letter-spacing:0.4px">Year: </span>
-              <strong style="color:#111">${year}</strong>
-            </td>
+            <td style="padding:3px 0;font-size:${bodySize};font-weight:400;color:#111"><span style="color:#6b7280">Term:</span> ${term}</td>
+            <td style="padding:3px 0;font-size:${bodySize};font-weight:400;color:#111"><span style="color:#6b7280">Year:</span> ${year}</td>
           </tr>
           <tr>
-            <td style="padding:2px 0">
-              <span style="color:#6b7280;font-size:${bodySize};text-transform:uppercase;letter-spacing:0.4px">Adm No: </span>
-              <strong style="color:#111">${student.admission_number || '—'}</strong>
-            </td>
-            <td style="padding:2px 0">
-              <span style="color:#6b7280;font-size:${bodySize};text-transform:uppercase;letter-spacing:0.4px">${isCandidate ? 'Index No: ' : 'Stream: '}</span>
-              <strong style="color:#111">${isCandidate ? (student.index_number || '——————————') : (student.stream_name || '—')}</strong>
-            </td>
+            <td style="padding:3px 0;font-size:${bodySize};font-weight:400;color:#111"><span style="color:#6b7280">Adm No:</span> ${student.admission_number || '—'}</td>
+            <td style="padding:3px 0;font-size:${bodySize};font-weight:400;color:#111"><span style="color:#6b7280">${isCandidate ? 'Index No:' : 'Stream:'}</span> ${isCandidate ? (student.index_number || '——————————') : (student.stream_name || '—')}</td>
           </tr>
           <tr>
-            <td style="padding:2px 0">
-              <span style="color:#6b7280;font-size:${bodySize};text-transform:uppercase;letter-spacing:0.4px">Gender: </span>
-              <strong style="color:#111;text-transform:capitalize">${student.gender || '—'}</strong>
-            </td>
-            <td style="padding:2px 0;text-align:right">
-              <span style="color:#9ca3af;font-size:${bodySize};font-style:italic">Printed: ${new Date().toLocaleDateString()}</span>
-            </td>
+            <td style="padding:3px 0;font-size:${bodySize};font-weight:400;color:#111"><span style="color:#6b7280">Gender:</span> ${student.gender || '—'}</td>
+            <td style="padding:3px 0;text-align:right;font-size:${bodySize};color:#9ca3af;font-style:italic">Printed: ${new Date().toLocaleDateString()}</td>
           </tr>
         </table>
       </div>
@@ -161,7 +141,7 @@ const pad = compact ? '8px 10px' : '18px 24px';
     </div>`;
 }
 
-export default function FeeReceipt({ studentId: initStudentId, term: initTerm, academic_year: initYear, onClose }) {
+export default function FeeReceipt({ studentId: initStudentId, term: initTerm, academic_year: initYear, paymentId: initPaymentId, onClose }) {
   const [studentId, setStudentId] = useState(initStudentId || '');
   const [term, setTerm] = useState(initTerm || 'Term 1');
   const [year, setYear] = useState(initYear || String(new Date().getFullYear()));
@@ -177,6 +157,7 @@ export default function FeeReceipt({ studentId: initStudentId, term: initTerm, a
   const [query, setQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [printMode, setPrintMode] = useState('single');
+  const isSinglePayment = !!initPaymentId;
 
   // Load school info once
   useEffect(() => {
@@ -214,6 +195,8 @@ export default function FeeReceipt({ studentId: initStudentId, term: initTerm, a
         stamp: rawStamp,
       };
       setSig(sigData);
+      // Use logo from receipt settings (single source of truth)
+      setSchool(s => ({ ...s, logo: data.logo || s.logo }));
       if (rawStamp) {
         buildStampWithDate(rawStamp, opts)
           .then(setPreviewStamp)
@@ -251,7 +234,11 @@ export default function FeeReceipt({ studentId: initStudentId, term: initTerm, a
         fetchWithAuth(`${API}/payments/summary/?${new URLSearchParams({ term: t, academic_year: y })}`),
       ]);
 
-      if (pRes?.ok) setPayments(normalize(await pRes.json()));
+      if (pRes?.ok) {
+        const allPayments = normalize(await pRes.json());
+        // If opened for a specific payment, filter to just that one
+        setPayments(initPaymentId ? allPayments.filter(p => p.id === initPaymentId) : allPayments);
+      }
 
       if (sumRes?.ok) {
         const sumData = await sumRes.json();
@@ -303,16 +290,13 @@ export default function FeeReceipt({ studentId: initStudentId, term: initTerm, a
 
     let bodyHTML, bodyStyle;
     if (printMode === '6per') {
-      bodyStyle = `body{margin:0;padding:8px;background:#fff}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.receipt{overflow:hidden}@media print{body{padding:0}}`;
+      bodyStyle = `.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.receipt{overflow:hidden}`;
       bodyHTML = `<div class="grid">${Array(6).fill(receiptHTML).join('')}</div>`;
     } else {
-      bodyStyle = `body{margin:0;padding:20px;background:#fff}.receipt{max-width:700px;margin:0 auto}@media print{body{padding:0}}`;
+      bodyStyle = `.receipt{max-width:700px;margin:0 auto}`;
       bodyHTML = receiptHTML;
     }
-
-    const win = window.open('', '_blank');
-    win.document.write(`<html><head><title>Fee Receipt</title><style>${bodyStyle}</style></head><body>${bodyHTML}</body></html>`);
-    win.document.close(); win.focus(); win.print(); win.close();
+    await printHTML(`<style>${bodyStyle}</style>${bodyHTML}`, 'Fee Receipt');
   };
 
   const content = (
@@ -405,7 +389,7 @@ export default function FeeReceipt({ studentId: initStudentId, term: initTerm, a
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
         <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
           <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white z-10">
-            <h2 className="font-semibold text-gray-800">Fee Receipt</h2>
+            <h2 className="font-semibold text-gray-800">{isSinglePayment ? 'Payment Receipt' : 'Fee Receipt'}</h2>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
           </div>
           <div className="p-5">{content}</div>

@@ -66,6 +66,9 @@ import FeeInvoice from "./pages/fees/FeeInvoice";
 import SchoolReceiptLookup from "./pages/SchoolReceiptLookup";
 import ReportTemplatesPage from "./pages/ReportTemplatesPage";
 import MarksEntryPage from "./pages/MarksEntryPage";
+import AttendancePage from "./pages/AttendancePage";
+import SchoolSettingsPage from "./pages/SchoolSettingsPage";
+import SchoolAccounting from "./pages/Accounting/SchoolAccounting";
 
 // ── Plan guard ────────────────────────────────────────────────────────────────
 function PlanGuard({ pageKey, children }) {
@@ -97,7 +100,10 @@ function AccessGuard({ pageKey, children }) {
   if (isAdmin) return children;
   if (Array.isArray(allowedPages) && allowedPages.includes(pageKey)) return children;
 
-  const fallback = ["manager", "staff", "worker"].includes(role) ? "/orders" : "/dashboard";
+  // Worker: redirect to their first allowed page
+  const SCHOOL_PAGE_ORDER = ['marks-entry','attendance','fees','school-receipt-lookup','student-management','report-templates','analytics','dashboard'];
+  const first = SCHOOL_PAGE_ORDER.find(p => Array.isArray(allowedPages) && allowedPages.includes(p));
+  const fallback = first ? `/${first}` : '/marks-entry';
   return <Navigate to={fallback} replace />;
 }
 
@@ -130,14 +136,23 @@ function DefaultRoute() {
 
   const getDefaultRoute = () => {
     if (configLoading || !featuresFromConfig) return null;
+
+    // Workers: land on their first allowed page
+    const role = user?.role?.toLowerCase();
+    const isAdmin = ['tenant_admin', 'superadmin'].includes(role) || user?.is_staff;
+    if (!isAdmin && Array.isArray(allowedPages) && allowedPages.length > 0) {
+      const SCHOOL_PAGE_ORDER = ['marks-entry','attendance','fees','school-receipt-lookup','student-management','report-templates','analytics','dashboard'];
+      const first = SCHOOL_PAGE_ORDER.find(p => allowedPages.includes(p));
+      if (first) return `/${first}`;
+      return `/${allowedPages[0]}`;
+    }
+
     if (firstAccessiblePath) return firstAccessiblePath;
     for (const item of navOrder) {
       if (!isEnabled(item.key)) continue;
       if (Array.isArray(allowedPages) && !allowedPages.includes(item.key)) continue;
       return item.path;
     }
-    const role = user?.role?.toLowerCase();
-    if (["manager", "staff", "worker"].includes(role)) return '/orders';
     return '/dashboard';
   };
 
@@ -198,14 +213,17 @@ function DashboardLayout({ sidebarOpen, setSidebarOpen, sidebarWidth, setSidebar
               <Route path="reports" element={<Reports />} />
               <Route index element={<Overview />} />
             </Route>
-            <Route path="/student-reports" element={<StudentReportPage />} />
-            <Route path="/student-management" element={<StudentManagementPage />} />
-            <Route path="/marks-entry" element={<MarksEntryPage />} />
-            <Route path="/fees" element={<FeesPage />} />
-            <Route path="/fees/receipt" element={<FeeReceipt />} />
-            <Route path="/fees/invoice" element={<FeeInvoice />} />
-            <Route path="/school-receipt-lookup" element={<SchoolReceiptLookup />} />
-            <Route path="/report-templates" element={<ReportTemplatesPage />} />
+            <Route path="/student-reports" element={<AccessGuard pageKey="report-templates"><StudentReportPage /></AccessGuard>} />
+            <Route path="/student-management" element={<AccessGuard pageKey="student-management"><StudentManagementPage /></AccessGuard>} />
+            <Route path="/marks-entry" element={<AccessGuard pageKey="marks-entry"><MarksEntryPage /></AccessGuard>} />
+            <Route path="/attendance" element={<AccessGuard pageKey="attendance"><AttendancePage /></AccessGuard>} />
+            <Route path="/school-settings" element={<SchoolSettingsPage />} />
+            <Route path="/fees" element={<AccessGuard pageKey="fees"><FeesPage /></AccessGuard>} />
+            <Route path="/fees/receipt" element={<AccessGuard pageKey="fees"><FeeReceipt /></AccessGuard>} />
+            <Route path="/fees/invoice" element={<AccessGuard pageKey="fees"><FeeInvoice /></AccessGuard>} />
+            <Route path="/school-receipt-lookup" element={<AccessGuard pageKey="school-receipt-lookup"><SchoolReceiptLookup /></AccessGuard>} />
+            <Route path="/school-accounting" element={<PlanGuard pageKey="accounting_enabled"><SchoolAccounting /></PlanGuard>} />
+            <Route path="/report-templates" element={<AccessGuard pageKey="report-templates"><ReportTemplatesPage /></AccessGuard>} />
             <Route path="/login" element={<Navigate to="/" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

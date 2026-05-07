@@ -212,7 +212,13 @@ export default function Sidebar({ isOpen, onToggle, sidebarWidth = 256 }) {
                   </div>
                   <div className="flex-1 text-left">
                     <div className="text-sm font-semibold text-white leading-tight truncate">{userProfile?.fullName || userProfile?.username || user?.first_name || user?.username || 'User'}</div>
-                    <div className="text-xs text-gray-400 capitalize">{user?.role?.replace('_', ' ')}</div>
+                    <div className="text-xs text-gray-400 capitalize">
+                      {user?.role === 'tenant_admin' || user?.role === 'superadmin'
+                        ? 'Admin'
+                        : user?.school_role
+                          ? user.school_role.charAt(0).toUpperCase() + user.school_role.slice(1).replace('_', ' ')
+                          : (user?.role || '').replace('_', ' ')}
+                    </div>
                   </div>
                 </button>
               </div>

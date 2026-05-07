@@ -1,0 +1,892 @@
+/* ===============================
+   MODERN NAVY BLUE & GOLD THEME
+================================ */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #e8f0f7 0%, #f5f8fa 100%);
+  color: #1a1a1a;
+}
+
+.report-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  min-height: 100vh;
+  min-width: fit-content;
+}
+
+.print-btn {
+  margin-bottom: 0;
+  padding: 12px 32px;
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
+  transition: all 0.3s ease;
+}
+
+.print-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(30, 58, 138, 0.4);
+}
+
+.top-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.watermark-btn {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #d4af37 0%, #f59e0b 100%);
+  color: #1e293b;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+  transition: all 0.3s ease;
+}
+
+.watermark-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(212, 175, 55, 0.4);
+}
+
+.watermark-btn.remove {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* ===============================
+   WATERMARK
+================================ */
+.watermark-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.watermark-img {
+  width: 55%;
+  height: auto;
+  opacity: 0.08;
+  object-fit: contain;
+}
+
+/* ===============================
+   REPORT CARD CONTAINER
+================================ */
+.report-card {
+  width: 210mm;
+  min-height: 297mm;
+  background: #ffffff;
+  position: relative;
+  border: 4px solid #1e3a8a;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  overflow: visible;
+  flex-shrink: 0;
+}
+
+.corner-accent {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  z-index: 10;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.corner-tl {
+  top: 8px;
+  left: 8px;
+  border-top: 3px solid #d4af37;
+  border-left: 3px solid #d4af37;
+  border-radius: 4px 0 0 0;
+}
+
+.corner-tr {
+  top: 8px;
+  right: 8px;
+  border-top: 3px solid #d4af37;
+  border-right: 3px solid #d4af37;
+  border-radius: 0 4px 0 0;
+}
+
+.corner-bl {
+  bottom: 8px;
+  left: 8px;
+  border-bottom: 3px solid #d4af37;
+  border-left: 3px solid #d4af37;
+  border-radius: 0 0 0 4px;
+}
+
+.corner-br {
+  bottom: 8px;
+  right: 8px;
+  border-bottom: 3px solid #d4af37;
+  border-right: 3px solid #d4af37;
+  border-radius: 0 0 4px 0;
+}
+
+.report-inner {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(297mm - 20mm);
+  padding: 8mm 10mm;
+}
+
+.report-body {
+  flex: 1;
+}
+
+.report-footer-push {
+  margin-top: auto;
+}
+
+/* ===============================
+   HEADER - MODERN DESIGN
+================================ */
+.report-header {
+  background: #ffffff;
+  border-radius: 8px;
+  overflow: visible;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.header-gradient-bar {
+  height: 6px;
+  background: linear-gradient(90deg, #1e3a8a 0%, #2563eb 50%, #d4af37 100%);
+}
+
+.header-content {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 12px 18px;
+  gap: 16px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.logo-upload-label {
+  cursor: pointer;
+  display: block;
+  transition: opacity 0.2s;
+  position: relative;
+  z-index: 5;
+}
+
+.logo-upload-label:hover {
+  opacity: 0.75;
+}
+
+.school-logo {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+.logo-placeholder {
+  width: 64px;
+  height: 64px;
+  border: 2px dashed #1e3a8a;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: #1e3a8a;
+  text-align: center;
+  line-height: 1.3;
+  pointer-events: none;
+}
+
+.school-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.school-name {
+  font-size: 19px;
+  font-weight: 700;
+  color: #1e3a8a;
+  letter-spacing: 0.5px;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.school-subtitle {
+  font-size: 11px;
+  font-weight: 600;
+  color: #d4af37;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.header-center {
+  display: flex;
+  justify-content: center;
+}
+
+.report-badge {
+  text-align: center;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.2);
+}
+
+.badge-label {
+  display: block;
+  font-size: 9px;
+  color: #d4af37;
+  letter-spacing: 1.5px;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.badge-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 1px;
+  margin: 0 0 3px 0;
+  line-height: 1;
+}
+
+.badge-subtitle {
+  display: block;
+  font-size: 8px;
+  color: #93c5fd;
+  letter-spacing: 1px;
+  font-weight: 500;
+}
+
+.header-right {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.term-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.term-badge,
+.year-badge {
+  padding: 6px 14px;
+  background: #f0f4f8;
+  border: 2px solid #1e3a8a;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #1e3a8a;
+  letter-spacing: 0.5px;
+}
+
+.header-contacts {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 18px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  font-size: 10px;
+  color: #475569;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.contact-divider {
+  color: #cbd5e1;
+  font-weight: bold;
+}
+
+/* ===============================
+   STUDENT BIO
+================================ */
+.student-bio {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.photo-upload-label {
+  cursor: pointer;
+  display: block;
+  flex-shrink: 0;
+  transition: opacity 0.2s;
+  position: relative;
+  z-index: 5;
+}
+
+.photo-upload-label:hover {
+  opacity: 0.75;
+}
+
+.photo-upload-label:hover .photo-box {
+  border-color: #2563eb;
+}
+
+.photo-box {
+  width: 88px;
+  height: 108px;
+  border: 2px solid #1e3a8a;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+}
+
+.photo-placeholder-text {
+  font-size: 10px;
+  color: #1e3a8a;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+.bio-table {
+  flex: 1;
+  border-collapse: collapse;
+  font-size: 11px;
+  border: 2px solid #1e3a8a;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.bio-table th,
+.bio-table td {
+  border: 1px solid #cbd5e1;
+  padding: 7px 10px;
+  text-align: left;
+}
+
+.bio-table th {
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+  color: #ffffff;
+  font-weight: 600;
+  white-space: nowrap;
+  width: 90px;
+}
+
+.bio-table td {
+  background: #ffffff;
+  color: #1e293b;
+}
+
+/* ===============================
+   SECTION TITLES
+================================ */
+h3 {
+  text-align: center;
+  margin: 10px 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #1e3a8a;
+  text-transform: uppercase;
+  position: relative;
+  padding-bottom: 6px;
+}
+
+h3::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #d4af37, transparent);
+}
+
+/* ===============================
+   PERFORMANCE TABLE
+================================ */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+  border: 2px solid #1e3a8a;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+table th,
+table td {
+  border: 1px solid #cbd5e1;
+  padding: 6px 4px;
+  text-align: center;
+}
+
+table th {
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 10px;
+}
+
+table tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+table tbody tr:hover {
+  background: #e0f2fe;
+}
+
+/* ===============================
+   SUMMARY ROW
+================================ */
+.summary-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin: 8px 0;
+  font-size: 11px;
+}
+
+.summary-row div {
+  border: 2px solid #1e3a8a;
+  padding: 8px;
+  text-align: center;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-radius: 6px;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.summary-row strong {
+  color: #1e3a8a;
+  font-weight: 700;
+}
+
+/* ===============================
+   GRADE SCALE
+================================ */
+.grade-scale {
+  margin: 8px 0;
+}
+
+.grade-scale th {
+  background: linear-gradient(135deg, #d4af37 0%, #f59e0b 100%);
+  color: #1e293b;
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.grade-scale td {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* ===============================
+   OVERALL PERFORMANCE
+================================ */
+.overall-performance {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 8px 0;
+  font-size: 11px;
+}
+
+.overall-performance div {
+  border: 2px solid #d4af37;
+  padding: 8px;
+  text-align: center;
+  font-weight: 500;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border-radius: 6px;
+  color: #1e293b;
+}
+
+.overall-performance strong {
+  color: #92400e;
+  font-weight: 700;
+}
+
+/* ===============================
+   KEY TO TERMS
+================================ */
+.key-terms {
+  border: 2px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 10px;
+  margin-top: 8px;
+  background: #f8fafc;
+}
+
+.key-terms p {
+  margin-bottom: 3px;
+  line-height: 1.5;
+}
+
+.key-terms strong {
+  color: #1e3a8a;
+  font-weight: 600;
+}
+
+/* ===============================
+   COMMENTS
+================================ */
+.comments {
+  margin-top: 8px;
+}
+
+.comments strong {
+  font-size: 11px;
+  color: #1e3a8a;
+  font-weight: 600;
+}
+
+.comments p {
+  border: 2px solid #cbd5e1;
+  border-radius: 6px;
+  min-height: 40px;
+  padding: 6px 8px;
+  font-size: 10px;
+  margin: 4px 0 8px;
+  background: #ffffff;
+  line-height: 1.5;
+}
+
+/* ===============================
+   FOOTER
+================================ */
+.footer-section {
+  margin-top: 10px;
+}
+
+.admin-footer {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 10px;
+}
+
+.admin-footer span {
+  border: 1px solid #1e3a8a;
+  padding: 6px;
+  text-align: center;
+  background: #f0f9ff;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.admin-footer strong {
+  color: #1e3a8a;
+  font-weight: 700;
+}
+
+.signatures {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.sig-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.sig-role {
+  font-size: 10px;
+  font-weight: 700;
+  color: #1e3a8a;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.sig-name {
+  font-size: 10px;
+  color: #475569;
+  margin-bottom: 4px;
+}
+
+.sig-upload-label,
+.stamp-upload-label {
+  cursor: pointer;
+  display: block;
+  transition: opacity 0.2s;
+  position: relative;
+  z-index: 5;
+}
+
+.sig-upload-label:hover,
+.stamp-upload-label:hover {
+  opacity: 0.75;
+}
+
+.sig-upload-placeholder {
+  width: 110px;
+  height: 44px;
+  border: 1.5px dashed #1e3a8a;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 9px;
+  color: #1e3a8a;
+  font-weight: 600;
+  background: #ffffff;
+  pointer-events: none;
+}
+
+.sig-img {
+  max-height: 44px;
+  max-width: 110px;
+  object-fit: contain;
+}
+
+.sig-label {
+  font-size: 9px;
+  color: #64748b;
+  border-top: 1px solid #cbd5e1;
+  padding-top: 3px;
+  width: 110px;
+  text-align: center;
+}
+
+.stamp-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.stamp-placeholder {
+  width: 88px;
+  height: 88px;
+  border: 1.5px dashed #d4af37;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 10px;
+  color: #d4af37;
+  font-weight: 600;
+  background: #ffffff;
+  pointer-events: none;
+}
+
+.stamp-img {
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+}
+
+.footer-bar {
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+  color: #ffffff;
+  font-size: 10px;
+  font-style: italic;
+  padding: 8px 14px;
+  text-align: center;
+  border-radius: 4px;
+}
+
+/* ===============================
+   PRINT STYLES
+================================ */
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .report-page {
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    width: 210mm !important;
+  }
+
+  .print-btn, .top-controls {
+    display: none !important;
+  }
+
+  .watermark-layer {
+    position: absolute !important;
+    z-index: 1 !important;
+    pointer-events: none !important;
+  }
+
+  .watermark-img {
+    opacity: 0.08 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .report-card {
+    box-shadow: none !important;
+    border: 4px solid #1e3a8a !important;
+    border-radius: 8px !important;
+    width: 210mm !important;
+    min-height: unset !important;
+    height: auto !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .corner-accent {
+    position: absolute !important;
+    width: 22px !important;
+    height: 22px !important;
+    z-index: 10 !important;
+  }
+
+  .corner-tl { top: 7px !important; left: 7px !important; border-top: 2px solid #d4af37 !important; border-left: 2px solid #d4af37 !important; border-radius: 3px 0 0 0 !important; }
+  .corner-tr { top: 7px !important; right: 7px !important; border-top: 2px solid #d4af37 !important; border-right: 2px solid #d4af37 !important; border-radius: 0 3px 0 0 !important; }
+  .corner-bl { bottom: 7px !important; left: 7px !important; border-bottom: 2px solid #d4af37 !important; border-left: 2px solid #d4af37 !important; border-radius: 0 0 0 3px !important; }
+  .corner-br { bottom: 7px !important; right: 7px !important; border-bottom: 2px solid #d4af37 !important; border-right: 2px solid #d4af37 !important; border-radius: 0 0 3px 0 !important; }
+
+  .report-inner {
+    min-height: unset !important;
+    height: auto !important;
+    padding: 5mm 6mm !important;
+  }
+
+  .report-header { margin-bottom: 5px !important; }
+  .header-content { padding: 7px 12px !important; gap: 10px !important; }
+  .school-logo, .logo-placeholder { width: 48px !important; height: 48px !important; }
+  .school-name { font-size: 14px !important; }
+  .school-subtitle { font-size: 9px !important; }
+  .report-badge { padding: 6px 12px !important; }
+  .badge-title { font-size: 16px !important; }
+  .badge-label { font-size: 7px !important; margin-bottom: 1px !important; }
+  .badge-subtitle { font-size: 7px !important; }
+  .term-badge, .year-badge { padding: 3px 8px !important; font-size: 9px !important; }
+  .header-contacts { padding: 4px 12px !important; font-size: 8px !important; gap: 5px !important; }
+  .student-bio { gap: 6px !important; margin-bottom: 6px !important; }
+  .photo-box { width: 66px !important; height: 80px !important; }
+  .bio-table th, .bio-table td { padding: 3px 5px !important; font-size: 9px !important; }
+  h3 { margin: 5px 0 3px !important; font-size: 10px !important; padding-bottom: 4px !important; }
+  table th, table td { padding: 2px 3px !important; font-size: 8px !important; }
+  .summary-row { gap: 3px !important; margin: 4px 0 !important; }
+  .summary-row div { padding: 4px !important; font-size: 9px !important; }
+  .grade-scale { margin: 4px 0 !important; }
+  .overall-performance { gap: 3px !important; margin: 4px 0 !important; }
+  .overall-performance div { padding: 4px !important; font-size: 9px !important; }
+  .key-terms { padding: 3px 7px !important; margin-top: 4px !important; font-size: 8px !important; }
+  .key-terms p { margin-bottom: 1px !important; line-height: 1.3 !important; }
+  .comments { margin-top: 4px !important; }
+  .comments strong { font-size: 9px !important; }
+  .comments p { min-height: 22px !important; padding: 3px 5px !important; font-size: 8px !important; margin: 2px 0 4px !important; }
+  .footer-section { margin-top: 5px !important; }
+  .admin-footer { gap: 3px !important; margin-bottom: 5px !important; font-size: 8px !important; }
+  .admin-footer span { padding: 3px !important; }
+  .signatures { gap: 6px !important; padding: 6px !important; margin-bottom: 4px !important; }
+  .sig-role { font-size: 8px !important; }
+  .sig-name { font-size: 8px !important; margin-bottom: 2px !important; }
+  .sig-upload-placeholder { width: 80px !important; height: 30px !important; font-size: 7px !important; }
+  .sig-img { max-height: 30px !important; max-width: 80px !important; }
+  .sig-label { width: 80px !important; font-size: 7px !important; }
+  .stamp-placeholder, .stamp-img { width: 60px !important; height: 60px !important; }
+  .footer-bar { padding: 4px 10px !important; font-size: 7px !important; }
+
+  /* Force gradient backgrounds to print */
+  .header-gradient-bar {
+    background: linear-gradient(90deg, #1e3a8a 0%, #2563eb 50%, #d4af37 100%) !important;
+  }
+  .report-badge {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%) !important;
+  }
+  .bio-table th {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%) !important;
+    color: #ffffff !important;
+  }
+  table th {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%) !important;
+    color: #ffffff !important;
+  }
+  .grade-scale th {
+    background: linear-gradient(135deg, #d4af37 0%, #f59e0b 100%) !important;
+    color: #1e293b !important;
+  }
+  .summary-row div {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) !important;
+  }
+  .overall-performance div {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%) !important;
+  }
+  .footer-bar {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%) !important;
+    color: #ffffff !important;
+  }
+  .admin-footer span {
+    background: #f0f9ff !important;
+  }
+  .header-contacts {
+    background: #f8fafc !important;
+  }
+  .signatures {
+    background: #f8fafc !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+}

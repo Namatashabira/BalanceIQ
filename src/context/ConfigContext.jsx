@@ -417,6 +417,28 @@ export function ConfigProvider({ children }) {
     return () => window.removeEventListener('auth-changed', fetchProfile);
   }, []);
 
+  // Seed avatar from backend profile into localStorage so Sidebar/Navbar pick it up
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+    fetch(`${API_BASE}/users/profile/get/`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(r => r.json())
+      .then(data => {
+        const profilePicUrl = data?.profile?.profile_picture_url || data?.profile_picture_url;
+        if (profilePicUrl) {
+          const stored = JSON.parse(localStorage.getItem('userProfile') || '{}');
+          if (stored.avatar !== profilePicUrl) {
+            stored.avatar = profilePicUrl;
+            localStorage.setItem('userProfile', JSON.stringify(stored));
+            window.dispatchEvent(new Event('storage'));
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const value = {
     ...config,
     userProfile,

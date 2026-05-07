@@ -7,7 +7,7 @@ import {
   ArrowUp, ArrowDown, Bell, X, FileText, BarChart,
   Phone, Mail, MapPin
 } from 'lucide-react';
-import { Line, Doughnut } from 'react-chartjs-2';
+import { Line, Doughnut, Bar, Pie } from 'react-chartjs-2';
 import { fetchWithAuth } from '../api';
 import { useConfig } from '../context/ConfigContext';
 import SchoolDashboard from './SchoolDashboard';
@@ -458,572 +458,283 @@ export default function Dashboard() {
     }
   };
 
+  // Generate mock data for charts
+  const generateMonthData = () => {
+    const labels = [];
+    const data = [];
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+      data.push(Math.floor(Math.random() * 50000) + 10000);
+    }
+    return { labels, data };
+  };
+
+  const monthData = generateMonthData();
+
+  // Chart configurations
+  const lineChartConfig = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top',
+        labels: {
+          usePointStyle: true,
+          padding: 15,
+          font: { size: 12, weight: 500 }
+        }
+      },
+      filler: true
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: { color: 'rgba(0, 0, 0, 0.05)' }
+      },
+      x: {
+        grid: { display: false }
+      }
+    }
+  };
+
+  // Chart data
+  const feesChartData = {
+    labels: monthData.labels,
+    datasets: [{
+      label: 'Fees Paid',
+      data: monthData.data,
+      borderColor: 'rgb(34, 197, 94)',
+      backgroundColor: 'rgba(34, 197, 94, 0.1)',
+      fill: true,
+      tension: 0.4,
+      borderWidth: 2,
+      pointRadius: 4,
+      pointBackgroundColor: 'rgb(34, 197, 94)',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2
+    }]
+  };
+
+  const teacherPayChartData = {
+    labels: monthData.labels,
+    datasets: [{
+      label: 'Teacher Payments',
+      data: monthData.data.map(v => Math.floor(v * 0.8)),
+      borderColor: 'rgb(59, 130, 246)',
+      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+      fill: true,
+      tension: 0.4,
+      borderWidth: 2,
+      pointRadius: 4,
+      pointBackgroundColor: 'rgb(59, 130, 246)',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2
+    }]
+  };
+
+  const attendanceChartData = {
+    labels: monthData.labels,
+    datasets: [{
+      label: 'Attendance Rate %',
+      data: monthData.data.map(() => Math.floor(Math.random() * 30) + 70),
+      borderColor: 'rgb(168, 85, 247)',
+      backgroundColor: 'rgba(168, 85, 247, 0.1)',
+      fill: true,
+      tension: 0.4,
+      borderWidth: 2,
+      pointRadius: 4,
+      pointBackgroundColor: 'rgb(168, 85, 247)',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2
+    }]
+  };
+
+  const performanceChartData = {
+    labels: monthData.labels,
+    datasets: [{
+      label: 'Performance Score',
+      data: monthData.data.map(() => Math.floor(Math.random() * 40) + 60),
+      borderColor: 'rgb(249, 115, 22)',
+      backgroundColor: 'rgba(249, 115, 22, 0.1)',
+      fill: true,
+      tension: 0.4,
+      borderWidth: 2,
+      pointRadius: 4,
+      pointBackgroundColor: 'rgb(249, 115, 22)',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2
+    }]
+  };
+
+  const expensesChartData = {
+    labels: monthData.labels,
+    datasets: [{
+      label: 'Expenses',
+      data: monthData.data.map(v => Math.floor(v * 0.4)),
+      borderColor: 'rgb(239, 68, 68)',
+      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+      fill: true,
+      tension: 0.4,
+      borderWidth: 2,
+      pointRadius: 4,
+      pointBackgroundColor: 'rgb(239, 68, 68)',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2
+    }]
+  };
+
+  const debtsChartData = {
+    labels: monthData.labels,
+    datasets: [{
+      label: 'Outstanding Debts',
+      data: monthData.data.map(v => Math.floor(v * 0.2)),
+      borderColor: 'rgb(236, 72, 153)',
+      backgroundColor: 'rgba(236, 72, 153, 0.1)',
+      fill: true,
+      tension: 0.4,
+      borderWidth: 2,
+      pointRadius: 4,
+      pointBackgroundColor: 'rgb(236, 72, 153)',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2
+    }]
+  };
+
+  const utilitiesChartData = {
+    labels: monthData.labels,
+    datasets: [{
+      label: 'Utilities Cost',
+      data: monthData.data.map(v => Math.floor(v * 0.15)),
+      borderColor: 'rgb(14, 165, 233)',
+      backgroundColor: 'rgba(14, 165, 233, 0.1)',
+      fill: true,
+      tension: 0.4,
+      borderWidth: 2,
+      pointRadius: 4,
+      pointBackgroundColor: 'rgb(14, 165, 233)',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2
+    }]
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-      {/* Header */}
-      <div className="mb-6 flex justify-between items-center flex-wrap gap-4 w-full">
-        <div className="flex-1 min-w-0">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Comprehensive overview • Auto-syncing • Last updated: {lastUpdated}
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-6">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">School Dashboard</h1>
+          <p className="text-gray-600 dark:text-gray-400">Last updated: {lastUpdated}</p>
         </div>
-        
-        <div className="flex gap-3 items-center flex-wrap">
-          {/* Role Selector */}
-          <select
-            value={userRole}
-            onChange={(e) => setUserRole(e.target.value)}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-          >
-            <option value="owner">Owner View</option>
-            <option value="manager">Manager View</option>
-            <option value="staff">Staff View</option>
-          </select>
-
-          {/* Auto-refresh Toggle */}
-          <button
-            onClick={() => setAutoRefresh(!autoRefresh)}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-              autoRefresh 
-                ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' 
-                : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-            }`}
-          >
-            <RefreshCw className={`w-4 h-4 ${autoRefresh ? 'animate-spin' : ''}`} />
-            Auto
-          </button>
-
-          {/* Manual Refresh Button */}
+        <div className="flex gap-2 mt-4 md:mt-0">
           <button
             onClick={handleRefresh}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
           </button>
-          
-          {/* Spacer to push notification to far right */}
-          <div className="w-px h-8 bg-gray-300 dark:bg-gray-600"></div>
-          
-          {/* Notifications Icon - Far Right */}
-          <div className="relative" ref={notificationRef}>
-            <button
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-            >
-              <Bell className={`w-6 h-6 text-gray-700 dark:text-gray-300 ${unreadCount > 0 ? 'animate-bounce' : ''}`} />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </button>
-
-            {/* Notifications Dropdown */}
-            {showNotifications && (
-              <div className="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-[600px] overflow-hidden flex flex-col">
-                {/* Header */}
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                  <h3 className="font-semibold text-gray-900 dark:text-white">
-                    Notifications ({unreadCount} unread)
-                  </h3>
-                  {notifications.length > 0 && (
-                    <button
-                      onClick={markAllAsRead}
-                      className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400"
-                    >
-                      Mark all read
-                    </button>
-                  )}
-                </div>
-
-                {/* Notifications List */}
-                <div className="overflow-y-auto flex-1">
-                  {notifications.length === 0 ? (
-                    <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-                      <Bell className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                      <p>No notifications yet</p>
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {notifications.map((notif) => (
-                        <div
-                          key={notif.id}
-                          className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                            !notif.read ? 'bg-blue-50 dark:bg-blue-900/10' : ''
-                          }`}
-                          onClick={() => markAsRead(notif.id)}
-                        >
-                          <div className="flex justify-between items-start mb-2">
-                            <div className="flex items-start gap-3 flex-1">
-                              <div className={`mt-1 p-2 rounded-full ${
-                                notif.type === 'new_order' 
-                                  ? 'bg-green-100 dark:bg-green-900/30' 
-                                  : notif.type === 'delayed_order'
-                                  ? 'bg-red-100 dark:bg-red-900/30'
-                                  : 'bg-blue-100 dark:bg-blue-900/30'
-                              }`}>
-                                {notif.type === 'new_order' && <ShoppingCart className="w-4 h-4 text-green-600" />}
-                                {notif.type === 'delayed_order' && <Clock className="w-4 h-4 text-red-600" />}
-                                {notif.type === 'order_update' && <Activity className="w-4 h-4 text-blue-600" />}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-medium text-gray-900 dark:text-white text-sm">
-                                  {notif.title}
-                                </h4>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                  {notif.message}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-                                  {new Date(notif.timestamp).toLocaleString()}
-                                </p>
-                              </div>
-                            </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteNotification(notif.id);
-                              }}
-                              className="ml-2 p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
-                            >
-                              <X className="w-4 h-4 text-gray-500" />
-                            </button>
-                          </div>
-                          {!notif.read && (
-                            <span className="inline-block w-2 h-2 bg-blue-500 rounded-full"></span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        {/* Revenue Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-green-100 dark:bg-green-900 rounded-lg">
-              <DollarSign className="w-6 h-6 text-green-600 dark:text-green-300" />
-            </div>
-            {revenueCard.growth30 >= 0 ? (
-              <ArrowUp className="w-5 h-5 text-green-500" />
-            ) : (
-              <ArrowDown className="w-5 h-5 text-red-500" />
-            )}
-          </div>
-          <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Total Revenue</h3>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">
-            {userRole === 'staff' && kpi_cards.revenue?.total === 'restricted' 
-              ? 'Restricted' 
-              : fmt(revenueCard.total)}
-          </p>
-          <div className="mt-4 flex justify-between text-xs">
-            <span className="text-gray-500 dark:text-gray-400">
-              Last 30d: <span className="font-semibold">{fmt(revenueCard.last30)}</span>
-            </span>
-            <span className="text-green-600 dark:text-green-400 font-semibold">
-              {revenueCard.growth30 >= 0 ? '+' : ''}{revenueCard.growth30}%
-            </span>
-          </div>
-        </div>
-
-        {/* Orders Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
-              <ShoppingCart className="w-6 h-6 text-blue-600 dark:text-blue-300" />
-            </div>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              {ordersCard.completion_rate}% completed
-            </span>
-          </div>
-          <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Total Orders</h3>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{ordersCard.total}</p>
-          <div className="mt-4 flex justify-between text-xs">
-            <span className="text-green-600 dark:text-green-400">
-              <CheckCircle className="w-3 h-3 inline mr-1" />
-              {ordersCard.completed} completed
-            </span>
-            <span className="text-yellow-600 dark:text-yellow-400">
-              <Clock className="w-3 h-3 inline mr-1" />
-              {ordersCard.pending} pending
-            </span>
-          </div>
-        </div>
-
-        {/* Customers Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-purple-100 dark:bg-purple-900 rounded-lg">
-              <Users className="w-6 h-6 text-purple-600 dark:text-purple-300" />
-            </div>
-            <span className="text-xs px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded">
-              +{customersCard.new_last_30_days} new
-            </span>
-          </div>
-          <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Customers</h3>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{customersCard.total_users}</p>
-          <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-            Unique buyers: <span className="font-semibold">{customersCard.unique_customers}</span>
-          </div>
-        </div>
-
-        {/* Stock Status Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-orange-100 dark:bg-orange-900 rounded-lg">
-              <Package className="w-6 h-6 text-orange-600 dark:text-orange-300" />
-            </div>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              {stockMetrics.total_stock} units
-            </span>
-          </div>
-          <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Products</h3>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{stockMetrics.total_products}</p>
-          <div className="mt-4 flex justify-between text-xs">
-            <span className="text-green-600 dark:text-green-400">{stockCard.active} active</span>
-            <span className="text-gray-500 dark:text-gray-400">{stockCard.inactive} inactive</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Accounting Summary */}
-      {accountingData && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <DollarSign className="w-6 h-6 text-green-600" />
-            Accounting Summary (This Month)
-          </h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Total Expenses</p>
-              <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                {fmt(parseFloat(accountingData.expenses?.total_expenses || 0))}
-              </p>
-              <p className="text-[11px] text-gray-500 mt-1">
-                {accountingData.expenses?.by_category?.length || 0} categories
-              </p>
-            </div>
-            <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
-              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Income</p>
-              <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                {fmt(parseFloat(accountingData.payments?.total_income || 0))}
-              </p>
-              <p className="text-[11px] text-gray-500 mt-1">
-                {accountingData.payments?.pending_count || 0} pending
-              </p>
-            </div>
-            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
-              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Net Profit</p>
-              <p className={`text-lg font-bold ${
-                (accountingData.profitLoss?.net_profit || 0) >= 0 
-                  ? 'text-green-600 dark:text-green-400' 
-                  : 'text-red-600 dark:text-red-400'
-              }`}>
-                {fmt(Math.abs(parseFloat(accountingData.profitLoss?.net_profit || 0)))}
-              </p>
-              <p className="text-[11px] text-gray-500 mt-1">
-                {accountingData.profitLoss?.profit_margin || 0}% margin
-              </p>
-            </div>
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
-              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Tax Due</p>
-              <p className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
-                {fmt(parseFloat(accountingData.taxes?.total_due || 0))}
-              </p>
-              <p className="text-[11px] text-gray-500 mt-1">
-                {accountingData.taxes?.upcoming?.length || 0} upcoming
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Critical Alerts */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-          <AlertTriangle className="w-6 h-6 text-red-600" />
-          Critical Alerts
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Object.entries(critical_alerts).map(([key, alert]) => {
-            if (alert.count === 0) return null;
-            
-            const severityColors = {
-              critical: 'bg-red-100 dark:bg-red-900 border-red-300 dark:border-red-700 text-red-800 dark:text-red-200',
-              error: 'bg-red-100 dark:bg-red-900 border-red-300 dark:border-red-700 text-red-800 dark:text-red-200',
-              warning: 'bg-yellow-100 dark:bg-yellow-900 border-yellow-300 dark:border-yellow-700 text-yellow-800 dark:text-yellow-200',
-              info: 'bg-blue-100 dark:bg-blue-900 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200'
-            };
-
-            return (
-              <div 
-                key={key}
-                className={`border-2 rounded-lg p-4 ${severityColors[alert.severity]}`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-bold text-2xl">{alert.count}</span>
-                  {alert.severity === 'critical' && <XCircle className="w-5 h-5" />}
-                  {alert.severity === 'warning' && <AlertTriangle className="w-5 h-5" />}
-                </div>
-                <p className="text-sm">{alert.message}</p>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Charts & Trends */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Users className="w-6 h-6 text-purple-600" />
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Contacts (auto-sync)</h2>
-          </div>
-          <span className="text-xs text-gray-500 dark:text-gray-400">Last sync: {lastUpdated || '—'}</span>
-        </div>
-        {contactsToShow.length === 0 ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400">No contacts yet. Add a customer or capture one from a new order.</p>
-        ) : (
-          <>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {contactsToShow.map((contact) => (
-                <div key={contact.id || contact.phone || contact.name} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900/40">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{contact.name || 'Walk-in Customer'}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{contact.totalDebt ? `Debt: ${fmt(contact.totalDebt)}` : 'Synced'}</p>
-                    </div>
-                    <span className="text-[10px] px-2 py-1 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-200">Live</span>
-                  </div>
-                  <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
-                    {contact.phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-gray-500" />
-                        <span>{contact.phone}</span>
-                      </div>
-                    )}
-                    {contact.email && (
-                      <div className="flex items-center gap-2">
-                        <Mail className="w-4 h-4 text-gray-500" />
-                        <span className="truncate">{contact.email}</span>
-                      </div>
-                    )}
-                    {contact.address && (
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-gray-500" />
-                        <span className="truncate">{contact.address}</span>
-                      </div>
-                    )}
-                  </div>
-                  {contact.updatedAt && (
-                    <p className="mt-3 text-[11px] text-gray-500 dark:text-gray-400">Updated {new Date(contact.updatedAt).toLocaleString()}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-            {Array.isArray(contacts) && ((isLargeScreen && contacts.length > 8) || (!isLargeScreen && contacts.length > 4)) && (
-              <div className="flex justify-center mt-4">
-                <button
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-                  onClick={() => setShowAllContacts((prev) => !prev)}
-                >
-                  {showAllContacts ? 'Show Less' : `More (${contacts.length - (isLargeScreen ? 8 : 4)} more contacts)`}
-                </button>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Charts & Trends */}
+      {/* Dashboard Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Sales Trend Chart */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <TrendingUp className="w-6 h-6 text-blue-600" />
-            Sales Trend (Last 30 Days)
-          </h2>
-          <div style={{ height: '300px' }}>
-            <Line data={salesChartData} options={chartOptions} />
+        {/* School Fees Paid */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg hover:shadow-xl transition-shadow overflow-hidden">
+          <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">School Fees Paid</h2>
+              <DollarSign className="w-5 h-5 text-green-500" />
+            </div>
+          </div>
+          <div className="p-6" style={{ height: '300px' }}>
+            <Line data={feesChartData} options={lineChartConfig} />
           </div>
         </div>
 
-        {/* Order Status Breakdown */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <ShoppingCart className="w-6 h-6 text-purple-600" />
-            Order Status Breakdown
-          </h2>
-          <div style={{ height: '300px' }} className="flex items-center justify-center">
-            <Doughnut data={orderStatusChartData} options={chartOptions} />
+        {/* Teacher Payments */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg hover:shadow-xl transition-shadow overflow-hidden">
+          <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Teacher Payments</h2>
+              <Users className="w-5 h-5 text-blue-500" />
+            </div>
           </div>
-        </div>
-      </div>
-
-      {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Latest Orders */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Latest Orders</h2>
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {safeRecentActivity.latest_orders.map(order => (
-              <div key={order.id} className="border-b border-gray-200 dark:border-gray-700 pb-3 last:border-0">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-semibold text-gray-900 dark:text-white">{order.order_number}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{order.customer}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500">{order.items_count} items</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-gray-900 dark:text-white">{fmt(order.total)}</p>
-                    <span className={`text-xs px-2 py-1 rounded ${
-                      order.status === 'delivered' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' :
-                      order.status === 'pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' :
-                      order.status === 'cancelled' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' :
-                      'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                    }`}>
-                      {order.status}
-                    </span>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                  {new Date(order.created_at).toLocaleString()}
-                </p>
-              </div>
-            ))}
+          <div className="p-6" style={{ height: '300px' }}>
+            <Line data={teacherPayChartData} options={lineChartConfig} />
           </div>
         </div>
 
-        {/* Stock Updates */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Recent Stock Updates</h2>
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {safeRecentActivity.stock_updates.map(product => (
-              <div key={product.id} className="border-b border-gray-200 dark:border-gray-700 pb-3 last:border-0">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-semibold text-gray-900 dark:text-white">{product.name}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Stock: <span className={`font-bold ${
-                        product.stock === 0 ? 'text-red-600' :
-                        product.stock <= 10 ? 'text-yellow-600' :
-                        'text-green-600'
-                      }`}>{product.stock}</span>
-                    </p>
-                  </div>
-                  <span className={`text-xs px-2 py-1 rounded ${
-                    product.status === 'active' 
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' 
-                      : 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300'
-                  }`}>
-                    {product.status}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                  Updated: {new Date(product.updated_at).toLocaleString()}
-                </p>
-              </div>
-            ))}
+        {/* Attendance */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg hover:shadow-xl transition-shadow overflow-hidden">
+          <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Student Attendance</h2>
+              <Activity className="w-5 h-5 text-purple-500" />
+            </div>
+          </div>
+          <div className="p-6" style={{ height: '300px' }}>
+            <Line data={attendanceChartData} options={lineChartConfig} />
+          </div>
+        </div>
+
+        {/* Performance by Class */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg hover:shadow-xl transition-shadow overflow-hidden">
+          <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Class Performance</h2>
+              <TrendingUp className="w-5 h-5 text-orange-500" />
+            </div>
+          </div>
+          <div className="p-6" style={{ height: '300px' }}>
+            <Line data={performanceChartData} options={lineChartConfig} />
           </div>
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <Link 
-            to="/product"
-            className="bg-blue-600 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            <span className="text-sm">Add Product</span>
-          </Link>
-          <Link 
-            to="/inventory"
-            className="bg-green-600 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-green-700 transition-colors"
-          >
-            <Package className="w-5 h-5" />
-            <span className="text-sm">Manage Stock</span>
-          </Link>
-          <Link 
-            to="/manual-entry"
-            className="bg-purple-600 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-purple-700 transition-colors"
-          >
-            <ShoppingCart className="w-5 h-5" />
-            <span className="text-sm">New Order</span>
-          </Link>
-          <Link 
-            to="/orders"
-            className="bg-indigo-600 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-indigo-700 transition-colors"
-          >
-            <FileText className="w-5 h-5" />
-            <span className="text-sm">View Orders</span>
-          </Link>
-          <Link 
-            to="/accounting"
-            className="bg-cyan-600 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-cyan-700 transition-colors"
-          >
-            <DollarSign className="w-5 h-5" />
-            <span className="text-sm">Accounting</span>
-          </Link>
-          <Link 
-            to="/analytics"
-            className="bg-orange-600 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-orange-700 transition-colors"
-          >
-            <BarChart className="w-5 h-5" />
-            <span className="text-sm">Analytics</span>
-          </Link>
+      {/* Bottom Row - 3 Column Layout (Responsive) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        {/* Expenses */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg hover:shadow-xl transition-shadow overflow-hidden">
+          <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Expenses</h2>
+              <BarChart className="w-5 h-5 text-red-500" />
+            </div>
+          </div>
+          <div className="p-6" style={{ height: '300px' }}>
+            <Line data={expensesChartData} options={lineChartConfig} />
+          </div>
         </div>
-      </div>
 
-      {/* Stock Overview */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Stock Overview</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-gray-700 rounded-lg shadow-md p-3 md:p-6 text-center">
-            <p className="text-gray-500 dark:text-gray-400 text-xs md:text-sm mb-2">Total Stock</p>
-            <p className="text-xl md:text-3xl font-bold text-blue-600 dark:text-blue-400">{stockMetrics.total_stock}</p>
-            <p className="text-[8px] md:text-xs text-gray-500 dark:text-gray-500 mt-1">
-              <span className="block">Value:</span>
-              <span className="block">{fmt(stockValue.total)}</span>
-            </p>
+        {/* Outstanding Debts */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg hover:shadow-xl transition-shadow overflow-hidden">
+          <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Outstanding Debts</h2>
+              <AlertTriangle className="w-5 h-5 text-pink-500" />
+            </div>
           </div>
-          <div className="bg-white dark:bg-gray-700 rounded-lg shadow-md p-3 md:p-6 text-center">
-            <p className="text-gray-500 dark:text-gray-400 text-xs md:text-sm mb-2">Current Stock</p>
-            <p className="text-xl md:text-3xl font-bold text-green-600 dark:text-green-400">{stockMetrics.current_stock}</p>
-            <p className="text-[8px] md:text-xs text-gray-500 dark:text-gray-500 mt-1">
-              <span className="block">Value:</span>
-              <span className="block">{fmt(stockValue.current)}</span>
-            </p>
+          <div className="p-6" style={{ height: '300px' }}>
+            <Line data={debtsChartData} options={lineChartConfig} />
           </div>
-          <div className="bg-white dark:bg-gray-700 rounded-lg shadow-md p-3 md:p-6 text-center">
-            <p className="text-gray-500 dark:text-gray-400 text-xs md:text-sm mb-2">Old Stock</p>
-            <p className="text-xl md:text-3xl font-bold text-orange-600 dark:text-orange-400">{kpi_cards?.stock?.old_stock ?? 0}</p>
-            <p className="text-[8px] md:text-xs text-gray-500 dark:text-gray-500 mt-1">
-              <span className="block">Value:</span>
-              <span className="block">{fmt(kpi_cards?.stock?.old_stock_value ?? 0)}</span>
-            </p>
+        </div>
+
+        {/* Utilities */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg hover:shadow-xl transition-shadow overflow-hidden">
+          <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Utilities Costs</h2>
+              <Package className="w-5 h-5 text-sky-500" />
+            </div>
           </div>
-          <div className="bg-white dark:bg-gray-700 rounded-lg shadow-md p-3 md:p-6 text-center">
-            <p className="text-gray-500 dark:text-gray-400 text-xs md:text-sm mb-2">Expired Stock</p>
-            <p className="text-xl md:text-3xl font-bold text-red-600 dark:text-red-400">{kpi_cards?.stock?.expired_stock ?? 0}</p>
-            <p className="text-[8px] md:text-xs text-gray-500 dark:text-gray-500 mt-1">
-              <span className="block">Value:</span>
-              <span className="block">{fmt(kpi_cards?.stock?.expired_stock_value ?? 0)}</span>
-            </p>
+          <div className="p-6" style={{ height: '300px' }}>
+            <Line data={utilitiesChartData} options={lineChartConfig} />
           </div>
         </div>
       </div>
-
     </div>
   );
 }

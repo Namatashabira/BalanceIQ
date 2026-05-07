@@ -2,6 +2,20 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Trash2, Upload, Save, RefreshCw, CheckCircle, AlertCircle, ChevronDown, Search, X, BookOpen, GraduationCap, ClipboardList, Users, TrendingDown, BarChart2, Trophy } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 
+function Avatar({ name, photo }) {
+  const [err, setErr] = useState(false);
+  const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const colors = ['bg-teal-400', 'bg-emerald-400', 'bg-cyan-400', 'bg-blue-400', 'bg-indigo-400', 'bg-amber-400'];
+  const color = colors[name.charCodeAt(0) % colors.length];
+  if (photo && !err)
+    return <img src={photo} alt={name} onError={() => setErr(true)} className="w-7 h-7 rounded-full object-cover flex-shrink-0 ring-2 ring-white" />;
+  return (
+    <div className={`w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-white text-[10px] font-bold ring-2 ring-white ${color}`}>
+      {initials}
+    </div>
+  );
+}
+
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const API = `${BASE_URL}/school`;
 
@@ -209,9 +223,16 @@ export default function MarksEntryPage() {
   const [customSubject, setCustomSubject] = useState('');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null);
+  const [saveStates, setSaveStates] = useState({});
+
+  const timers = useRef({});
+  const filtersRef = useRef(filters);
+  const customSubjectRef = useRef(customSubject);
+  useEffect(() => { filtersRef.current = filters; }, [filters]);
+  useEffect(() => { customSubjectRef.current = customSubject; }, [customSubject]);
+  useEffect(() => () => Object.values(timers.current).forEach(clearTimeout), []);
 
   const isCustomSubject = filters.subject === '__custom__';
   const activeSubject = isCustomSubject ? customSubject : filters.subject;
@@ -223,12 +244,12 @@ export default function MarksEntryPage() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // Fetch students + merge with any existing saved marks for this subject/term/year
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setSaveStates({});
     try {
-      const studentParams = new URLSearchParams();
+      const studentParams = new URLSearchParams({ limit: 500 });
       if (filters.cls) studentParams.set('class_assigned', filters.cls);
 
       const markParams = new URLSearchParams({
@@ -247,7 +268,6 @@ export default function MarksEntryPage() {
       const studentsData = await studentsRes.json();
       const students = Array.isArray(studentsData) ? studentsData : (studentsData.results || []);
 
-      // Build a map of existing marks keyed by student id
       const marksMap = {};
       if (marksRes?.ok) {
         const marksData = await marksRes.json();
@@ -259,14 +279,14 @@ export default function MarksEntryPage() {
         const existing = marksMap[s.id];
         return {
           studentId: s.id,
-          markId: existing?.id || null,         // null = not yet saved
+          markId: existing?.id || null,
           name: `${s.first_name} ${s.last_name}`,
+          photo: s.photo || null,
           adm: s.admission_number || '',
           cls: s.class_assigned || '',
           comp: existing?.competency || '',
           ca: existing?.ca_score ?? '',
           exam: existing?.exam_score ?? '',
-          dirty: false,                          // tracks unsaved changes
         };
       }));
     } catch (e) {
@@ -278,67 +298,69 @@ export default function MarksEntryPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const updateRow = (studentId, field, value) =>
-    setRows(rs => rs.map(r => r.studentId === studentId ? { ...r, [field]: value, dirty: true } : r));
+  // ── Autosave a single row ─────────────────────────────────────────────────
+  const saveRow = useCallback(async (row) => {
+    const f = filtersRef.current;
+    const subject = f.subject === '__custom__' ? customSubjectRef.current : f.subject;
+    if (!subject || (row.ca === '' && row.exam === '')) return; // nothing to save
+    if (String(row.studentId).startsWith('manual') && !row.name) return;
+
+    setSaveStates(s => ({ ...s, [row.studentId]: 'saving' }));
+    try {
+      const res = await fetchWithAuth(`${API}/marks/bulk-save/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([{
+          student: row.studentId,
+          subject,
+          term: f.term,
+          academic_year: f.year,
+          competency: row.comp,
+          ca_score: row.ca === '' ? null : Number(row.ca),
+          exam_score: row.exam === '' ? null : Number(row.exam),
+        }]),
+      });
+      if (!res?.ok) throw new Error();
+      setSaveStates(s => ({ ...s, [row.studentId]: 'saved' }));
+    } catch {
+      setSaveStates(s => ({ ...s, [row.studentId]: 'error' }));
+      showToast('Auto-save failed for one record', false);
+    }
+  }, []);
+
+  // ── Update row + schedule autosave ────────────────────────────────────────
+  const updateRow = useCallback((studentId, field, value) => {
+    setSaveStates(s => ({ ...s, [studentId]: 'idle' }));
+    setRows(rs => {
+      const updated = rs.map(r => r.studentId === studentId ? { ...r, [field]: value } : r);
+      const row = updated.find(r => r.studentId === studentId);
+      clearTimeout(timers.current[studentId]);
+      timers.current[studentId] = setTimeout(() => saveRow(row), 900);
+      return updated;
+    });
+  }, [saveRow]);
 
   const addRow = () =>
     setRows(rs => [...rs, {
       studentId: `manual-${Date.now()}`,
       markId: null,
       name: '', adm: '', cls: filters.cls,
+      photo: null,
       comp: '', ca: '', exam: '',
-      dirty: true,
     }]);
 
-  const removeRow = (studentId) => setRows(rs => rs.filter(r => r.studentId !== studentId));
-
-  // Only save rows that have at least one score entered
-  const handleSave = async () => {
-    const toSave = rows.filter(r => r.ca !== '' || r.exam !== '');
-    if (!toSave.length) { showToast('Enter at least one score before saving.', false); return; }
-
-    // Manual rows need a real student id — skip them if name is blank
-    const payload = toSave
-      .filter(r => !String(r.studentId).startsWith('manual') || r.name)
-      .map(r => ({
-        student: r.studentId,
-        subject: activeSubject,
-        term: filters.term,
-        academic_year: filters.year,
-        competency: r.comp,
-        ca_score: r.ca === '' ? null : Number(r.ca),
-        exam_score: r.exam === '' ? null : Number(r.exam),
-      }));
-
-    setSaving(true);
-    try {
-      const res = await fetchWithAuth(`${API}/marks/bulk-save/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res?.ok) throw new Error('Save failed');
-      const result = await res.json();
-      if (result.errors?.length) {
-        showToast(`Saved ${result.saved} marks. ${result.errors.length} failed.`, false);
-      } else {
-        showToast(`${result.saved} marks saved successfully!`);
-      }
-      // Reload to get updated markIds and clear dirty flags
-      await loadData();
-    } catch (e) {
-      showToast(e.message, false);
-    } finally {
-      setSaving(false);
-    }
+  const removeRow = (studentId) => {
+    clearTimeout(timers.current[studentId]);
+    setRows(rs => rs.filter(r => r.studentId !== studentId));
   };
+
+  const savingCount = Object.values(saveStates).filter(v => v === 'saving').length;
+  const allSaved   = rows.length > 0 && Object.values(saveStates).every(v => v === 'saved');
 
   const totals = rows.map(r => (Number(r.ca) || 0) + (Number(r.exam) || 0)).filter(t => t > 0);
   const avg  = totals.length ? (totals.reduce((a, b) => a + b, 0) / totals.length).toFixed(1) : null;
   const high = totals.length ? Math.max(...totals) : null;
   const low  = totals.length ? Math.min(...totals) : null;
-  const savedCount = rows.filter(r => r.markId && !r.dirty).length;
-  const dirtyCount = rows.filter(r => r.dirty && (r.ca !== '' || r.exam !== '')).length;
 
   return (
     <div className="space-y-5">
@@ -377,12 +399,12 @@ export default function MarksEntryPage() {
                   <BookOpen className="w-3.5 h-3.5" /> Avg {avg}
                 </span>
               )}
-              {dirtyCount > 0 && (
-                <span className="inline-flex items-center gap-1.5 bg-amber-400/30 text-amber-100 text-xs font-medium px-3 py-1.5 rounded-full">
-                  <AlertCircle className="w-3.5 h-3.5" /> {dirtyCount} unsaved
+              {savingCount > 0 && (
+                <span className="inline-flex items-center gap-1.5 bg-white/20 text-white text-xs font-medium px-3 py-1.5 rounded-full">
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving…
                 </span>
               )}
-              {savedCount > 0 && dirtyCount === 0 && (
+              {savingCount === 0 && allSaved && (
                 <span className="inline-flex items-center gap-1.5 bg-green-400/25 text-green-100 text-xs font-medium px-3 py-1.5 rounded-full">
                   <CheckCircle className="w-3.5 h-3.5" /> All saved
                 </span>
@@ -401,16 +423,6 @@ export default function MarksEntryPage() {
               <Upload className="w-3.5 h-3.5" /> Bulk Upload
               <input type="file" accept=".xlsx,.xls,.csv" className="hidden" />
             </label>
-            <button
-              onClick={handleSave}
-              disabled={saving || dirtyCount === 0}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-white text-emerald-700 text-xs font-bold hover:bg-emerald-50 transition disabled:opacity-50 shadow"
-            >
-              {saving
-                ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving…</>
-                : <><Save className="w-3.5 h-3.5" /> Save Marks{dirtyCount > 0 ? ` (${dirtyCount})` : ''}</>
-              }
-            </button>
           </div>
         </div>
       </div>
@@ -506,6 +518,7 @@ export default function MarksEntryPage() {
               {filters.cls && <span className="ml-2 text-xs font-normal text-gray-400">— {filters.cls}</span>}
               <span className="ml-2 text-xs font-normal text-gray-400">· {filters.term} · {filters.year}</span>
             </h2>
+            <p className="text-[11px] text-gray-400 mt-0.5">Changes are saved automatically</p>
           </div>
           <button onClick={addRow} className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
             <Plus className="w-4 h-4" /> Add Row
@@ -542,17 +555,23 @@ export default function MarksEntryPage() {
                 const total = (Number(row.ca) || 0) + (Number(row.exam) || 0);
                 const hasScore = row.ca !== '' || row.exam !== '';
                 const g = hasScore ? getGrade(total) : null;
+                const ss = saveStates[row.studentId];
                 return (
-                  <tr key={row.studentId} className={`hover:bg-gray-50 ${row.dirty ? 'bg-amber-50/40' : ''}`}>
+                  <tr key={row.studentId} className={`hover:bg-gray-50 transition-colors ${ss === 'saving' ? 'bg-teal-50/30' : ''}`}>
                     <td className="px-4 py-3 text-gray-400 text-xs">{i + 1}</td>
-                    <td className="px-4 py-3 font-medium text-gray-800">{row.name || (
-                      <input
-                        className="w-36 border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        placeholder="Student name"
-                        value={row.name}
-                        onChange={e => updateRow(row.studentId, 'name', e.target.value)}
-                      />
-                    )}</td>
+                    <td className="px-4 py-3">
+                      {row.name
+                        ? <div className="flex items-center gap-2">
+                            <Avatar name={row.name} photo={row.photo} />
+                            <span className="font-medium text-gray-800 whitespace-nowrap">{row.name}</span>
+                          </div>
+                        : <input
+                            className="w-36 border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            placeholder="Student name"
+                            value={row.name}
+                            onChange={e => updateRow(row.studentId, 'name', e.target.value)}
+                          />}
+                    </td>
                     <td className="px-4 py-3 text-gray-500 font-mono text-xs">{row.adm || '—'}</td>
                     <td className="px-4 py-3">
                       {row.cls
@@ -594,11 +613,10 @@ export default function MarksEntryPage() {
                         : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      {row.markId && !row.dirty
-                        ? <span className="inline-flex items-center gap-1 text-xs text-green-600"><CheckCircle className="w-3.5 h-3.5" /> Saved</span>
-                        : row.dirty && hasScore
-                        ? <span className="inline-flex items-center gap-1 text-xs text-amber-500"><AlertCircle className="w-3.5 h-3.5" /> Unsaved</span>
-                        : <span className="text-gray-300 text-xs">—</span>}
+                      {ss === 'saving' && <span className="inline-flex items-center gap-1 text-xs text-teal-500"><RefreshCw className="w-3 h-3 animate-spin" /> Saving…</span>}
+                      {ss === 'saved'  && <span className="inline-flex items-center gap-1 text-xs text-green-600"><CheckCircle className="w-3.5 h-3.5" /> Saved</span>}
+                      {ss === 'error'  && <span className="inline-flex items-center gap-1 text-xs text-red-500"><AlertCircle className="w-3.5 h-3.5" /> Failed</span>}
+                      {!ss            && <span className="text-gray-300 text-xs">—</span>}
                     </td>
                     <td className="px-4 py-3">
                       <button onClick={() => removeRow(row.studentId)} className="p-1.5 rounded hover:bg-red-50 text-red-400 hover:text-red-600">

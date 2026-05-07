@@ -6,7 +6,8 @@ import {
 } from 'lucide-react';
 import { useConfig } from '../context/ConfigContext';
 import { useReportTemplate } from '../context/ReportTemplateContext';
-import { ClassicPreview, ModernPreview, MinimalPreview } from './ReportTemplatesPage';
+import { ClassicPreview, ModernPreview, MinimalPreview, TEMPLATE_MAP } from './ReportTemplatesPage';
+import { loadReceiptSettings } from '../services/receiptSettingsService';
 
 const API = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api');
 const SCHOOL_API = `${API}/school`;
@@ -22,8 +23,6 @@ const GRADE_SCALE = [
 ];
 const getGrade = (score) => (GRADE_SCALE.find(g => score >= g.min) || GRADE_SCALE[GRADE_SCALE.length - 1]).grade;
 const REMARK_MAP = { A: 'Excellent', B: 'Good', C: 'Satisfactory', D: 'Needs Improvement', E: 'Poor', F: 'Fail' };
-
-const TEMPLATE_MAP = { classic: ClassicPreview, modern: ModernPreview, minimal: MinimalPreview };
 
 const BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace('/api', '');
 
@@ -53,9 +52,9 @@ async function buildReportData(student, term, academicYear, logo, schoolInfo) {
 
   return {
     school: {
-      name: schoolInfo?.name || 'School Name',
-      logo: schoolInfo?.logo || logo || null,
-      address: [schoolInfo?.poBox, schoolInfo?.address].filter(Boolean).join(' · ') || '',
+      name: schoolInfo?.name || schoolInfo?.businessName || 'School Name',
+      logo: logo || null,
+      address: [schoolInfo?.poBox, schoolInfo?.location, schoolInfo?.town].filter(Boolean).join(' · ') || '',
       motto: schoolInfo?.motto || '',
     },
     student: {
@@ -84,8 +83,16 @@ async function buildReportData(student, term, academicYear, logo, schoolInfo) {
 }
 
 export default function StudentReportPage() {
-  const { logo, schoolInfo } = useConfig();
+  const { schoolInfo } = useConfig();
   const { template, setTemplate } = useReportTemplate();
+  const [rsLogo, setRsLogo] = useState('');  // logo from ReceiptSettings (single source of truth)
+
+  // Load logo from ReceiptSettings on mount
+  useEffect(() => {
+    loadReceiptSettings().then(data => {
+      if (data.logo) setRsLogo(data.logo);
+    }).catch(() => {});
+  }, []);
 
   const [activeTab, setActiveTab] = useState('generate'); // 'generate' | 'history'
   const [allStudents, setAllStudents] = useState([]);
@@ -217,7 +224,7 @@ export default function StudentReportPage() {
           const res = await fetchWithAuth(`${SCHOOL_API}/students/${student.id}/`);
           if (res?.ok) fullStudent = await res.json();
         }
-    const data = await buildReportData(fullStudent, term, academicYear, logo, schoolInfo);
+    const data = await buildReportData(fullStudent, term, academicYear, rsLogo, schoolInfo);
         studentMap[results.length] = student.id;
         results.push(data);
       } catch {
@@ -255,7 +262,7 @@ export default function StudentReportPage() {
         setSaveStatus('error');
       }
     }
-  }, [visibleStudents, selectedIds, scope, term, academicYear, logo, template]);
+  }, [visibleStudents, selectedIds, scope, term, academicYear, rsLogo, template]);
 
   const handlePrint = useCallback(() => {
     const style = document.createElement('style');
@@ -274,7 +281,7 @@ export default function StudentReportPage() {
     document.head.removeChild(style);
   }, []);
 
-  const PreviewComponent = TEMPLATE_MAP[template] || ModernPreview;
+  const PreviewComponent = TEMPLATE_MAP[template] || TEMPLATE_MAP.classic;
 
   const scopeLabel = scope === 'all'
     ? `Whole School (${visibleStudents.length})`
@@ -298,7 +305,7 @@ export default function StudentReportPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {['classic', 'modern', 'minimal'].map(t => (
+          {['salah', 'salahv2', 'greenclassic', 'classic2', 'classic', 'modern', 'minimal'].map(t => (
             <button key={t} onClick={() => setTemplate(t)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all border ${
                 template === t

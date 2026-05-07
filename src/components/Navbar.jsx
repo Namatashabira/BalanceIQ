@@ -198,7 +198,13 @@ function UserMenu({ user, userProfile, onOpenAccount, onLogout }) {
 
   const displayName = userProfile?.fullName || userProfile?.username || user?.first_name || user?.username || 'User';
   const avatar = userProfile?.avatar;
-  const role = user?.role?.replace('_', ' ') || '';
+  const rawRole = user?.role || '';
+  const schoolRole = user?.school_role || '';
+  const roleLabel = rawRole === 'tenant_admin' || rawRole === 'superadmin'
+    ? 'Admin'
+    : schoolRole
+      ? schoolRole.charAt(0).toUpperCase() + schoolRole.slice(1).replace('_', ' ')
+      : rawRole.replace('_', ' ');
 
   return (
     <div ref={ref} className="relative">
@@ -215,7 +221,7 @@ function UserMenu({ user, userProfile, onOpenAccount, onLogout }) {
         </div>
         <div className="hidden sm:flex flex-col items-start leading-tight">
           <span className="text-sm font-semibold text-gray-800 max-w-[100px] truncate">{displayName}</span>
-          <span className="text-[11px] text-gray-400 capitalize">{role}</span>
+          <p className="text-xs text-gray-400 capitalize">{roleLabel}</p>
         </div>
         <ChevronDown size={14} className={`text-gray-400 transition-transform hidden sm:block ${open ? 'rotate-180' : ''}`} />
       </button>
@@ -224,7 +230,7 @@ function UserMenu({ user, userProfile, onOpenAccount, onLogout }) {
         <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100">
             <p className="text-sm font-semibold text-gray-900 truncate">{displayName}</p>
-            <p className="text-xs text-gray-400 capitalize">{role}</p>
+            <p className="text-xs text-gray-400 capitalize">{roleLabel}</p>
           </div>
           <div className="py-1">
             <button
