@@ -126,7 +126,18 @@ self.addEventListener('fetch', (event) => {
   }
 
   // ── Default ───────────────────────────────────────────────────────────────
-  event.respondWith(fetch(request).catch(() => caches.match(request)));
+  event.respondWith(
+    fetch(request).catch(() =>
+      caches.match(request).then(
+        (cached) =>
+          cached ||
+          new Response(JSON.stringify({ offline: true }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' },
+          })
+      )
+    )
+  );
 });
 
 // ── Background Sync ───────────────────────────────────────────────────────────
