@@ -8,6 +8,7 @@ import axios from 'axios';
 import Fuse from 'fuse.js';
 import { getFeaturesForBusinessType } from '../businessTypeFeatures';
 import { useAuth } from '../context/AuthContext';
+import SuccessFireworks from '../components/SuccessFireworks';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api';
 
@@ -22,6 +23,7 @@ export default function Register() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [registeredUser, setRegisteredUser] = useState(null);
   const [businessTypes, setBusinessTypes] = useState([]);
   const [suggestedType, setSuggestedType] = useState(null);
   const [formData, setFormData] = useState({
@@ -99,7 +101,6 @@ export default function Register() {
         localStorage.setItem('accessToken', res.data.access);
         localStorage.setItem('refreshToken', res.data.refresh);
         if (res.data.tenant) localStorage.setItem('activeTenant', JSON.stringify(res.data.tenant));
-        if (res.data.user) await login(res.data.user);
         // Apply pre-selected plan from pricing page
         const pendingPlan = localStorage.getItem('selectedPlan');
         if (pendingPlan && pendingPlan !== 'free') {
@@ -111,15 +112,14 @@ export default function Register() {
             );
           } catch {}
         }
-        // Start free trial subscription if no plan was pre-selected
         try {
           await axios.get(`${API_URL}/plans/my-subscription/`, {
             headers: { Authorization: `Bearer ${res.data.access}` }
           });
         } catch {}
         window.dispatchEvent(new Event('plan-changed'));
+        setRegisteredUser(res.data.user);
         setStep(4);
-        setTimeout(() => navigate('/'), 2000);
       }
     } catch (err) {
       const msg = err?.response?.data?.error || err?.response?.data?.detail;
@@ -425,26 +425,13 @@ export default function Register() {
               </div>
             )}
 
-            {/* ── STEP 4: Success ── */}
+            {/* ── STEP 4: Success Fireworks ── */}
             {step === 4 && (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center py-12">
-                  <div className="relative mb-6 flex justify-center">
-                    <div className="h-20 w-20 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-2xl">
-                      <CheckCircle className="h-10 w-10 text-white" />
-                    </div>
-                    <div className="absolute -top-1 -right-1 h-7 w-7 rounded-full bg-pink-500 flex items-center justify-center">
-                      <Rocket className="h-4 w-4 text-white" />
-                    </div>
-                  </div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to BusinessIQ!</h2>
-                  <p className="text-gray-500 mb-6">Your business workspace is ready.</p>
-                  <div className="flex items-center justify-center gap-2 text-emerald-400 font-semibold text-sm">
-                    <span className="h-4 w-4 border-2 border-emerald-300 border-t-emerald-400 rounded-full animate-spin" />
-                    Setting up your workspace...
-                  </div>
-                </div>
-              </div>
+              <SuccessFireworks
+                name={formData.firstName || formData.username}
+                businessType={formData.businessType}
+                onDone={() => { login(registeredUser); navigate('/'); }}
+              />
             )}
           </form>
         </div>

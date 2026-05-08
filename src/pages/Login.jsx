@@ -4,6 +4,8 @@ import { loginUser } from '../api';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Key, ArrowLeft, CheckCircle, ShieldCheck, Loader2 } from 'lucide-react';
+import BIQLogo from '../components/BIQLogo';
+import SuccessFireworks from '../components/SuccessFireworks';
 
 const BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace(/\/api\/?$/, '');
 const API  = `${BASE}/api`;
@@ -146,6 +148,8 @@ export default function Login() {
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
   const [showOtp, setShowOtp]   = useState(false);
+  const [success, setSuccess]   = useState(false);
+  const [successUser, setSuccessUser] = useState(null);
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -157,7 +161,14 @@ export default function Login() {
     try {
       await new Promise(r => setTimeout(r, 1200));
       const result = await loginUser(credentials.username, credentials.password);
-      if (result?.user) { login(result.user); navigate('/'); return; }
+      if (result?.user) {
+        localStorage.setItem('accessToken', result.access || result.token || '');
+        if (result.refresh) localStorage.setItem('refreshToken', result.refresh);
+        if (result.user?.tenant) localStorage.setItem('activeTenant', JSON.stringify(result.user.tenant));
+        setSuccessUser(result.user);
+        setSuccess(true);
+        return;
+      }
       setError('Invalid username or password');
     } catch (err) {
       setError(err?.response?.data?.error || 'Login failed. Please check your credentials.');
@@ -166,8 +177,20 @@ export default function Login() {
 
   return (
     <>
-      {loading && (
+      {success && <SuccessFireworks
+        name={credentials.username}
+        businessType={
+          successUser?.tenant?.business_type ||
+          successUser?.business_type ||
+          JSON.parse(localStorage.getItem('activeTenant') || '{}')?.business_type ||
+          ''
+        }
+        onDone={() => { login(successUser); navigate('/'); }}
+      />}
+
+      {loading && !success && (
         <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center gap-5">
+          <BIQLogo size={64} />
           <div className="relative w-16 h-16">
             <div className="absolute inset-0 rounded-full border-4 border-gray-200" />
             <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-purple-600 border-r-purple-400 animate-spin" />
