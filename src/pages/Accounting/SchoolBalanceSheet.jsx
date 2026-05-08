@@ -123,7 +123,7 @@ export default function SchoolBalanceSheet() {
   const isBalanced = balanceSheet?.is_balanced;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6 overflow-x-hidden min-w-0">
       <div className="flex justify-between items-center flex-wrap gap-3">
         <h2 className="text-2xl font-bold text-gray-800">Balance Sheet</h2>
         <div className="flex gap-2">
@@ -160,7 +160,7 @@ export default function SchoolBalanceSheet() {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-3">
             {[
               { label: 'Total Assets', value: fmt(balanceSheet.assets?.total), color: 'blue' },
               { label: 'Total Liabilities', value: fmt(balanceSheet.liabilities?.total), color: 'red' },
@@ -214,8 +214,8 @@ export default function SchoolBalanceSheet() {
       {/* Assets Tab */}
       {activeTab === 'assets' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="hidden sm:block overflow-x-auto">
+            <table className="min-w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
                   {['Name', 'Type', 'Purchase Value', 'Current Value', 'Condition', ''].map(h => (
@@ -244,14 +244,34 @@ export default function SchoolBalanceSheet() {
               </tbody>
             </table>
           </div>
+          <div className="sm:hidden divide-y divide-gray-100">
+            {assets.length === 0 ? (
+              <p className="px-4 py-8 text-center text-gray-400">No assets recorded.</p>
+            ) : assets.map(a => (
+              <div key={a.id} className="p-4 space-y-1">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-semibold text-gray-800 text-sm">{a.name}</p>
+                    <p className="text-xs text-gray-500">{a.asset_type_display} &middot; {a.condition || '—'}</p>
+                  </div>
+                  <p className="font-bold text-blue-600 text-sm">{fmt(a.current_value)}</p>
+                </div>
+                <p className="text-xs text-gray-400">Purchase: {fmt(a.purchase_value)}</p>
+                <div className="flex gap-2 pt-1">
+                  <button onClick={() => openEditAsset(a)} className="p-1.5 rounded hover:bg-blue-50 text-blue-600"><Edit2 size={14} /></button>
+                  <button onClick={() => deleteAsset(a.id)} className="p-1.5 rounded hover:bg-red-50 text-red-500"><Trash2 size={14} /></button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
       {/* Liabilities Tab */}
       {activeTab === 'liabilities' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="hidden sm:block overflow-x-auto">
+            <table className="min-w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
                   {['Creditor', 'Type', 'Original', 'Paid', 'Balance', 'Status', ''].map(h => (
@@ -284,6 +304,30 @@ export default function SchoolBalanceSheet() {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="sm:hidden divide-y divide-gray-100">
+            {debts.length === 0 ? (
+              <p className="px-4 py-8 text-center text-gray-400">No liabilities recorded.</p>
+            ) : debts.map(d => (
+              <div key={d.id} className="p-4 space-y-1">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-semibold text-gray-800 text-sm">{d.creditor_name}</p>
+                    <p className="text-xs text-gray-500">{d.debt_type_display}</p>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[d.status] || 'bg-gray-100 text-gray-600'}`}>{d.status_display}</span>
+                </div>
+                <div className="flex gap-4 text-xs">
+                  <span>Original: <strong>{fmt(d.original_amount)}</strong></span>
+                  <span className="text-green-600">Paid: {fmt(d.amount_paid)}</span>
+                  <span className="text-red-600 font-semibold">Bal: {fmt(d.balance)}</span>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button onClick={() => openEditDebt(d)} className="p-1.5 rounded hover:bg-blue-50 text-blue-600"><Edit2 size={14} /></button>
+                  <button onClick={() => deleteDebt(d.id)} className="p-1.5 rounded hover:bg-red-50 text-red-500"><Trash2 size={14} /></button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

@@ -93,7 +93,7 @@ export default function SchoolPayments() {
   if (loading) return <div className="p-6 text-center text-gray-500">Loading…</div>;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6 overflow-x-hidden min-w-0">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800">Payments</h2>
         {activeTab === 'salaries' && (
@@ -106,19 +106,19 @@ export default function SchoolPayments() {
 
       {/* Salary Summary Cards */}
       {salarySummary && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: 'Total Paid', value: fmt(salarySummary.total_paid), icon: CheckCircle, color: 'green' },
             { label: 'Balance Due', value: fmt(salarySummary.balance_due), icon: Clock, color: 'yellow' },
             { label: 'This Month', value: fmt(salarySummary.this_month_paid), icon: CreditCard, color: 'blue' },
             { label: 'Teachers', value: salarySummary.teacher_count, icon: Users, color: 'purple' },
           ].map(({ label, value, icon: Icon, color }) => (
-            <div key={label} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            <div key={label} className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <Icon className={`text-${color}-600`} size={18} />
-                <p className="text-xs text-gray-500">{label}</p>
+                <Icon className={`text-${color}-600 flex-shrink-0`} size={16} />
+                <p className="text-xs text-gray-500 truncate">{label}</p>
               </div>
-              <p className={`text-lg font-bold text-${color}-600`}>{value}</p>
+              <p className={`text-sm font-bold text-${color}-600 truncate`}>{value}</p>
             </div>
           ))}
         </div>
@@ -139,8 +139,8 @@ export default function SchoolPayments() {
       {/* Fee Payments */}
       {activeTab === 'fees' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="hidden sm:block overflow-x-auto">
+            <table className="min-w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
                   {['Date', 'Student', 'Term', 'Category', 'Method', 'Amount'].map(h => (
@@ -164,6 +164,20 @@ export default function SchoolPayments() {
               </tbody>
             </table>
           </div>
+          <div className="sm:hidden divide-y divide-gray-100">
+            {feePayments.length === 0 ? (
+              <p className="px-4 py-8 text-center text-gray-400">No fee payments found.</p>
+            ) : feePayments.map(p => (
+              <div key={p.id} className="p-4 space-y-0.5">
+                <div className="flex justify-between">
+                  <p className="font-semibold text-gray-800 text-sm">{p.student_name || `Student #${p.student}`}</p>
+                  <p className="font-bold text-green-600 text-sm">{fmt(p.amount_paid)}</p>
+                </div>
+                <p className="text-xs text-gray-500">{p.payment_date} &middot; {p.term} {p.academic_year}</p>
+                <p className="text-xs text-gray-500 capitalize">{p.category_display} &middot; {p.payment_method}</p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -172,7 +186,7 @@ export default function SchoolPayments() {
         <div className="space-y-4">
           {/* Filters */}
           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <input type="text" placeholder="Search teacher name…"
                 value={salaryFilters.teacher_name}
                 onChange={(e) => setSalaryFilters({ ...salaryFilters, teacher_name: e.target.value })}
@@ -190,8 +204,8 @@ export default function SchoolPayments() {
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="min-w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
                     {['Teacher', 'Month', 'Net Salary', 'Paid', 'Balance', 'Status', ''].map(h => (
@@ -230,6 +244,37 @@ export default function SchoolPayments() {
                   })}
                 </tbody>
               </table>
+            </div>
+            <div className="sm:hidden divide-y divide-gray-100">
+              {salaries.length === 0 ? (
+                <p className="px-4 py-8 text-center text-gray-400">No salary records found.</p>
+              ) : salaries.map(s => {
+                const cfg = STATUS_CFG[s.status] || STATUS_CFG.pending;
+                const Icon = cfg.Icon;
+                return (
+                  <div key={s.id} className="p-4 space-y-1">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-semibold text-gray-800 text-sm">{s.teacher_name}</p>
+                        <p className="text-xs text-gray-500">{s.month}</p>
+                      </div>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.color}`}>
+                        <Icon size={10} />{s.status}
+                      </span>
+                    </div>
+                    <div className="flex gap-4 text-xs">
+                      <span>Net: <strong>{fmt(s.net_salary)}</strong></span>
+                      <span className="text-green-600">Paid: {fmt(s.amount_paid)}</span>
+                      <span className="text-red-600">Bal: {fmt(s.balance_due)}</span>
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <button onClick={() => setReceiptSalary(s)} className="p-1.5 rounded hover:bg-green-50 text-green-600"><Receipt size={14} /></button>
+                      <button onClick={() => openEdit(s)} className="p-1.5 rounded hover:bg-blue-50 text-blue-600"><Edit2 size={14} /></button>
+                      <button onClick={() => handleDelete(s.id)} className="p-1.5 rounded hover:bg-red-50 text-red-500"><Trash2 size={14} /></button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

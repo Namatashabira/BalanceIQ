@@ -338,8 +338,8 @@ export default function Payments() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-      <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 overflow-x-hidden">
+      <div className="p-6 max-w-7xl mx-auto space-y-6 min-w-0">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
@@ -611,7 +611,7 @@ export default function Payments() {
         {/* Payments Table */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
+          <table className="min-w-full">
               <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
                 <tr>
                   {['Date','Party Name','Amount','Type','Status','Payment Method','Due Date','Actions'].map((col) => (

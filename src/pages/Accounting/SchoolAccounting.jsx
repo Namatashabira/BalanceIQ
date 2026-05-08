@@ -26,7 +26,7 @@ export default function SchoolAccounting() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center gap-3 mb-4">
@@ -54,7 +54,7 @@ export default function SchoolAccounting() {
                     : 'border-transparent text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                 }`}
               >
-                <Icon size={18} className={isActive ? 'text-blue-600' : tab.color} />
+                <Icon size={18} className={`hidden sm:block ${isActive ? 'text-blue-600' : tab.color}`} />
                 {tab.label}
               </button>
             );

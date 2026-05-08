@@ -200,7 +200,7 @@ export default function SchoolExpenses() {
   if (loading) return <div className="p-6 text-center text-gray-500">Loading...</div>;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6 overflow-x-hidden min-w-0">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800">Expenses</h2>
         <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
@@ -209,16 +209,19 @@ export default function SchoolExpenses() {
       </div>
 
       {summary && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-3">
           {[
             { label: 'Total Expenses', value: fmt(summary.total_expenses), icon: DollarSign, color: 'red' },
             { label: 'This Month', value: fmt(summary.this_month), icon: Calendar, color: 'orange' },
             { label: 'Total Records', value: summary.expense_count, icon: TrendingUp, color: 'purple' },
           ].map(({ label, value, icon: Icon, color }) => (
-            <div key={label} className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className={`p-2.5 bg-${color}-100 rounded-lg`}><Icon className={`text-${color}-600`} size={22} /></div>
-                <div><p className="text-xs text-gray-500">{label}</p><p className="text-xl font-bold text-gray-800">{value}</p></div>
+            <div key={label} className="bg-white p-3 sm:p-5 rounded-xl shadow-sm border border-gray-100">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className={`p-2 bg-${color}-100 rounded-lg flex-shrink-0`}><Icon className={`text-${color}-600`} size={18} /></div>
+                <div className="min-w-0">
+                  <p className="text-[10px] sm:text-xs text-gray-500 truncate">{label}</p>
+                  <p className="text-sm sm:text-xl font-bold text-gray-800 truncate">{value}</p>
+                </div>
               </div>
             </div>
           ))}
@@ -227,7 +230,7 @@ export default function SchoolExpenses() {
 
       <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
         <div className="flex items-center gap-2 mb-3 text-sm font-medium text-gray-600"><Filter size={16} /> Filters</div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <select value={filters.category} onChange={(e) => setFilters({ ...filters, category: e.target.value })} className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
             <option value="">All Categories</option>
             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -245,8 +248,9 @@ export default function SchoolExpenses() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        {/* Desktop table */}
+        <div className="hidden sm:block overflow-x-auto">
+          <table className="min-w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
                 {['Date', 'Category', 'Description', 'Payee', 'Method', 'Amount', ''].map(h => (
@@ -277,6 +281,28 @@ export default function SchoolExpenses() {
               ))}
             </tbody>
           </table>
+        </div>
+        {/* Mobile cards */}
+        <div className="sm:hidden divide-y divide-gray-100">
+          {expenses.length === 0 ? (
+            <p className="px-4 py-8 text-center text-gray-400">No expenses found.</p>
+          ) : expenses.map(exp => (
+            <div key={exp.id} className="p-4 space-y-1">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="font-semibold text-gray-800 text-sm">{exp.description}</p>
+                  <p className="text-xs text-gray-500">{exp.date} &middot; {exp.category_name || '—'}</p>
+                  <p className="text-xs text-gray-500">{exp.payee} &middot; {exp.payment_method?.replace('_', ' ')}</p>
+                </div>
+                <p className="font-bold text-red-600 text-sm">{fmt(exp.amount)}</p>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button onClick={() => handlePrintExpense(exp)} className="p-1.5 rounded hover:bg-green-50 text-green-600"><Printer size={14} /></button>
+                <button onClick={() => openEdit(exp)} className="p-1.5 rounded hover:bg-blue-50 text-blue-600"><Edit2 size={14} /></button>
+                <button onClick={() => handleDelete(exp.id)} className="p-1.5 rounded hover:bg-red-50 text-red-500"><Trash2 size={14} /></button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

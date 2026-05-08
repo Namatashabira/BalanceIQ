@@ -28,8 +28,8 @@ const currentYear = () => String(new Date().getFullYear());
 // ── Stat card ─────────────────────────────────────────────────────────────────
 function StatCard({ icon: Icon, label, value, sub, color, trend, to }) {
   const card = (
-    <div className={`bg-white rounded-xl shadow-sm border border-gray-100 p-3 flex flex-col gap-2 h-full hover:shadow-md transition-shadow ${to ? 'cursor-pointer' : ''}`}>
-      <div className="flex items-center justify-between">
+    <div className={`bg-white rounded-xl shadow-sm border border-gray-100 p-3 flex flex-col gap-1 h-full hover:shadow-md transition-shadow ${to ? 'cursor-pointer' : ''}`}>
+      <div className="hidden sm:flex items-center justify-between">
         <div className={`p-1.5 rounded-lg ${color} shrink-0`}>
           <Icon className="w-3.5 h-3.5 text-white" />
         </div>
@@ -366,7 +366,7 @@ export default function SchoolDashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         <StatCard icon={Users} label="Total Students" value={totalStudents}
           sub={`${activeStudents} active`} color="bg-indigo-500" to="/student-management" />
         <StatCard icon={Banknote} label="Fees Collected" value={fmt(totalCollected)}

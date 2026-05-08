@@ -311,13 +311,13 @@ export default function SchoolReceiptLookup() {
       {/* ── Tab: Search by student ── */}
       {tab === 'student' && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="relative sm:col-span-1">
-              <label className="block text-xs font-medium text-gray-600 mb-1">Student Name / Adm No.</label>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="relative">
+              <label className="block text-xs font-medium text-gray-600 mb-1 truncate">Student Name / Adm No.</label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                 <input
-                  className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border border-gray-300 rounded-lg pl-7 pr-2 py-2 text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Type to search…"
                   value={query}
                   onChange={e => { setQuery(e.target.value); searchStudents(e.target.value); }}
@@ -339,14 +339,14 @@ export default function SchoolReceiptLookup() {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Term</label>
-              <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+              <select className="w-full border border-gray-300 rounded-lg px-2 py-2 text-xs focus:ring-2 focus:ring-blue-500"
                 value={term} onChange={e => setTerm(e.target.value)}>
                 {['Term 1', 'Term 2', 'Term 3'].map(t => <option key={t}>{t}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Academic Year</label>
-              <input className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+              <input className="w-full border border-gray-300 rounded-lg px-2 py-2 text-xs focus:ring-2 focus:ring-blue-500"
                 value={year} onChange={e => setYear(e.target.value)} placeholder="e.g. 2025" />
             </div>
           </div>

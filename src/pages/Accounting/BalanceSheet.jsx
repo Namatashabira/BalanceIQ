@@ -101,8 +101,8 @@ export default function BalanceSheet() {
   const sumValues = (items) => items.reduce((sum, item) => sum + parseFloat(item.amount || item.value || 0), 0);
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-      <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 overflow-x-hidden">
+      <div className="p-6 max-w-7xl mx-auto space-y-6 min-w-0">
         {/* Header */}
         <div className="mb-6">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">

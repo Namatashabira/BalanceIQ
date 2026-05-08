@@ -220,7 +220,7 @@ export default function SchoolProfits() {
   const isProfit = netProfit >= 0;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6 overflow-x-hidden min-w-0">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800">Profits & Income</h2>
         <button onClick={openAdd}
@@ -244,37 +244,31 @@ export default function SchoolProfits() {
       {/* Overview */}
       {activeTab === 'overview' && summary && (
         <div className="space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-green-100 rounded-lg"><DollarSign className="text-green-600" size={22} /></div>
-                <div>
-                  <p className="text-xs text-gray-500">Total Income</p>
-                  <p className="text-xl font-bold text-gray-800">{fmt(summary.total_income)}</p>
-                </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gray-100 min-w-0">
+              <div className="hidden sm:flex items-center gap-2 mb-1">
+                <div className="p-2 bg-green-100 rounded-lg flex-shrink-0"><DollarSign className="text-green-600" size={18} /></div>
               </div>
+              <p className="text-xs text-gray-500">Total Income</p>
+              <p className="text-sm font-bold text-gray-800 truncate">{fmt(summary.total_income)}</p>
             </div>
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-blue-100 rounded-lg"><Calendar className="text-blue-600" size={22} /></div>
-                <div>
-                  <p className="text-xs text-gray-500">This Month</p>
-                  <p className="text-xl font-bold text-gray-800">{fmt(summary.this_month)}</p>
-                </div>
+            <div className="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gray-100 min-w-0">
+              <div className="hidden sm:flex items-center gap-2 mb-1">
+                <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0"><Calendar className="text-blue-600" size={18} /></div>
               </div>
+              <p className="text-xs text-gray-500">This Month</p>
+              <p className="text-sm font-bold text-gray-800 truncate">{fmt(summary.this_month)}</p>
             </div>
-            <div className={`bg-white p-5 rounded-xl shadow-sm border ${isProfit ? 'border-green-200' : 'border-red-200'}`}>
-              <div className="flex items-center gap-3">
-                <div className={`p-2.5 rounded-lg ${isProfit ? 'bg-green-100' : 'bg-red-100'}`}>
-                  {isProfit ? <TrendingUp className="text-green-600" size={22} /> : <TrendingDown className="text-red-600" size={22} />}
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Net Profit (YTD)</p>
-                  <p className={`text-xl font-bold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
-                    {isProfit ? '' : '-'}{fmt(Math.abs(netProfit))}
-                  </p>
+            <div className={`bg-white p-3 sm:p-4 rounded-xl shadow-sm border min-w-0 ${isProfit ? 'border-green-200' : 'border-red-200'}`}>
+              <div className="hidden sm:flex items-center gap-2 mb-1">
+                <div className={`p-2 rounded-lg flex-shrink-0 ${isProfit ? 'bg-green-100' : 'bg-red-100'}`}>
+                  {isProfit ? <TrendingUp className="text-green-600" size={18} /> : <TrendingDown className="text-red-600" size={18} />}
                 </div>
               </div>
+              <p className="text-xs text-gray-500">Net Profit (YTD)</p>
+              <p className={`text-sm font-bold truncate ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
+                {isProfit ? '' : '-'}{fmt(Math.abs(netProfit))}
+              </p>
             </div>
           </div>
 
@@ -300,8 +294,8 @@ export default function SchoolProfits() {
       {/* Income Records */}
       {activeTab === 'income' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="hidden sm:block overflow-x-auto">
+            <table className="min-w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
                   {['Date', 'Type', 'Description', 'Source', 'Amount', ''].map(h => (
@@ -335,6 +329,27 @@ export default function SchoolProfits() {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="sm:hidden divide-y divide-gray-100">
+            {income.length === 0 ? (
+              <p className="px-4 py-8 text-center text-gray-400">No income records found.</p>
+            ) : income.map(item => (
+              <div key={item.id} className="p-4 space-y-1">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-semibold text-gray-800 text-sm">{item.description}</p>
+                    <p className="text-xs text-gray-500">{item.date} &middot; {item.source}</p>
+                    <span className="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full">{item.income_type_display}</span>
+                  </div>
+                  <p className="font-bold text-green-600 text-sm">{fmt(item.amount)}</p>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button onClick={() => handlePrintIncome(item)} className="p-1.5 rounded hover:bg-green-50 text-green-600"><Printer size={14} /></button>
+                  <button onClick={() => openEdit(item)} className="p-1.5 rounded hover:bg-blue-50 text-blue-600"><Edit2 size={14} /></button>
+                  <button onClick={() => handleDelete(item.id)} className="p-1.5 rounded hover:bg-red-50 text-red-500"><Trash2 size={14} /></button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
