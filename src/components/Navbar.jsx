@@ -185,7 +185,7 @@ function NotificationBell() {
 }
 
 // ── User Menu ────────────────────────────────────────────────────────────────
-function UserMenu({ user, userProfile, onOpenAccount, onLogout }) {
+function UserMenu({ user, userProfile, onOpenAccount, onLogout, businessType }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const navigate = useNavigate();
@@ -240,7 +240,7 @@ function UserMenu({ user, userProfile, onOpenAccount, onLogout }) {
               <User size={15} className="text-gray-400" /> My Account
             </button>
             <button
-              onClick={() => { navigate('/settings'); setOpen(false); }}
+              onClick={() => { navigate(businessType === 'school' ? '/school-settings' : '/settings'); setOpen(false); }}
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
             >
               <Settings size={15} className="text-gray-400" /> Settings
@@ -512,6 +512,7 @@ export default function Navbar({ onToggleSidebar, sidebarOpen }) {
                 userProfile={userProfile}
                 onOpenAccount={() => setShowAccount(true)}
                 onLogout={logout}
+                businessType={businessType}
               />
             </div>
             <button
