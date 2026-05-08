@@ -429,6 +429,7 @@ export function ConfigProvider({ children }) {
         const profilePicUrl = data?.profile?.profile_picture_url || data?.profile_picture_url;
         if (profilePicUrl) {
           const stored = JSON.parse(localStorage.getItem('userProfile') || '{}');
+          // Only update if URL actually changed to avoid unnecessary re-renders
           if (stored.avatar !== profilePicUrl) {
             stored.avatar = profilePicUrl;
             localStorage.setItem('userProfile', JSON.stringify(stored));

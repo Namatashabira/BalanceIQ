@@ -107,50 +107,61 @@ function AccessGuard({ pageKey, children }) {
   return <Navigate to={fallback} replace />;
 }
 
+// ── School-only route guard ───────────────────────────────────────────────────
+function SchoolGuard({ children }) {
+  const { businessType, loading } = useConfig();
+  if (loading) return null;
+  if (businessType !== 'school') return <Navigate to="/" replace />;
+  return children;
+}
+
+// ── Business-only route guard ─────────────────────────────────────────────────
+function BusinessGuard({ children }) {
+  const { businessType, loading } = useConfig();
+  if (loading) return null;
+  if (businessType === 'school') return <Navigate to="/dashboard" replace />;
+  return children;
+}
 // ── Default route ─────────────────────────────────────────────────────────────
 function DefaultRoute() {
   const { user } = useAuth();
   const allowedPages = useAllowedPages();
   const features = useFeatures();
-  const { firstAccessiblePath, loading: configLoading, features: featuresFromConfig } = useConfig();
+  const { businessType, firstAccessiblePath, loading: configLoading, features: featuresFromConfig } = useConfig();
   const isAdmin = ['tenant_admin', 'superadmin'].includes(user?.role) || user?.is_staff;
+  const isSchool = businessType === 'school';
 
   const isEnabled = (key, def = true) => {
     const v = features?.[key];
     return v === undefined ? def : v === true;
   };
 
-  const navOrder = [
-    { path: '/dashboard', key: 'dashboard_enabled' },
-    { path: '/product', key: 'product_enabled' },
-    { path: '/inventory', key: 'inventory_enabled' },
-    { path: '/orders', key: 'orders_enabled' },
-    { path: '/sales', key: 'sales_enabled' },
-    { path: '/customers', key: 'customers_enabled' },
-    { path: '/appointments', key: 'scheduling_enabled' },
-    { path: '/manual-entry', key: 'manual_entry_enabled' },
-    { path: '/receipt-lookup', key: 'payments_enabled' },
-    { path: '/analytics', key: 'analytics_enabled' },
-    { path: '/accounting', key: 'accounting_enabled' },
-  ];
-
   const getDefaultRoute = () => {
     if (configLoading || !featuresFromConfig) return null;
 
-    // Workers: land on their first allowed page
-    const role = user?.role?.toLowerCase();
-    const isAdmin = ['tenant_admin', 'superadmin'].includes(role) || user?.is_staff;
-    if (!isAdmin && Array.isArray(allowedPages) && allowedPages.length > 0) {
-      const SCHOOL_PAGE_ORDER = ['marks-entry','attendance','fees','school-receipt-lookup','student-management','report-templates','analytics','dashboard'];
-      const first = SCHOOL_PAGE_ORDER.find(p => allowedPages.includes(p));
-      if (first) return `/${first}`;
-      return `/${allowedPages[0]}`;
+    if (isSchool) {
+      // Workers: land on first allowed school page
+      if (!isAdmin && Array.isArray(allowedPages) && allowedPages.length > 0) {
+        const order = ['marks-entry','attendance','fees','school-receipt-lookup','student-management','report-templates','analytics','dashboard'];
+        const first = order.find(p => allowedPages.includes(p));
+        return first ? `/${first}` : `/${allowedPages[0]}`;
+      }
+      // Admin: land on school dashboard
+      return '/dashboard';
     }
 
+    // Non-school business
     if (firstAccessiblePath) return firstAccessiblePath;
+    const navOrder = [
+      { path: '/dashboard', key: 'dashboard_enabled' },
+      { path: '/product',   key: 'product_enabled' },
+      { path: '/inventory', key: 'inventory_enabled' },
+      { path: '/orders',    key: 'orders_enabled' },
+      { path: '/analytics', key: 'analytics_enabled' },
+      { path: '/accounting',key: 'accounting_enabled' },
+    ];
     for (const item of navOrder) {
       if (!isEnabled(item.key)) continue;
-      if (Array.isArray(allowedPages) && !allowedPages.includes(item.key)) continue;
       return item.path;
     }
     return '/dashboard';
@@ -178,32 +189,32 @@ function DashboardLayout({ sidebarOpen, setSidebarOpen, sidebarWidth, setSidebar
           <Routes>
             <Route path="/" element={<DefaultRoute />} />
             <Route path="/dashboard" element={<PlanGuard pageKey="dashboard_enabled"><AccessGuard pageKey="dashboard_enabled"><Dashboard /></AccessGuard></PlanGuard>} />
-            <Route path="/my-organizations" element={<AccessGuard pageKey="organizations_enabled"><MyOrganizations /></AccessGuard>} />
-            <Route path="/create-organization" element={<AccessGuard pageKey="organizations_enabled"><CreateOrganization /></AccessGuard>} />
-            <Route path="/product" element={<PlanGuard pageKey="product_enabled"><AccessGuard pageKey="product_enabled"><Product /></AccessGuard></PlanGuard>} />
-            <Route path="/inventory" element={<PlanGuard pageKey="inventory_enabled"><AccessGuard pageKey="inventory_enabled"><Inventory /></AccessGuard></PlanGuard>} />
+            <Route path="/my-organizations" element={<BusinessGuard><AccessGuard pageKey="organizations_enabled"><MyOrganizations /></AccessGuard></BusinessGuard>} />
+            <Route path="/create-organization" element={<BusinessGuard><AccessGuard pageKey="organizations_enabled"><CreateOrganization /></AccessGuard></BusinessGuard>} />
+            <Route path="/product" element={<BusinessGuard><PlanGuard pageKey="product_enabled"><AccessGuard pageKey="product_enabled"><Product /></AccessGuard></PlanGuard></BusinessGuard>} />
+            <Route path="/inventory" element={<BusinessGuard><PlanGuard pageKey="inventory_enabled"><AccessGuard pageKey="inventory_enabled"><Inventory /></AccessGuard></PlanGuard></BusinessGuard>} />
             <Route path="/analytics" element={<PlanGuard pageKey="analytics_enabled"><AccessGuard pageKey="analytics_enabled"><Analytics /></AccessGuard></PlanGuard>} />
-            <Route path="/ai-insights" element={<PlanGuard pageKey="ai_insights_enabled"><AccessGuard pageKey="analytics_enabled"><AIInsights /></AccessGuard></PlanGuard>} />
-            <Route path="/forecast" element={<PlanGuard pageKey="analytics_enabled"><AccessGuard pageKey="analytics_enabled"><Forecast /></AccessGuard></PlanGuard>} />
-            <Route path="/manual-entry" element={<PlanGuard pageKey="manual_entry_enabled"><AccessGuard pageKey="manual_entry_enabled"><ManualOrderEntry /></AccessGuard></PlanGuard>} />
-            <Route path="/appointments" element={<PlanGuard pageKey="scheduling_enabled"><AccessGuard pageKey="scheduling_enabled"><Appointments /></AccessGuard></PlanGuard>} />
-            <Route path="/receipt-lookup" element={<PlanGuard pageKey="payments_enabled"><AccessGuard pageKey="payments_enabled"><ReceiptLookup /></AccessGuard></PlanGuard>} />
-            <Route path="/abandoned-carts" element={<PlanGuard pageKey="orders_enabled"><AccessGuard pageKey="orders_enabled"><AbandonedCarts /></AccessGuard></PlanGuard>} />
+            <Route path="/ai-insights" element={<BusinessGuard><PlanGuard pageKey="ai_insights_enabled"><AccessGuard pageKey="analytics_enabled"><AIInsights /></AccessGuard></PlanGuard></BusinessGuard>} />
+            <Route path="/forecast" element={<BusinessGuard><PlanGuard pageKey="analytics_enabled"><AccessGuard pageKey="analytics_enabled"><Forecast /></AccessGuard></PlanGuard></BusinessGuard>} />
+            <Route path="/manual-entry" element={<BusinessGuard><PlanGuard pageKey="manual_entry_enabled"><AccessGuard pageKey="manual_entry_enabled"><ManualOrderEntry /></AccessGuard></PlanGuard></BusinessGuard>} />
+            <Route path="/appointments" element={<BusinessGuard><PlanGuard pageKey="scheduling_enabled"><AccessGuard pageKey="scheduling_enabled"><Appointments /></AccessGuard></PlanGuard></BusinessGuard>} />
+            <Route path="/receipt-lookup" element={<BusinessGuard><PlanGuard pageKey="payments_enabled"><AccessGuard pageKey="payments_enabled"><ReceiptLookup /></AccessGuard></PlanGuard></BusinessGuard>} />
+            <Route path="/abandoned-carts" element={<BusinessGuard><PlanGuard pageKey="orders_enabled"><AccessGuard pageKey="orders_enabled"><AbandonedCarts /></AccessGuard></PlanGuard></BusinessGuard>} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/orders" element={<PlanGuard pageKey="orders_enabled"><AccessGuard pageKey="orders_enabled"><Orders /></AccessGuard></PlanGuard>} />
-            <Route path="/sales" element={<PlanGuard pageKey="sales_enabled"><AccessGuard pageKey="sales_enabled"><Sales /></AccessGuard></PlanGuard>} />
-            <Route path="/customers" element={<PlanGuard pageKey="customers_enabled"><AccessGuard pageKey="customers_enabled"><Customers /></AccessGuard></PlanGuard>} />
+            <Route path="/orders" element={<BusinessGuard><PlanGuard pageKey="orders_enabled"><AccessGuard pageKey="orders_enabled"><Orders /></AccessGuard></PlanGuard></BusinessGuard>} />
+            <Route path="/sales" element={<BusinessGuard><PlanGuard pageKey="sales_enabled"><AccessGuard pageKey="sales_enabled"><Sales /></AccessGuard></PlanGuard></BusinessGuard>} />
+            <Route path="/customers" element={<BusinessGuard><PlanGuard pageKey="customers_enabled"><AccessGuard pageKey="customers_enabled"><Customers /></AccessGuard></PlanGuard></BusinessGuard>} />
             <Route path="/manage-users" element={<AccessGuard pageKey="superadmin"><ManageUsers /></AccessGuard>} />
-            <Route path="/accounting" element={<PlanGuard pageKey="accounting_enabled"><AccountingDashboard /></PlanGuard>} />
-            <Route path="/accounting/expenses" element={<PlanGuard pageKey="accounting_enabled"><Expenses /></PlanGuard>} />
-            <Route path="/accounting/payments" element={<PlanGuard pageKey="accounting_enabled"><Payments /></PlanGuard>} />
-            <Route path="/accounting/taxes" element={<PlanGuard pageKey="accounting_enabled"><TaxesEnhanced /></PlanGuard>} />
-            <Route path="/accounting/profit-loss" element={<PlanGuard pageKey="accounting_enabled"><ProfitAndLoss /></PlanGuard>} />
-            <Route path="/accounting/balance-sheet" element={<PlanGuard pageKey="accounting_enabled"><BalanceSheet /></PlanGuard>} />
-            <Route path="/accounting/assets" element={<PlanGuard pageKey="accounting_enabled"><AccessGuard pageKey="accounting_enabled"><Assets /></AccessGuard></PlanGuard>} />
-            <Route path="/reports/business" element={<PlanGuard pageKey="analytics_enabled"><BusinessReport /></PlanGuard>} />
-            <Route path="/website-builder" element={<PlanGuard pageKey="website_builder_enabled"><AccessGuard pageKey="website_builder_enabled"><WebsiteBuilder /></AccessGuard></PlanGuard>} />
-            <Route path="/enrollment" element={<EnrollmentIndex />}>
+            <Route path="/accounting" element={<BusinessGuard><PlanGuard pageKey="accounting_enabled"><AccountingDashboard /></PlanGuard></BusinessGuard>} />
+            <Route path="/accounting/expenses" element={<BusinessGuard><PlanGuard pageKey="accounting_enabled"><Expenses /></PlanGuard></BusinessGuard>} />
+            <Route path="/accounting/payments" element={<BusinessGuard><PlanGuard pageKey="accounting_enabled"><Payments /></PlanGuard></BusinessGuard>} />
+            <Route path="/accounting/taxes" element={<BusinessGuard><PlanGuard pageKey="accounting_enabled"><TaxesEnhanced /></PlanGuard></BusinessGuard>} />
+            <Route path="/accounting/profit-loss" element={<BusinessGuard><PlanGuard pageKey="accounting_enabled"><ProfitAndLoss /></PlanGuard></BusinessGuard>} />
+            <Route path="/accounting/balance-sheet" element={<BusinessGuard><PlanGuard pageKey="accounting_enabled"><BalanceSheet /></PlanGuard></BusinessGuard>} />
+            <Route path="/accounting/assets" element={<BusinessGuard><PlanGuard pageKey="accounting_enabled"><AccessGuard pageKey="accounting_enabled"><Assets /></AccessGuard></PlanGuard></BusinessGuard>} />
+            <Route path="/reports/business" element={<BusinessGuard><PlanGuard pageKey="analytics_enabled"><BusinessReport /></PlanGuard></BusinessGuard>} />
+            <Route path="/website-builder" element={<BusinessGuard><PlanGuard pageKey="website_builder_enabled"><AccessGuard pageKey="website_builder_enabled"><WebsiteBuilder /></AccessGuard></PlanGuard></BusinessGuard>} />
+            <Route path="/enrollment" element={<BusinessGuard><EnrollmentIndex /></BusinessGuard>}>
               <Route path="overview" element={<Overview />} />
               <Route path="new" element={<NewEnrollment />} />
               <Route path="applications" element={<Applications />} />
@@ -213,17 +224,17 @@ function DashboardLayout({ sidebarOpen, setSidebarOpen, sidebarWidth, setSidebar
               <Route path="reports" element={<Reports />} />
               <Route index element={<Overview />} />
             </Route>
-            <Route path="/student-reports" element={<AccessGuard pageKey="report-templates"><StudentReportPage /></AccessGuard>} />
-            <Route path="/student-management" element={<AccessGuard pageKey="student-management"><StudentManagementPage /></AccessGuard>} />
-            <Route path="/marks-entry" element={<AccessGuard pageKey="marks-entry"><MarksEntryPage /></AccessGuard>} />
-            <Route path="/attendance" element={<AccessGuard pageKey="attendance"><AttendancePage /></AccessGuard>} />
-            <Route path="/school-settings" element={<SchoolSettingsPage />} />
-            <Route path="/fees" element={<AccessGuard pageKey="fees"><FeesPage /></AccessGuard>} />
-            <Route path="/fees/receipt" element={<AccessGuard pageKey="fees"><FeeReceipt /></AccessGuard>} />
-            <Route path="/fees/invoice" element={<AccessGuard pageKey="fees"><FeeInvoice /></AccessGuard>} />
-            <Route path="/school-receipt-lookup" element={<AccessGuard pageKey="school-receipt-lookup"><SchoolReceiptLookup /></AccessGuard>} />
-            <Route path="/school-accounting" element={<PlanGuard pageKey="accounting_enabled"><SchoolAccounting /></PlanGuard>} />
-            <Route path="/report-templates" element={<AccessGuard pageKey="report-templates"><ReportTemplatesPage /></AccessGuard>} />
+            <Route path="/student-reports" element={<SchoolGuard><AccessGuard pageKey="report-templates"><StudentReportPage /></AccessGuard></SchoolGuard>} />
+            <Route path="/student-management" element={<SchoolGuard><AccessGuard pageKey="student-management"><StudentManagementPage /></AccessGuard></SchoolGuard>} />
+            <Route path="/marks-entry" element={<SchoolGuard><AccessGuard pageKey="marks-entry"><MarksEntryPage /></AccessGuard></SchoolGuard>} />
+            <Route path="/attendance" element={<SchoolGuard><AccessGuard pageKey="attendance"><AttendancePage /></AccessGuard></SchoolGuard>} />
+            <Route path="/school-settings" element={<SchoolGuard><SchoolSettingsPage /></SchoolGuard>} />
+            <Route path="/fees" element={<SchoolGuard><AccessGuard pageKey="fees"><FeesPage /></AccessGuard></SchoolGuard>} />
+            <Route path="/fees/receipt" element={<SchoolGuard><AccessGuard pageKey="fees"><FeeReceipt /></AccessGuard></SchoolGuard>} />
+            <Route path="/fees/invoice" element={<SchoolGuard><AccessGuard pageKey="fees"><FeeInvoice /></AccessGuard></SchoolGuard>} />
+            <Route path="/school-receipt-lookup" element={<SchoolGuard><AccessGuard pageKey="school-receipt-lookup"><SchoolReceiptLookup /></AccessGuard></SchoolGuard>} />
+            <Route path="/school-accounting" element={<SchoolGuard><PlanGuard pageKey="accounting_enabled"><SchoolAccounting /></PlanGuard></SchoolGuard>} />
+            <Route path="/report-templates" element={<SchoolGuard><AccessGuard pageKey="report-templates"><ReportTemplatesPage /></AccessGuard></SchoolGuard>} />
             <Route path="/login" element={<Navigate to="/" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
