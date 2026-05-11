@@ -29,7 +29,7 @@ export default function Register() {
   const [formData, setFormData] = useState({
     username: '', email: '', password: '', confirmPassword: '',
     firstName: '', lastName: '', businessName: '', businessType: '',
-    businessTypeDisplay: '', industryDescription: '',
+    businessTypeDisplay: '', industryDescription: '', schoolType: '',
   });
 
   useEffect(() => { fetchBusinessTypes(); }, []);
@@ -83,6 +83,7 @@ export default function Register() {
       if (formData.password.length < 6) return setError('Password must be at least 6 characters');
     }
     if (step === 2 && (!formData.businessName || !formData.businessType)) return setError('Please fill in all required fields');
+    if (step === 2 && formData.businessType === 'school' && !formData.schoolType) return setError('Please select the type of school (Primary or Secondary)');
     setStep(step + 1);
     setError('');
   };
@@ -96,11 +97,15 @@ export default function Register() {
         username: formData.username, email: formData.email, password: formData.password,
         first_name: formData.firstName, last_name: formData.lastName,
         business_name: formData.businessName, business_type: formData.businessType || 'other',
+        ...(formData.businessType === 'school' && formData.schoolType ? { school_type: formData.schoolType } : {}),
       });
       if (res.data?.access) {
         localStorage.setItem('accessToken', res.data.access);
         localStorage.setItem('refreshToken', res.data.refresh);
-        if (res.data.tenant) localStorage.setItem('activeTenant', JSON.stringify(res.data.tenant));
+        if (res.data.tenant) {
+          localStorage.setItem('activeTenant', JSON.stringify(res.data.tenant));
+          if (res.data.tenant.school_type) localStorage.setItem('schoolType', res.data.tenant.school_type);
+        }
         // Apply pre-selected plan from pricing page
         const pendingPlan = localStorage.getItem('selectedPlan');
         if (pendingPlan && pendingPlan !== 'free') {
@@ -340,6 +345,30 @@ export default function Register() {
                   )}
                 </div>
 
+                {/* School Type selector — only shown when business type is school */}
+                {formData.businessType === 'school' && (
+                  <div>
+                    <label className={labelCls}>Type of School <span className="text-pink-400">*</span></label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[['primary', '🏫 Primary School', 'Baby Class to P.7'], ['secondary', '🎓 Secondary School', 'S.1 to S.6']].map(([val, label, sub]) => (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, schoolType: val }))}
+                          className={`p-4 rounded-xl border-2 text-left transition-all ${
+                            formData.schoolType === val
+                              ? 'border-purple-500 bg-purple-50'
+                              : 'border-gray-200 hover:border-purple-300 bg-white'
+                          }`}
+                        >
+                          <p className={`text-sm font-semibold ${formData.schoolType === val ? 'text-purple-700' : 'text-gray-700'}`}>{label}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className={labelCls}>Description <span className="text-white/40 font-normal">(Optional)</span></label>
                   <textarea name="industryDescription" placeholder="Tell us about your business goals or unique needs..."
@@ -392,6 +421,7 @@ export default function Register() {
                     {[
                       ['Business', formData.businessName],
                       ['Type', businessTypes.find(t => t.value === formData.businessType)?.label || formData.businessTypeDisplay],
+                      ...(formData.businessType === 'school' && formData.schoolType ? [['School Type', formData.schoolType === 'primary' ? 'Primary School (Baby – P.7)' : 'Secondary School (S.1 – S.6)']] : []),
                     ].map(([k, v]) => (
                       <div key={k} className="flex justify-between items-center">
                         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{k}</span>

@@ -3,10 +3,11 @@ import {
   Users, ShieldCheck, RefreshCw, Plus, Trash2, X,
   GraduationCap, DollarSign, LayoutDashboard,
   ClipboardList, FileText, UserCheck, BarChart3, CheckCircle, XCircle, Building2,
-  ChevronDown, Key, Copy, Mail, AtSign, Crown
+  ChevronDown, Key, Copy, Mail, AtSign, Crown, PenLine
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import SchoolProfileSettings from './SchoolProfileSettings';
+import SchoolSignaturesSettings from './SchoolSignaturesSettings';
 import { useAuth } from '../context/AuthContext';
 
 const API = `${import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api'}/tenants`;
@@ -512,6 +513,7 @@ function PermissionsMatrix() {
 // ── Main page ─────────────────────────────────────────────────────────────────
 const TABS = [
   { key: 'profile',     label: 'School Profile',   icon: Building2 },
+  { key: 'signatures',  label: 'Signatures',        icon: PenLine },
   { key: 'staff',       label: 'Staff Management', icon: Users },
   { key: 'permissions', label: 'Role Permissions',  icon: ShieldCheck },
 ];
@@ -549,6 +551,7 @@ export default function SchoolSettingsPage() {
       </div>
 
       {tab === 'profile'     && <SchoolProfileSettings />}
+      {tab === 'signatures'  && <SchoolSignaturesSettings />}
       {tab === 'staff'       && <StaffTab />}
       {tab === 'permissions' && <PermissionsMatrix />}
     </div>

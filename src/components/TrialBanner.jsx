@@ -3,8 +3,10 @@ import { Clock, Zap } from 'lucide-react';
 import { usePlan } from '../context/PlanContext';
 
 export default function TrialBanner() {
-  const { planKey, daysLeft, trialExpired, sub } = usePlan();
+  const { planKey, daysLeft, trialExpired, sub, isSuperAdmin } = usePlan();
 
+  // Owner never sees trial banners
+  if (isSuperAdmin) return null;
   // Only show for free trial that hasn't expired yet
   if (planKey !== 'free') return null;
   if (sub?.status !== 'trial') return null;

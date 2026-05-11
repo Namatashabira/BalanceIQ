@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { useAuth } from './AuthContext';
 
 const API = import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('accessToken')}` });
@@ -85,6 +86,9 @@ const computeLocalSub = () => {
 const PlanContext = createContext(null);
 
 export function PlanProvider({ children }) {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'superadmin' || user?.is_staff === true;
+
   const [sub, setSub] = useState(() => computeLocalSub());
   const [loading, setLoading] = useState(true);
   // planReady = we have fetched from DB at least once this session
@@ -114,6 +118,16 @@ export function PlanProvider({ children }) {
       setPlanReady(true);
       return;
     }
+    // Superadmin is the owner — skip subscription API entirely
+    try {
+      const stored = localStorage.getItem('user');
+      const u = stored ? JSON.parse(stored) : null;
+      if (u?.role === 'superadmin' || u?.is_superuser === true) {
+        setLoading(false);
+        setPlanReady(true);
+        return;
+      }
+    } catch {}
     try {
       const res = await axios.get(`${API}/plans/my-subscription/`, {
         headers: authHeaders(),
@@ -167,6 +181,7 @@ export function PlanProvider({ children }) {
 
   // Guard uses planReady (not loading) so spinner only shows until first DB fetch
   const isPageAllowed = (pageKey) => {
+    if (isSuperAdmin) return true;      // owner bypasses subscription
     if (!planReady) return false;       // block until DB truth arrives
     if (trialExpired) return false;
     if (allowedPages === null) return true;
@@ -174,6 +189,7 @@ export function PlanProvider({ children }) {
   };
 
   const canAddProduct = (currentCount) => {
+    if (isSuperAdmin) return true;      // owner bypasses product limit
     if (trialExpired) return false;
     const limit = planDef.product_limit ?? 7;
     if (limit === -1) return true;
@@ -212,9 +228,9 @@ export function PlanProvider({ children }) {
 
   return (
     <PlanContext.Provider value={{
-      sub, planKey, planDef, trialExpired, daysLeft,
+      sub, planKey, planDef, trialExpired: isSuperAdmin ? false : trialExpired, daysLeft,
       isPageAllowed, canAddProduct, selectPlan,
-      loading, planReady, refetch: fetchSub,
+      loading, planReady, isSuperAdmin, refetch: fetchSub,
     }}>
       {children}
     </PlanContext.Provider>

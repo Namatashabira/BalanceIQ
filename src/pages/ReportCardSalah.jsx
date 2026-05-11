@@ -121,20 +121,20 @@ function mapSubjects(subjects) {
 
 export default function ReportCardSalah({ data }) {
   const [stamp, setStamp] = useState(data.school?.stamp || '');
-  const [classSig, setClassSig] = useState(data.school?.sig || '');
-  const [headSig, setHeadSig] = useState('');
+
+  const creds = (() => { try { return JSON.parse(localStorage.getItem('staffCredentials') || '[]'); } catch { return []; } })();
+  const teacherCred = creds.find(c => c.role === 'teacher');
+  const headCred    = creds.find(c => c.role === 'headteacher');
+  const teacherName  = teacherCred?.name  || '___________________';
+  const teacherTitle = teacherCred?.title || 'Class Teacher';
+  const headName     = headCred?.name     || '___________________';
+  const headTitle    = headCred?.title    || 'Head Teacher';
 
   const subjects = mapSubjects(data.subjects || []);
   const total = data.subjects.reduce((a, s) => a + (s.score ?? 0), 0);
   const avg = data.subjects.length ? Math.round(total / data.subjects.length) : 0;
   const result = computeResult(data.subjects);
   const payLabel = data.student.payment_status === 'paid' ? 'PAID' : data.student.payment_status === 'partial' ? 'PARTIAL' : 'NOT PAID';
-
-  const handleUpload = (setter) => (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setter(URL.createObjectURL(file));
-  };
 
   return (
     <>
@@ -262,7 +262,7 @@ export default function ReportCardSalah({ data }) {
               {/* Comments */}
               <div className="src-comments">
                 <strong>Class Teacher's Comment:</strong>
-                <p>{data.notes?.[0]?.description || '................................................................................................'}</p>
+                <p>{data.ai_comment || data.notes?.[0]?.description || '................................................................................................'}</p>
                 <strong>Head Teacher's Comment:</strong>
                 <p style={{minHeight:28}}></p>
               </div>
@@ -279,11 +279,9 @@ export default function ReportCardSalah({ data }) {
                 </div>
                 <div className="src-sigs">
                   <div className="src-sig-card">
-                    <span className="src-sig-role">Class Teacher</span>
-                    <span className="src-sig-name">___________________</span>
-                    {classSig
-                      ? <img src={classSig} style={{maxHeight:36,maxWidth:100,objectFit:'contain'}} alt="sig" />
-                      : <div className="src-sig-line" />}
+                    <span className="src-sig-role">{teacherTitle.toUpperCase()}</span>
+                    <span className="src-sig-name">{teacherName}</span>
+                    <div className="src-sig-line" />
                     <span className="src-sig-label">Signature</span>
                   </div>
                   <div className="src-stamp-card">
@@ -293,11 +291,9 @@ export default function ReportCardSalah({ data }) {
                     <span className="src-sig-label" style={{width:80}}>Stamp</span>
                   </div>
                   <div className="src-sig-card">
-                    <span className="src-sig-role">Head Teacher</span>
-                    <span className="src-sig-name">___________________</span>
-                    {headSig
-                      ? <img src={headSig} style={{maxHeight:36,maxWidth:100,objectFit:'contain'}} alt="sig" />
-                      : <div className="src-sig-line" />}
+                    <span className="src-sig-role">{headTitle.toUpperCase()}</span>
+                    <span className="src-sig-name">{headName}</span>
+                    <div className="src-sig-line" />
                     <span className="src-sig-label">Signature</span>
                   </div>
                 </div>

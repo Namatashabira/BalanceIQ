@@ -13,7 +13,9 @@ const API = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api');
 const SCHOOL_API = `${API}/school`;
 
 const TERMS = ['Term 1', 'Term 2', 'Term 3'];
-const CLASSES = ['S.1', 'S.2', 'S.3', 'S.4', 'S.5', 'S.6'];
+const PRIMARY_CLASSES = ['Baby', 'Middle', 'Top', 'P.1', 'P.2', 'P.3', 'P.4', 'P.5', 'P.6', 'P.7'];
+const SECONDARY_CLASSES = ['S.1', 'S.2', 'S.3', 'S.4', 'S.5', 'S.6'];
+const CLASSES = [...PRIMARY_CLASSES, ...SECONDARY_CLASSES];
 const currentYear = new Date().getFullYear();
 const YEARS = Array.from({ length: 5 }, (_, i) => String(currentYear - i));
 
@@ -47,6 +49,20 @@ async function buildReportData(student, term, academicYear, logo, schoolInfo) {
     return { subject_name: m.subject, ca_score: m.ca_score ?? null, exam_score: m.exam_score ?? null, score: total, grade, remark: REMARK_MAP[grade] || '', competency: m.competency || '' };
   });
 
+  // Fetch AI comment for this student
+  let aiComment = '';
+  try {
+    const aiRes = await fetchWithAuth(`${API}/ai-comments/generate/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ student_id: student.id, term, academic_year: academicYear }),
+    });
+    if (aiRes?.ok) {
+      const aiData = await aiRes.json();
+      aiComment = aiData.comment || '';
+    }
+  } catch { /* use empty comment on failure */ }
+
   const guardians = (student.guardians || []).map(g => ({ full_name: g.full_name, relationship: g.relationship, phone: g.phone, email: g.email || '' }));
   const history = student.history || [];
 
@@ -78,6 +94,7 @@ async function buildReportData(student, term, academicYear, logo, schoolInfo) {
     subjects,
     attendance: history.filter(h => h.history_type === 'attendance').map(h => ({ title: h.title, description: h.description, date: h.date })),
     notes: history.filter(h => h.history_type === 'note').map(h => ({ title: h.title, description: h.description, date: h.date })),
+    ai_comment: aiComment,
     metadata: { term, academic_year: academicYear },
   };
 }

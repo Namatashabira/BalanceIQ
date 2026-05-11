@@ -16,6 +16,9 @@ import salahCss from './salah-react/src/index.css?raw';
 
 function mapData(data) {
   const total = data.subjects.reduce((a, s) => a + (s.score ?? 0), 0);
+  const creds = (() => { try { return JSON.parse(localStorage.getItem('staffCredentials') || '[]'); } catch { return []; } })();
+  const teacherCred = creds.find(c => c.role === 'teacher');
+  const headCred    = creds.find(c => c.role === 'headteacher');
   const avg = data.subjects.length ? Math.round(total / data.subjects.length) : 0;
 
   return {
@@ -65,7 +68,7 @@ function mapData(data) {
       grade: avg >= 75 ? 'A' : avg >= 60 ? 'B' : avg >= 50 ? 'C' : avg >= 35 ? 'D' : 'E',
     },
     comments: {
-      classTeacher: data.notes?.[0]?.description || '',
+      classTeacher: data.ai_comment || data.notes?.[0]?.description || '',
       headTeacher: '',
     },
     admin: {
@@ -73,8 +76,10 @@ function mapData(data) {
       nextTerm: '___________',
       balance: Number(data.student.fees_balance || 0).toLocaleString(),
       nextFees: '___________',
-      classTeacherName: '',
-      headTeacherName: '',
+      classTeacherName: teacherCred?.name || '',
+      classTeacherTitle: teacherCred?.title || 'Class Teacher',
+      headTeacherName: headCred?.name || '',
+      headTeacherTitle: headCred?.title || 'Head Teacher',
     },
   };
 }

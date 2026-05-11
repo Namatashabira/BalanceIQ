@@ -164,7 +164,10 @@ export default function Login() {
       if (result?.user) {
         localStorage.setItem('accessToken', result.access || result.token || '');
         if (result.refresh) localStorage.setItem('refreshToken', result.refresh);
-        if (result.user?.tenant) localStorage.setItem('activeTenant', JSON.stringify(result.user.tenant));
+        if (result.user?.tenant) {
+          localStorage.setItem('activeTenant', JSON.stringify(result.user.tenant));
+          if (result.user.tenant.school_type) localStorage.setItem('schoolType', result.user.tenant.school_type);
+        }
         setSuccessUser(result.user);
         setSuccess(true);
         return;

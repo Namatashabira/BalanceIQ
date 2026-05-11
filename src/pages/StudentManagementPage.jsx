@@ -1,10 +1,10 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Pencil, Trash2, X, User, Users, BookOpen, Settings, Mail, Phone, Calendar, TrendingUp, ClipboardList, StickyNote, Shield, MapPin, GraduationCap, Banknote } from 'lucide-react';
 import { fetchWithAuth } from '../api';
+import useSchoolClasses from '../hooks/useSchoolClasses';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api';
 const API = `${BASE_URL}/school`;
-const CLASSES = ['S.1', 'S.2', 'S.3', 'S.4', 'S.5', 'S.6'];
 
 const EMPTY_STUDENT = { first_name: '', last_name: '', admission_number: '', date_of_birth: '', gender: '', email: '', phone: '', class_assigned: '', stream: '', index_number: '', district: '', home_address: '', enrollment_date: '', status: 'active', previous_school: '', nationality: 'Ugandan', fees_balance: '', payment_status: 'not_paid' };
 const EMPTY_GUARDIAN = { full_name: '', relationship: '', phone: '', email: '' };
@@ -60,6 +60,8 @@ function Field({ label, children }) {
 }
 
 export default function StudentManagementPage() {
+  const { schoolType, classes: CLASSES, indexClasses } = useSchoolClasses();
+
   const [students, setStudents] = useState([]);
   const [streams, setStreams] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -212,65 +214,117 @@ export default function StudentManagementPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Student Management</h1>
-        <div className="flex gap-2">
-          <button onClick={() => setModal('streams')} className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50">
-            <Settings className="w-4 h-4" /> Manage Streams
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Student Management</h1>
+        <div className="flex gap-2 flex-shrink-0">
+          <button onClick={() => setModal('streams')} className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50">
+            <Settings className="w-4 h-4" /><span className="hidden sm:inline">Manage Streams</span><span className="sm:hidden">Streams</span>
           </button>
-          <button onClick={openAdd} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700">
-            <Plus className="w-4 h-4" /> Add Student
+          <button onClick={openAdd} className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700">
+            <Plus className="w-4 h-4" /><span className="hidden sm:inline">Add Student</span><span className="sm:hidden">Add</span>
           </button>
         </div>
       </div>
-
-      <div className="flex flex-wrap gap-3 items-center">
+      {/* Filter bar */}
+      <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 sm:items-center">
         {/* Search */}
-        <div className="relative">
+        <div className="relative w-full sm:w-56">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           <input
             type="text"
             placeholder="Search name, admission noâ€¦"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="pl-9 pr-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white w-56"
+            className="pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white w-full"
           />
         </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-600">Class</label>
+        {/* Class + Stream on same row on mobile */}
+        <div className="flex gap-2 items-center">
+          <label className="text-sm font-medium text-gray-600 whitespace-nowrap">Class</label>
           <select
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white flex-1 sm:flex-none"
             value={filterClass}
             onChange={e => { setFilterClass(e.target.value); setFilterStream(''); }}
           >
-            <option value="">All classes</option>
+            <option value="">All</option>
             {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-600">Stream</label>
+          <label className="text-sm font-medium text-gray-600 whitespace-nowrap">Stream</label>
           <select
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white disabled:opacity-50"
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white flex-1 sm:flex-none disabled:opacity-50"
             value={filterStream}
             onChange={e => setFilterStream(e.target.value)}
             disabled={filterStreamOptions.length === 0}
           >
-            <option value="">All streams</option>
+            <option value="">All</option>
             {filterStreamOptions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
-        {(filterClass || filterStream || search) && (
-          <button
-            onClick={() => { setFilterClass(''); setFilterStream(''); setSearch(''); }}
-            className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-red-500 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors"
-          >
-            <X className="w-3.5 h-3.5" /> Clear filters
-          </button>
-        )}
-        <span className="ml-auto text-xs text-gray-400">{visibleStudents.length} student{visibleStudents.length !== 1 ? 's' : ''}</span>
+        <div className="flex items-center gap-2">
+          {(filterClass || filterStream || search) && (
+            <button
+              onClick={() => { setFilterClass(''); setFilterStream(''); setSearch(''); }}
+              className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-red-500 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors"
+            >
+              <X className="w-3.5 h-3.5" /> Clear
+            </button>
+          )}
+          <span className="text-xs text-gray-400 sm:ml-auto">{visibleStudents.length} student{visibleStudents.length !== 1 ? 's' : ''}</span>
+        </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow border border-gray-100 overflow-x-auto">
+      {/* â”€â”€ Mobile: card grid â”€â”€ */}
+      <div className="sm:hidden space-y-3">
+        {loading ? (
+          <div className="text-center py-10 text-gray-400 text-sm">Loading...</div>
+        ) : visibleStudents.length === 0 ? (
+          <div className="text-center py-10 text-gray-400 text-sm">No students match the selected filters.</div>
+        ) : visibleStudents.map(s => {
+          const photo = resolvePhoto(s.photo);
+          const initials = `${s.first_name?.[0] || ''}${s.last_name?.[0] || ''}`.toUpperCase();
+          return (
+            <div key={s.id} onClick={() => openProfile(s)}
+              className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 flex items-center gap-3 cursor-pointer active:bg-gray-50">
+              {/* Photo â€” large enough to clearly see */}
+              <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center shadow">
+                {photo
+                  ? <img src={photo} alt={`${s.first_name} ${s.last_name}`} className="w-full h-full object-cover" />
+                  : <span className="text-white font-bold text-lg">{initials || '?'}</span>}
+              </div>
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-900 text-sm truncate">{s.first_name} {s.last_name}</p>
+                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                  {s.class_assigned && (
+                    <span className="text-xs text-blue-600 font-medium">{s.class_assigned}{s.stream_name ? ` Â· ${s.stream_name}` : ''}</span>
+                  )}
+                  {s.admission_number && (
+                    <span className="text-xs text-gray-400">#{s.admission_number}</span>
+                  )}
+                  {calcAge(s.date_of_birth) !== null && (
+                    <span className="text-xs text-gray-400">{calcAge(s.date_of_birth)} yrs</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 mt-1">
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full capitalize ${
+                    s.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-600' :
+                    s.payment_status === 'partial' ? 'bg-amber-50 text-amber-600' :
+                    'bg-red-50 text-red-500'
+                  }`}>{s.payment_status?.replace('_', ' ') || 'not paid'}</span>
+                </div>
+              </div>
+              {/* Actions */}
+              <div className="flex flex-col gap-1.5 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                <button onClick={() => openEdit(s)} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600"><Pencil className="w-3.5 h-3.5" /></button>
+                <button onClick={() => handleDelete(s.id)} className="p-1.5 rounded-lg bg-red-50 text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* â”€â”€ Desktop: table â”€â”€ */}
+      <div className="hidden sm:block bg-white rounded-xl shadow border border-gray-100 overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead className="bg-gray-50">
             <tr>
@@ -281,9 +335,9 @@ export default function StudentManagementPage() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
-              <tr><td colSpan={8} className="text-center py-8 text-gray-400">Loading...</td></tr>
+              <tr><td colSpan={9} className="text-center py-8 text-gray-400">Loading...</td></tr>
             ) : visibleStudents.length === 0 ? (
-              <tr><td colSpan={8} className="text-center py-8 text-gray-400">No students match the selected filters.</td></tr>
+              <tr><td colSpan={9} className="text-center py-8 text-gray-400">No students match the selected filters.</td></tr>
             ) : visibleStudents.map(s => (
               <tr key={s.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => openProfile(s)}>
                 <td className="px-4 py-3">
@@ -294,7 +348,7 @@ export default function StudentManagementPage() {
                 <td className="px-4 py-3 text-gray-600">{s.class_assigned || 'â€”'}</td>
                 <td className="px-4 py-3 text-gray-600">{s.stream_name || 'â€”'}</td>
                 <td className="px-4 py-3 text-gray-600">
-                  {['S.4', 'S.6'].includes(s.class_assigned)
+                  {indexClasses.includes(s.class_assigned)
                     ? <span className={s.index_number ? 'font-mono text-blue-700' : 'text-gray-300'}>{s.index_number || 'No index'}</span>
                     : <span className="text-gray-300">â€”</span>}
                 </td>
@@ -317,7 +371,6 @@ export default function StudentManagementPage() {
         </table>
       </div>
 
-      {/* Add / Edit Modal */}
       {(modal === 'add' || modal === 'edit') && (
         <Modal title={modal === 'edit' ? 'Edit Student' : 'Add Student'} onClose={() => setModal(null)} wide>
           <form onSubmit={handleSave} className="space-y-3">
@@ -339,7 +392,7 @@ export default function StudentManagementPage() {
               <div className="text-sm text-gray-500">
                 <p className="font-medium text-gray-700">Student Photo</p>
                 <p>Click the <span className="text-blue-600">+</span> to upload. JPG, PNG supported.</p>
-                {photoFile && <p className="text-emerald-600 mt-0.5">âœ“ {photoFile.name}</p>}
+                {photoFile && <p className="text-emerald-600 mt-0.5">✓ {photoFile.name}</p>}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -366,7 +419,7 @@ export default function StudentManagementPage() {
               </Field>
               <Field label="Gender">
                 <select className={inputCls} value={form.gender} onChange={e => setForm(f => ({ ...f, gender: e.target.value }))}>
-                  <option value="">â€” Select â€”</option>
+                  <option value="">— Select —</option>
                   <option value="male">Male</option>
                   <option value="female">Female</option>
                   <option value="other">Other</option>
@@ -376,19 +429,19 @@ export default function StudentManagementPage() {
             <div className="grid grid-cols-2 gap-3">
               <Field label="Class">
                 <select className={inputCls} value={form.class_assigned} onChange={e => setForm(f => ({ ...f, class_assigned: e.target.value, stream: '' }))}>
-                  <option value="">â€” Select Class â€”</option>
+                  <option value="">— Select Class —</option>
                   {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </Field>
               <Field label="Stream">
                 <select className={inputCls} value={form.stream} onChange={e => setForm(f => ({ ...f, stream: e.target.value }))} disabled={!form.class_assigned}>
-                  <option value="">â€” Select Stream â€”</option>
+                  <option value="">— Select Stream —</option>
                   {filteredStreams.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
                 {!form.class_assigned && <p className="text-xs text-gray-400 mt-1">Select a class first</p>}
                 {form.class_assigned && filteredStreams.length === 0 && (
                   <p className="text-xs text-orange-500 mt-1">
-                    No streams for {form.class_assigned} â€”{' '}
+                    No streams for {form.class_assigned} —{' '}
                     <button type="button" className="underline" onClick={() => setModal('streams')}>add one</button>
                   </p>
                 )}
@@ -460,7 +513,7 @@ export default function StudentManagementPage() {
                 </Field>
               </div>
             </div>
-            {['S.4', 'S.6'].includes(form.class_assigned) && (
+            {indexClasses.includes(form.class_assigned) && (
               <Field label="Index Number">
                 <div className="relative">
                   <input
@@ -529,7 +582,7 @@ export default function StudentManagementPage() {
               {error && <p className="text-xs text-red-500 self-center mr-auto">{error}</p>}
               <button type="button" onClick={() => setModal(null)} className="px-4 py-2 rounded-lg border text-sm font-medium hover:bg-gray-50">Cancel</button>
               <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-60">
-                {saving ? 'Savingâ€¦' : 'Save'}
+                {saving ? 'Saving…' : 'Save'}
               </button>
             </div>
           </form>
@@ -638,7 +691,7 @@ export default function StudentManagementPage() {
                 <div className="flex-1 min-w-0 pt-1">
                   <h2 className="text-xl font-bold text-white leading-tight truncate">{selected.first_name} {selected.last_name}</h2>
                   <p className="text-blue-100 text-sm mt-0.5">
-                    {selected.class_assigned || 'No class'}{selected.stream_name ? ` · ${selected.stream_name}` : ''}
+                    {selected.class_assigned || 'No class'}{selected.stream_name ? ` � ${selected.stream_name}` : ''}
                   </p>
                   <div className="flex flex-wrap gap-1.5 mt-2.5">
                     {selected.admission_number && (
@@ -646,7 +699,7 @@ export default function StudentManagementPage() {
                         <User className="w-3 h-3" /> {selected.admission_number}
                       </span>
                     )}
-                    {['S.4', 'S.6'].includes(selected.class_assigned) && selected.index_number && (
+                    {indexClasses.includes(selected.class_assigned) && selected.index_number && (
                       <span className="inline-flex items-center gap-1 bg-orange-400/30 rounded-lg px-2 py-0.5 text-xs text-orange-100 font-mono">
                         IDX: {selected.index_number}
                       </span>
@@ -711,7 +764,7 @@ export default function StudentManagementPage() {
                         <span className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center shrink-0">{icon}</span>
                         <div>
                           <p className="text-xs text-gray-400 leading-none mb-0.5">{label}</p>
-                          <p className="text-sm font-semibold text-gray-800">{value || '—'}</p>
+                          <p className="text-sm font-semibold text-gray-800">{value || '�'}</p>
                         </div>
                       </div>
                     ))}
@@ -730,7 +783,7 @@ export default function StudentManagementPage() {
                       ].map(({ label, value }) => (
                         <div key={label} className="flex items-center justify-between px-3 py-2.5">
                           <span className="text-xs text-gray-400">{label}</span>
-                          <span className="text-sm font-medium text-gray-800">{value || '—'}</span>
+                          <span className="text-sm font-medium text-gray-800">{value || '�'}</span>
                         </div>
                       ))}
                     </div>
@@ -748,7 +801,7 @@ export default function StudentManagementPage() {
                       ].map(({ label, value }) => (
                         <div key={label} className="flex items-center justify-between px-3 py-2.5">
                           <span className="text-xs text-gray-400">{label}</span>
-                          <span className="text-sm font-medium text-gray-800">{value || '—'}</span>
+                          <span className="text-sm font-medium text-gray-800">{value || '�'}</span>
                         </div>
                       ))}
                       <div className="flex items-center justify-between px-3 py-2.5">
@@ -780,7 +833,7 @@ export default function StudentManagementPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-800">{g.full_name}</p>
                         <p className="text-xs text-violet-600 font-medium">{g.relationship}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{g.phone}{g.email ? ` · ${g.email}` : ''}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{g.phone}{g.email ? ` � ${g.email}` : ''}</p>
                       </div>
                     </div>
                   ))}

@@ -71,6 +71,12 @@ const css = `
 `;
 
 export default function ReportCardClassic({ data }) {
+  const teacherCred = (() => { try { return JSON.parse(localStorage.getItem('staffCredentials') || '[]').find(c => c.role === 'teacher') || null; } catch { return null; } })();
+  const headCred    = (() => { try { return JSON.parse(localStorage.getItem('staffCredentials') || '[]').find(c => c.role === 'headteacher') || null; } catch { return null; } })();
+  const teacherName  = teacherCred?.name  || '___________________';
+  const teacherTitle = teacherCred?.title || 'Class Teacher';
+  const headName     = headCred?.name     || '___________________';
+  const headTitle    = headCred?.title    || 'Head Teacher';
   const total = data.subjects.reduce((a, s) => a + (s.score ?? 0), 0);
   const avg = data.subjects.length ? Math.round(total / data.subjects.length) : 0;
   const payLabel = data.student.payment_status === 'paid' ? 'PAID' : data.student.payment_status === 'partial' ? 'PARTIAL' : 'NOT PAID';
@@ -189,7 +195,7 @@ export default function ReportCardClassic({ data }) {
         {/* Comments */}
         <div className="rcc-comments">
           <strong>Class Teacher's Comment:</strong>
-          <p>{data.notes?.[0]?.description || '................................................................................................'}</p>
+          <p>{data.ai_comment || data.notes?.[0]?.description || '................................................................................................'}</p>
           <strong>Head Teacher's Comment:</strong>
           <p style={{minHeight:30}}></p>
         </div>
@@ -199,14 +205,14 @@ export default function ReportCardClassic({ data }) {
           <span>Term Ended: ___________</span>
           <span>Next Term Begins: ___________</span>
           <span>Fees Balance: UGX {Number(data.student.fees_balance || 0).toLocaleString()}</span>
-          <span>Head Teacher: ___________</span>
+          <span>Head Teacher: <strong>{headName}</strong></span>
         </div>
 
         {/* Signatures */}
         <div className="rcc-sigs">
           <div className="rcc-sig-block">
-            <span className="rcc-sig-role">Class Teacher</span>
-            <span className="rcc-sig-name">___________________</span>
+            <span className="rcc-sig-role">{teacherTitle}</span>
+            <span className="rcc-sig-name">{teacherName}</span>
             <div className="rcc-sig-line" />
             <span className="rcc-sig-label">Signature</span>
           </div>
@@ -217,8 +223,8 @@ export default function ReportCardClassic({ data }) {
             <span style={{fontSize:9,color:'#555'}}>Official Stamp</span>
           </div>
           <div className="rcc-sig-block">
-            <span className="rcc-sig-role">Head Teacher</span>
-            <span className="rcc-sig-name">___________________</span>
+            <span className="rcc-sig-role">{headTitle}</span>
+            <span className="rcc-sig-name">{headName}</span>
             <div className="rcc-sig-line" />
             <span className="rcc-sig-label">Signature</span>
           </div>

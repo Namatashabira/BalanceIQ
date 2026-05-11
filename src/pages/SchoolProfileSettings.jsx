@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
-import { Save, Upload, Building2, Phone, Mail, MapPin, BookOpen, Stamp, PenLine, Image, CheckCircle } from 'lucide-react';
+import { Save, Upload, Building2, Phone, Mail, MapPin, BookOpen, Stamp, PenLine, Image, CheckCircle, GraduationCap } from 'lucide-react';
 import axios from 'axios';
 import { fetchWithAuth } from '../api';
 import { loadReceiptSettings, syncPendingReceiptSettings } from '../services/receiptSettingsService';
 import { buildStampWithDate } from '../utils/stampProcessor';
+import { readSchoolType, writeSchoolType } from '../hooks/useSchoolClasses';
 
 const BASE = import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api';
 const SETTINGS_API = `${BASE}/core/business-settings/`;
 const RECEIPT_SETTINGS_API = `${BASE}/fees/receipt-settings/`;
+const SCHOOL_TYPE_API = `${BASE}/tenants/school-type/`;
 
 const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500';
 const labelCls = 'block text-sm font-medium text-gray-700 mb-1';
@@ -49,6 +51,11 @@ export default function SchoolProfileSettings() {
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
   const [profileError, setProfileError] = useState('');
+
+  // ── School type ──────────────────────────────────────────────────────────────────────────────
+  const [schoolType, setSchoolType] = useState(readSchoolType);
+  const [schoolTypeSaving, setSchoolTypeSaving] = useState(false);
+  const [schoolTypeSaved, setSchoolTypeSaved] = useState(false);
 
   // ── Logo + Stamp + Signature (all saved together to ReceiptSettings) ─────────
   const [rs, setRs] = useState({
@@ -107,6 +114,25 @@ export default function SchoolProfileSettings() {
       }
     });
   }, []);
+
+  // Save school type
+  const saveSchoolType = async (type) => {
+    setSchoolTypeSaving(true);
+    try {
+      const res = await fetchWithAuth(SCHOOL_TYPE_API, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ school_type: type }),
+      });
+      if (res?.ok) {
+        writeSchoolType(type);
+        setSchoolType(type);
+        setSchoolTypeSaved(true);
+        setTimeout(() => setSchoolTypeSaved(false), 3000);
+      }
+    } catch { /* ignore */ }
+    finally { setSchoolTypeSaving(false); }
+  };
 
   // ── Save school profile (text fields only) ───────────────────────────────────
   const saveProfile = async (e) => {
@@ -267,6 +293,22 @@ export default function SchoolProfileSettings() {
           </button>
         </div>
       </form>
+
+      {/* School Type Selector */}
+      <Section title="School Type" icon={GraduationCap}>
+        <p className="text-sm text-gray-500 mb-4">Select whether this is a Primary or Secondary school. This controls which classes appear throughout the system.</p>
+        <div className="grid grid-cols-2 gap-3">
+          {[['primary', 'Primary School', 'Baby Class \u2013 P.7'], ['secondary', 'Secondary School', 'S.1 \u2013 S.6']].map(([val, label, sub]) => (
+            <button key={val} type="button" onClick={() => saveSchoolType(val)} disabled={schoolTypeSaving}
+              className={`p-4 rounded-xl border-2 text-left transition-all disabled:opacity-60 ${schoolType === val ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-indigo-300 bg-white'}`}>
+              <p className={`text-sm font-semibold ${schoolType === val ? 'text-indigo-700' : 'text-gray-700'}`}>{label}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
+              {schoolType === val && <span className="text-[10px] font-bold text-indigo-500 mt-1 block">&#10003; Currently active</span>}
+            </button>
+          ))}
+        </div>
+        {schoolTypeSaved && <p className="text-xs text-emerald-600 mt-2">&#10003; School type saved</p>}
+      </Section>
 
       {/* ── Logo + Stamp + Signature (single form, single save) ── */}
       <form onSubmit={saveReceiptAssets} className="space-y-5">

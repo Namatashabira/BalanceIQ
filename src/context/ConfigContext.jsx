@@ -5,14 +5,8 @@ import { defaultPricingSettings } from '../utils/pricingHelpers';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api';
 
-/**
- * Configuration Context
- * Provides business configuration, feature toggles, and dynamic labels throughout the app
- */
-
 const ConfigContext = createContext(null);
 
-// ---------- helpers: pricing settings shape (snake <-> camel) ----------
 const normalizePricingFromApi = (apiData) => {
   if (!apiData) return null;
   return {
@@ -50,7 +44,6 @@ export function ConfigProvider({ children }) {
   const [config, setConfig] = useState({
     businessType: null,
     features: {
-      // Default features - all enabled by default
       dashboard_enabled: true,
       product_enabled: true,
       inventory_enabled: true,
@@ -83,14 +76,17 @@ export function ConfigProvider({ children }) {
     },
     theme: null,
     logo: localStorage.getItem('cachedLogo') || null,
-    schoolInfo: (() => { try { return JSON.parse(localStorage.getItem('cachedSchoolInfo') || 'null'); } catch { return null; } })(),
+    schoolInfo: (() => {
+      try { return JSON.parse(localStorage.getItem('cachedSchoolInfo') || 'null'); } catch { return null; }
+    })(),
     pricingSettings: null,
     allowedPages: null,
     firstAccessiblePath: null,
     onboardingCompleted: false,
     loading: true,
-    error: null
+    error: null,
   });
+
   const [userProfile, setUserProfile] = useState(() => {
     try {
       const cached = localStorage.getItem('cachedUserProfile');
@@ -98,24 +94,22 @@ export function ConfigProvider({ children }) {
     } catch { return null; }
   });
 
-  // Fetch configuration from backend
   const fetchConfiguration = async () => {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) {
-        // Not logged in - use defaults
         setConfig(prev => ({ ...prev, loading: false }));
         return;
       }
 
       const response = await axios.get(`${API_BASE}/core/configuration/`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       setConfig({
         businessType: response.data.business_type,
-        features: response.data.features || config.features, // fallback to defaults
-        labels: response.data.labels || config.labels, // fallback to defaults
+        features: response.data.features || config.features,
+        labels: response.data.labels || config.labels,
         theme: response.data.theme || null,
         logo: response.data.theme?.logo_url || null,
         pricingSettings: normalizePricingFromApi(response.data.pricing_settings),
@@ -123,14 +117,37 @@ export function ConfigProvider({ children }) {
         firstAccessiblePath: response.data.first_accessible_path || null,
         onboardingCompleted: response.data.onboarding_completed,
         loading: false,
-        error: null
+        error: null,
       });
+
+      // Persist school_type so all pages stay in sync
+      if (response.data.school_type) {
+        localStorage.setItem('schoolType', response.data.school_type);
+        try {
+          const t = JSON.parse(localStorage.getItem('activeTenant') || '{}');
+          t.school_type = response.data.school_type;
+          localStorage.setItem('activeTenant', JSON.stringify(t));
+        } catch { /* ignore */ }
+        window.dispatchEvent(new Event('schoolTypeChanged'));
+      }
+
+      // Pre-fetch staff credentials for school tenants so report cards work offline
+      if (response.data.business_type === 'school') {
+        try {
+          const credRes = await axios.get(`${API_BASE}/core/staff-credentials/`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (credRes.data?.staff_credentials) {
+            localStorage.setItem('staffCredentials', JSON.stringify(credRes.data.staff_credentials));
+          }
+        } catch { /* keep cached */ }
+      }
 
       // Fetch school info only when business type is school
       if (response.data.business_type === 'school') {
         try {
           const bsRes = await axios.get(`${API_BASE}/core/business-settings/`, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
           });
           const bs = bsRes.data;
           const schoolInfo = {
@@ -145,40 +162,32 @@ export function ConfigProvider({ children }) {
         } catch { /* keep cached */ }
       }
 
-      // Apply theme colors if available and cache to reduce page flash on reload
+      // Apply and cache theme colors
       if (response.data.theme) {
-        applyThemeColors(
-          response.data.theme.primary_color || '#3B82F6',
-          response.data.theme.secondary_color || '#10B981',
-          response.data.theme.accent_color || '#8B5CF6'
-        );
         try {
+          applyThemeColors(
+            response.data.theme.primary_color || '#3B82F6',
+            response.data.theme.secondary_color || '#10B981',
+            response.data.theme.accent_color || '#8B5CF6'
+          );
           localStorage.setItem('cachedTheme', JSON.stringify(response.data.theme));
           const logoUrl = response.data.theme.logo_url || null;
           if (logoUrl) localStorage.setItem('cachedLogo', logoUrl);
           else localStorage.removeItem('cachedLogo');
-        } catch (err) {
-          // ignore storage errors (e.g., private mode)
-        }
+        } catch { /* ignore storage errors */ }
       }
     } catch (error) {
       console.warn('Error fetching configuration (using defaults):', error.message);
-      // Keep defaults, just set loading to false
-      setConfig(prev => ({
-        ...prev,
-        loading: false,
-        error: null // Don't show error for public pages
-      }));
+      setConfig(prev => ({ ...prev, loading: false, error: null }));
     }
   };
 
-  // Fetch pricing settings directly (for pages that need freshest state)
   const fetchPricingSettings = async () => {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) return null;
       const response = await axios.get(`${API_BASE}/core/pricing-settings/`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       const normalized = normalizePricingFromApi(response.data);
       setConfig(prev => ({ ...prev, pricingSettings: normalized }));
@@ -189,35 +198,23 @@ export function ConfigProvider({ children }) {
     }
   };
 
-  // Reload configuration
   const reloadConfig = () => {
     setConfig(prev => ({ ...prev, loading: true }));
     fetchConfiguration();
   };
 
-  // Update feature toggle
   const updateFeature = async (featureKey, enabled) => {
     try {
       const token = localStorage.getItem('accessToken');
       await axios.post(
         `${API_BASE}/core/feature-toggles/bulk_update/`,
-        {
-          features: { [featureKey]: enabled }
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        { features: { [featureKey]: enabled } },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      // Update local state
       setConfig(prev => ({
         ...prev,
-        features: {
-          ...prev.features,
-          [featureKey]: enabled
-        }
+        features: { ...prev.features, [featureKey]: enabled },
       }));
-
       return { success: true };
     } catch (error) {
       console.error('Error updating feature:', error);
@@ -225,35 +222,18 @@ export function ConfigProvider({ children }) {
     }
   };
 
-  // Update terminology
   const updateLabel = async (entity, label, labelPlural) => {
     try {
       const token = localStorage.getItem('accessToken');
       await axios.post(
         `${API_BASE}/core/terminology/bulk_update/`,
-        {
-          labels: {
-            [entity]: {
-              label: label,
-              label_plural: labelPlural
-            }
-          }
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        { labels: { [entity]: { label, label_plural: labelPlural } } },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      // Update local state
       setConfig(prev => ({
         ...prev,
-        labels: {
-          ...prev.labels,
-          [entity]: label,
-          [`${entity}_plural`]: labelPlural
-        }
+        labels: { ...prev.labels, [entity]: label, [`${entity}_plural`]: labelPlural },
       }));
-
       return { success: true };
     } catch (error) {
       console.error('Error updating label:', error);
@@ -261,13 +241,11 @@ export function ConfigProvider({ children }) {
     }
   };
 
-  // Update theme (colors + optional logo)
   const updateTheme = async (primaryColor, secondaryColor, accentColor, selectedPaletteId, logoFile = null) => {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) return { success: false, error: 'Not authenticated' };
 
-      // Always send full theme payload; multipart works with or without a file
       const formData = new FormData();
       formData.append('primary_color', primaryColor);
       formData.append('secondary_color', secondaryColor);
@@ -275,43 +253,22 @@ export function ConfigProvider({ children }) {
       if (selectedPaletteId) formData.append('selected_palette_id', selectedPaletteId);
       if (logoFile) formData.append('logo', logoFile);
 
-      // Get current theme ID or create new one
-      const themesResponse = await axios.get(
-        `${API_BASE}/core/theme/`,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-
+      const themesResponse = await axios.get(`${API_BASE}/core/theme/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const themeId = themesResponse.data.results?.[0]?.id || themesResponse.data[0]?.id;
 
       if (themeId) {
-        await axios.put(
-          `${API_BASE}/core/theme/${themeId}/`,
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'multipart/form-data'
-            }
-          }
-        );
+        await axios.put(`${API_BASE}/core/theme/${themeId}/`, formData, {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' },
+        });
       } else {
-        await axios.post(
-          `${API_BASE}/core/theme/`,
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'multipart/form-data'
-            }
-          }
-        );
+        await axios.post(`${API_BASE}/core/theme/`, formData, {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' },
+        });
       }
 
-      // Reload configuration to get updated theme (logo URL, etc.)
       await fetchConfiguration();
-
       return { success: true };
     } catch (error) {
       console.error('Error updating theme:', error);
@@ -319,37 +276,21 @@ export function ConfigProvider({ children }) {
     }
   };
 
-  // Apply business preset
   const applyPreset = async (businessType) => {
     try {
       const token = localStorage.getItem('accessToken');
-      
-      // First get the business config ID
-      const configsResponse = await axios.get(
-        `${API_BASE}/core/business-config/`,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-
+      const configsResponse = await axios.get(`${API_BASE}/core/business-config/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const configId = configsResponse.data.results?.[0]?.id || configsResponse.data[0]?.id;
+      if (!configId) throw new Error('No business configuration found');
 
-      if (!configId) {
-        throw new Error('No business configuration found');
-      }
-
-      // Apply preset
       await axios.post(
         `${API_BASE}/core/business-config/${configId}/apply_preset/`,
         { business_type: businessType },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      // Reload configuration
       await fetchConfiguration();
-
       return { success: true };
     } catch (error) {
       console.error('Error applying preset:', error);
@@ -357,17 +298,13 @@ export function ConfigProvider({ children }) {
     }
   };
 
-  // Update pricing settings and persist to backend
   const updatePricingSettings = async (settings) => {
     try {
       const token = localStorage.getItem('accessToken');
       const payload = pricingToApi(settings);
-      await axios.post(
-        `${API_BASE}/core/pricing-settings/`,
-        payload,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
+      await axios.post(`${API_BASE}/core/pricing-settings/`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setConfig(prev => ({ ...prev, pricingSettings: normalizePricingFromApi(settings) }));
       return { success: true };
     } catch (error) {
@@ -376,7 +313,7 @@ export function ConfigProvider({ children }) {
     }
   };
 
-  // Effect 1: logo — pre-apply cached theme instantly, then fetch from API
+  // Pre-apply cached theme instantly, then fetch fresh config
   useEffect(() => {
     try {
       const cached = localStorage.getItem('cachedTheme');
@@ -388,9 +325,8 @@ export function ConfigProvider({ children }) {
           theme.accent_color || '#8B5CF6'
         );
       }
-    } catch (err) {
-      // ignore malformed cache
-    }
+    } catch { /* ignore malformed cache */ }
+
     fetchConfiguration();
 
     const handleAuthChanged = () => fetchConfiguration();
@@ -398,38 +334,36 @@ export function ConfigProvider({ children }) {
     return () => window.removeEventListener('auth-changed', handleAuthChanged);
   }, []);
 
-  // Effect 2: userProfile — seed from localStorage, then fetch fresh from API
+  // Seed userProfile from API
   useEffect(() => {
     const fetchProfile = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) return;
       axios.get(`${API_BASE}/core/auth/profile/`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       }).then(res => {
         const fresh = res.data.user || res.data;
         setUserProfile(fresh);
         try { localStorage.setItem('cachedUserProfile', JSON.stringify(fresh)); } catch {}
       }).catch(() => {});
     };
-
     fetchProfile();
     window.addEventListener('auth-changed', fetchProfile);
     return () => window.removeEventListener('auth-changed', fetchProfile);
   }, []);
 
-  // Seed avatar from backend profile into localStorage so Sidebar/Navbar pick it up
+  // Seed avatar from backend profile into localStorage
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     if (!token) return;
     fetch(`${API_BASE}/users/profile/get/`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.json())
       .then(data => {
         const profilePicUrl = data?.profile?.profile_picture_url || data?.profile_picture_url;
         if (profilePicUrl) {
           const stored = JSON.parse(localStorage.getItem('userProfile') || '{}');
-          // Only update if URL actually changed to avoid unnecessary re-renders
           if (stored.avatar !== profilePicUrl) {
             stored.avatar = profilePicUrl;
             localStorage.setItem('userProfile', JSON.stringify(stored));
@@ -450,7 +384,7 @@ export function ConfigProvider({ children }) {
     updateTheme,
     applyPreset,
     updatePricingSettings,
-    fetchPricingSettings
+    fetchPricingSettings,
   };
 
   return (
@@ -460,54 +394,33 @@ export function ConfigProvider({ children }) {
   );
 }
 
-/**
- * Hook to access configuration
- */
 export function useConfig() {
   const context = useContext(ConfigContext);
-  if (!context) {
-    throw new Error('useConfig must be used within ConfigProvider');
-  }
+  if (!context) throw new Error('useConfig must be used within ConfigProvider');
   return context;
 }
 
-/**
- * Hook to check if a feature is enabled
- */
 export function useFeature(featureKey) {
   const { features } = useConfig();
   return features[featureKey] === true;
 }
 
-/**
- * Hook to get dynamic label
- * @param {string} entity - Entity name (resource, transaction, entity, inventory, etc.)
- * @param {boolean} plural - Whether to return plural form
- * @returns {string} - The label
- */
 export function useLabel(entity, plural = false) {
   const { labels } = useConfig();
   const key = plural ? `${entity}_plural` : entity;
   return labels[key] || (plural ? `${entity}s` : entity);
 }
 
-/**
- * Hook to get all labels
- */
 export function useLabels() {
   const { labels } = useConfig();
   const safe = labels || {};
-
   return {
-    // Singular forms
     resource: safe.resource || 'Item',
     transaction: safe.transaction || 'Transaction',
     entity: safe.entity || 'Contact',
     inventory: safe.inventory || 'Stock',
     payment: safe.payment || 'Payment',
     schedule: safe.schedule || 'Schedule',
-    
-    // Plural forms
     resources: safe.resource_plural || 'Items',
     transactions: safe.transaction_plural || 'Transactions',
     entities: safe.entity_plural || 'Contacts',
@@ -517,19 +430,12 @@ export function useLabels() {
   };
 }
 
-/**
- * Hook to get multiple features at once
- */
 export function useFeatures() {
   const { features } = useConfig();
   return features;
 }
 
-/**
- * Hook to get page-level access control list
- */
 export function useAllowedPages() {
   const { allowedPages } = useConfig();
-  // Preserve empty array (no access) instead of collapsing to null/full access
   return allowedPages === undefined ? null : allowedPages;
 }

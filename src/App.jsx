@@ -33,12 +33,10 @@ import AIInsights from "./pages/AIInsights";
 import Forecast from "./pages/Forecast";
 import Sales from "./pages/Sales";
 import Settings from "./pages/SettingsNew";
-import Orders from "./pages/Orders/Orders";
 import ManualEntry from "./pages/ManualEntry";
 import ManualOrderEntry from "./pages/ManualOrderEntry";
 import ReceiptLookup from "./pages/ReceiptLookup";
 import Appointments from "./pages/Appointments";
-import AbandonedCarts from "./pages/Orders/AbandonedCarts";
 import AccountingDashboard from "./pages/Accounting/AccountingDashboard";
 import Expenses from "./pages/Accounting/Expenses";
 import Payments from "./pages/Accounting/Payments";
@@ -58,7 +56,6 @@ import Documents from "./pages/enrollment/Documents";
 import PaymentsPage from "./pages/enrollment/Payments";
 import Reports from "./pages/enrollment/Reports";
 import BusinessReport from "./pages/Reports/BusinessReport";
-import WebsiteBuilder from "./pages/WebsiteBuilder/WebsiteBuilder";
 import StudentManagementPage from "./pages/StudentManagementPage";
 import FeesPage from "./pages/FeesPage";
 import FeeReceipt from "./pages/fees/FeeReceipt";
@@ -72,7 +69,8 @@ import SchoolAccounting from "./pages/Accounting/SchoolAccounting";
 
 // ── Plan guard ────────────────────────────────────────────────────────────────
 function PlanGuard({ pageKey, children }) {
-  const { isPageAllowed, trialExpired, planReady } = usePlan();
+  const { isPageAllowed, trialExpired, planReady, isSuperAdmin } = usePlan();
+  if (isSuperAdmin) return children;
   if (!planReady) {
     return (
       <div className="flex items-center justify-center h-full py-20">
@@ -110,6 +108,8 @@ function AccessGuard({ pageKey, children }) {
 // ── School-only route guard ───────────────────────────────────────────────────
 function SchoolGuard({ children }) {
   const { businessType, loading } = useConfig();
+  const { isSuperAdmin } = usePlan();
+  if (isSuperAdmin) return children;
   if (loading) return null;
   if (businessType !== 'school') return <Navigate to="/" replace />;
   return children;
@@ -118,6 +118,8 @@ function SchoolGuard({ children }) {
 // ── Business-only route guard ─────────────────────────────────────────────────
 function BusinessGuard({ children }) {
   const { businessType, loading } = useConfig();
+  const { isSuperAdmin } = usePlan();
+  if (isSuperAdmin) return children;
   if (loading) return null;
   if (businessType === 'school') return <Navigate to="/dashboard" replace />;
   return children;
@@ -199,9 +201,7 @@ function DashboardLayout({ sidebarOpen, setSidebarOpen, sidebarWidth, setSidebar
             <Route path="/manual-entry" element={<BusinessGuard><PlanGuard pageKey="manual_entry_enabled"><AccessGuard pageKey="manual_entry_enabled"><ManualOrderEntry /></AccessGuard></PlanGuard></BusinessGuard>} />
             <Route path="/appointments" element={<BusinessGuard><PlanGuard pageKey="scheduling_enabled"><AccessGuard pageKey="scheduling_enabled"><Appointments /></AccessGuard></PlanGuard></BusinessGuard>} />
             <Route path="/receipt-lookup" element={<BusinessGuard><PlanGuard pageKey="payments_enabled"><AccessGuard pageKey="payments_enabled"><ReceiptLookup /></AccessGuard></PlanGuard></BusinessGuard>} />
-            <Route path="/abandoned-carts" element={<BusinessGuard><PlanGuard pageKey="orders_enabled"><AccessGuard pageKey="orders_enabled"><AbandonedCarts /></AccessGuard></PlanGuard></BusinessGuard>} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/orders" element={<BusinessGuard><PlanGuard pageKey="orders_enabled"><AccessGuard pageKey="orders_enabled"><Orders /></AccessGuard></PlanGuard></BusinessGuard>} />
             <Route path="/sales" element={<BusinessGuard><PlanGuard pageKey="sales_enabled"><AccessGuard pageKey="sales_enabled"><Sales /></AccessGuard></PlanGuard></BusinessGuard>} />
             <Route path="/customers" element={<BusinessGuard><PlanGuard pageKey="customers_enabled"><AccessGuard pageKey="customers_enabled"><Customers /></AccessGuard></PlanGuard></BusinessGuard>} />
             <Route path="/manage-users" element={<AccessGuard pageKey="superadmin"><ManageUsers /></AccessGuard>} />
@@ -213,7 +213,6 @@ function DashboardLayout({ sidebarOpen, setSidebarOpen, sidebarWidth, setSidebar
             <Route path="/accounting/balance-sheet" element={<BusinessGuard><PlanGuard pageKey="accounting_enabled"><BalanceSheet /></PlanGuard></BusinessGuard>} />
             <Route path="/accounting/assets" element={<BusinessGuard><PlanGuard pageKey="accounting_enabled"><AccessGuard pageKey="accounting_enabled"><Assets /></AccessGuard></PlanGuard></BusinessGuard>} />
             <Route path="/reports/business" element={<BusinessGuard><PlanGuard pageKey="analytics_enabled"><BusinessReport /></PlanGuard></BusinessGuard>} />
-            <Route path="/website-builder" element={<BusinessGuard><PlanGuard pageKey="website_builder_enabled"><AccessGuard pageKey="website_builder_enabled"><WebsiteBuilder /></AccessGuard></PlanGuard></BusinessGuard>} />
             <Route path="/enrollment" element={<BusinessGuard><EnrollmentIndex /></BusinessGuard>}>
               <Route path="overview" element={<Overview />} />
               <Route path="new" element={<NewEnrollment />} />
