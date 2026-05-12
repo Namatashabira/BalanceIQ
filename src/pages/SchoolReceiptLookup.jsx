@@ -190,7 +190,7 @@ export default function SchoolReceiptLookup() {
     if (!q || q.length < 2) { setSearchResults([]); return; }
     setSearching(true);
     try {
-      const res = await fetchWithAuth(`${BASE_URL}/students/students/?search=${encodeURIComponent(q)}&limit=8`);
+      const res = await fetchWithAuth(`${BASE_URL}/students/?search=${encodeURIComponent(q)}&limit=8`);
       if (res?.ok) {
         const data = await res.json();
         setSearchResults(Array.isArray(data) ? data : (data.results || []));

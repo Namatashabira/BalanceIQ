@@ -24,19 +24,20 @@ export function StudentBio({ student }) {
       <table className="bio-table">
         <tbody>
           <tr>
-            <th>Name</th><td>{student.name}</td>
-            <th>Gender</th><td>{student.gender}</td>
-            <th>Section</th><td>{student.section}</td>
+            <th>Name</th>
+            <td>{student.name}</td>
+            <th>Gender</th>
+            <td>{student.gender}</td>
+            <th>Section</th>
+            <td>{student.section}</td>
           </tr>
           <tr>
-            <th>Class</th><td>{student.class}</td>
-            <th>Stream</th><td>{student.stream}</td>
-            <th>ID No</th><td>{student.idNo}</td>
-          </tr>
-          <tr>
-            <th>Pay Code</th><td>{student.payCode}</td>
-            <th>Term</th><td>{student.term}</td>
-            <th>Academic Year</th><td>{student.year}</td>
+            <th>Class</th>
+            <td>{student.class}</td>
+            <th>Stream</th>
+            <td>{student.stream}</td>
+            <th>ID No</th>
+            <td>{student.idNo}</td>
           </tr>
         </tbody>
       </table>

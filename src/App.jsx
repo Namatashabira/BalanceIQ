@@ -62,10 +62,12 @@ import FeeReceipt from "./pages/fees/FeeReceipt";
 import FeeInvoice from "./pages/fees/FeeInvoice";
 import SchoolReceiptLookup from "./pages/SchoolReceiptLookup";
 import ReportTemplatesPage from "./pages/ReportTemplatesPage";
+import PreviewReportPage from "./pages/PreviewReportPage";
 import MarksEntryPage from "./pages/MarksEntryPage";
 import AttendancePage from "./pages/AttendancePage";
 import SchoolSettingsPage from "./pages/SchoolSettingsPage";
 import SchoolAccounting from "./pages/Accounting/SchoolAccounting";
+import ReportViewPage from "./pages/ReportViewPage";
 
 // ── Plan guard ────────────────────────────────────────────────────────────────
 function PlanGuard({ pageKey, children }) {
@@ -234,6 +236,7 @@ function DashboardLayout({ sidebarOpen, setSidebarOpen, sidebarWidth, setSidebar
             <Route path="/school-receipt-lookup" element={<SchoolGuard><AccessGuard pageKey="school-receipt-lookup"><SchoolReceiptLookup /></AccessGuard></SchoolGuard>} />
             <Route path="/school-accounting" element={<SchoolGuard><PlanGuard pageKey="accounting_enabled"><SchoolAccounting /></PlanGuard></SchoolGuard>} />
             <Route path="/report-templates" element={<SchoolGuard><AccessGuard pageKey="report-templates"><ReportTemplatesPage /></AccessGuard></SchoolGuard>} />
+            <Route path="/preview-report" element={<SchoolGuard><AccessGuard pageKey="report-templates"><PreviewReportPage /></AccessGuard></SchoolGuard>} />
             <Route path="/login" element={<Navigate to="/" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
@@ -310,6 +313,7 @@ function AppContent() {
         </Routes>
       ) : (
         <Routes>
+          <Route path="/report-view" element={<ReportViewPage />} />
           <Route path="/manual-entry-old" element={<ManualEntry />} />
           <Route path="/" element={<HomePage />} />
           <Route path="/pricing" element={<Pricing />} />

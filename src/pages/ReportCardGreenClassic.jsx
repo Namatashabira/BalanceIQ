@@ -29,6 +29,7 @@ function mapData(data) {
       email: data.school?.email || '',
       website: data.school?.website || '',
       logo: data.school?.logo || '',
+      stamp: data.school?.stamp || '',
       term: data.metadata?.term || 'Term 1',
       year: data.metadata?.academic_year || String(new Date().getFullYear()),
     },
@@ -110,7 +111,7 @@ export default function ReportCardGreenClassic({ data }) {
               <Comments comments={mapped.comments} />
             </div>
             <div className="report-footer-push">
-              <FooterSignatures admin={mapped.admin} school={mapped.school} />
+              <FooterSignatures admin={mapped.admin} school={mapped.school} student={mapped.student} />
             </div>
           </div>
         </div>

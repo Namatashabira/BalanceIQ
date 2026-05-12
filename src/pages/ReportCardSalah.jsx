@@ -1,8 +1,11 @@
 /**
- * ReportCardSalah — Navy Blue & Gold modern template
- * Adapted from salah-react. Accepts the standard buildReportData shape.
+ * ReportCardSalah — Navy Blue & Gold modern template (REDESIGNED)
+ * Modern, centered layout with school header, logo, and term/year on title line
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
+import { buildStampWithDate } from '../utils/stampProcessor';
+import { loadReceiptSettings } from '../services/receiptSettingsService';
 
 /* ── inline styles scoped via className prefix "src-" ── */
 const css = `
@@ -15,58 +18,60 @@ const css = `
 .src-br { bottom:7px; right:7px; border-bottom:3px solid #d4af37; border-right:3px solid #d4af37; border-radius:0 0 4px 0; }
 .src-wm { position:absolute; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; pointer-events:none; z-index:1; }
 .src-wm img { width:55%; opacity:0.07; object-fit:contain; }
-.src-inner { position:relative; z-index:2; padding:8mm 10mm; display:flex; flex-direction:column; min-height:260mm; }
+.src-inner { position:relative; z-index:2; padding:5mm 8mm; display:flex; flex-direction:column; min-height:277mm; }
 .src-body { flex:1; }
 .src-footer-push { margin-top:auto; }
 
-/* header */
-.src-hdr { background:#fff; border-radius:8px; margin-bottom:10px; box-shadow:0 2px 8px rgba(0,0,0,.08); }
-.src-hdr-bar { height:6px; background:linear-gradient(90deg,#1e3a8a 0%,#2563eb 50%,#d4af37 100%); }
-.src-hdr-content { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; padding:10px 16px; gap:14px; }
-.src-hdr-left { display:flex; align-items:center; gap:12px; }
-.src-logo { width:60px; height:60px; object-fit:contain; border-radius:6px; }
-.src-logo-ph { width:60px; height:60px; border:2px dashed #1e3a8a; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:600; color:#1e3a8a; text-align:center; }
-.src-school-name { font-size:17px; font-weight:700; color:#1e3a8a; letter-spacing:.5px; margin:0; }
-.src-school-sub { font-size:10px; font-weight:600; color:#d4af37; letter-spacing:1.5px; text-transform:uppercase; margin:0; }
-.src-badge { text-align:center; padding:8px 16px; background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%); border-radius:8px; }
-.src-badge-lbl { display:block; font-size:8px; color:#d4af37; letter-spacing:1.5px; font-weight:600; margin-bottom:2px; }
-.src-badge-title { font-size:20px; font-weight:800; color:#fff; letter-spacing:1px; margin:0 0 2px; line-height:1; }
-.src-badge-sub { display:block; font-size:7px; color:#93c5fd; letter-spacing:1px; }
-.src-hdr-right { display:flex; justify-content:flex-end; }
-.src-term-info { display:flex; flex-direction:column; gap:5px; align-items:flex-end; }
-.src-term-badge,.src-year-badge { padding:5px 12px; background:#f0f4f8; border:2px solid #1e3a8a; border-radius:6px; font-size:10px; font-weight:700; color:#1e3a8a; }
-.src-contacts { display:flex; align-items:center; justify-content:center; gap:7px; padding:6px 16px; background:#f8fafc; border-top:1px solid #e2e8f0; font-size:9px; color:#475569; }
-.src-contact-item { display:flex; align-items:center; gap:3px; }
+/* REDESIGNED header - centered layout */
+.src-hdr { background:#fff; border-radius:6px; margin-bottom:5px; box-shadow:0 1px 4px rgba(0,0,0,.07); }
+.src-hdr-bar { height:5px; background:linear-gradient(90deg,#1e3a8a 0%,#2563eb 50%,#d4af37 100%); }
+.src-hdr-wrapper { display:flex; flex-direction:column; align-items:center; padding:5px 16px 6px; gap:2px; }
+.src-school-header { text-align:center; }
+.src-school-name { font-size:15px; font-weight:800; color:#1e3a8a; letter-spacing:1px; margin:0; text-transform:uppercase; }
+.src-school-motto { font-size:9px; color:#1e3a8a; font-style:italic; font-weight:600; margin:2px 0 1px 0; }
+.src-school-location { font-size:8px; color:#475569; margin:0; display:flex; align-items:center; justify-content:center; gap:4px; }
+.src-meta-item { display:flex; align-items:center; gap:3px; }
 .src-divider { color:#cbd5e1; font-weight:bold; }
+.src-logo-wrapper { display:flex; align-items:center; justify-content:center; margin:1px 0; }
+.src-logo { max-width:52px; max-height:52px; width:auto; height:auto; object-fit:contain; background:transparent; display:block; }
+.src-logo-ph { width:44px; height:44px; border:2px dashed #1e3a8a; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:600; color:#1e3a8a; text-align:center; }
+.src-badge-row { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; }
+.src-badge { text-align:center; flex:1; padding:5px 10px; background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%); border-radius:5px; min-width:160px; }
+.src-badge-title { font-size:16px; font-weight:800; color:#fff; letter-spacing:1px; margin:0; line-height:1.1; }
+.src-badge-sub { display:block; font-size:7px; color:#93c5fd; letter-spacing:1px; margin-top:1px; }
+.src-term-year { display:flex; align-items:center; justify-content:center; gap:6px; }
+.src-term-badge, .src-year-badge { padding:4px 10px; background:#f0f4f8; border:2px solid #1e3a8a; border-radius:5px; font-size:8px; font-weight:700; color:#1e3a8a; }
+.src-term-badge span, .src-year-badge span { display:block; font-size:6.5px; color:#64748b; font-weight:500; margin-top:1px; }
 
 /* bio */
-.src-bio { display:flex; gap:10px; margin-bottom:10px; }
-.src-photo { width:80px; height:100px; border:2px solid #1e3a8a; border-radius:6px; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#f8fafc; flex-shrink:0; }
+.src-bio { display:flex; gap:8px; margin-bottom:5px; }
+.src-photo { width:72px; height:90px; border:2px solid #1e3a8a; border-radius:5px; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#f8fafc; flex-shrink:0; }
 .src-photo img { width:100%; height:100%; object-fit:cover; }
-.src-photo-ph { font-size:9px; color:#1e3a8a; font-weight:600; text-align:center; }
-.src-bio-table { flex:1; border-collapse:collapse; font-size:10px; border:2px solid #1e3a8a; border-radius:8px; overflow:hidden; }
-.src-bio-table th,.src-bio-table td { border:1px solid #cbd5e1; padding:6px 8px; text-align:left; }
-.src-bio-table th { background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%); color:#fff; font-weight:600; white-space:nowrap; width:85px; }
-.src-bio-table td { background:#fff; color:#1e293b; }
+.src-photo-ph { font-size:8px; color:#1e3a8a; font-weight:600; text-align:center; }
+.src-bio-table { flex:1; border-collapse:collapse; font-size:8px; border:2px solid #1e3a8a; border-radius:6px; overflow:hidden; }
+.src-bio-table th,.src-bio-table td { border:1px solid #e2e8f0; padding:4px 7px; text-align:left; }
+.src-bio-table th { background:#f0f4ff; color:#1e3a8a; font-weight:700; white-space:nowrap; width:75px; font-size:7.5px; letter-spacing:0.5px; text-transform:uppercase; border-right:2px solid #1e3a8a; }
+.src-bio-table td { background:#fff; color:#1e293b; font-weight:500; }
+.src-bio-table tr:nth-child(even) td { background:#f8fafc; }
 
 /* section title */
-.src-section-title { text-align:center; margin:8px 0 5px; font-size:12px; font-weight:700; letter-spacing:1.5px; color:#1e3a8a; text-transform:uppercase; padding-bottom:5px; border-bottom:2px solid #d4af37; }
+.src-section-title { text-align:center; margin:4px 0 3px; font-size:10px; font-weight:700; letter-spacing:1.5px; color:#1e3a8a; text-transform:uppercase; padding-bottom:3px; border-bottom:2px solid #d4af37; }
 
 /* perf table */
-.src-perf-table { width:100%; border-collapse:collapse; font-size:9px; border:2px solid #1e3a8a; border-radius:8px; overflow:hidden; margin-bottom:6px; }
-.src-perf-table th,.src-perf-table td { border:1px solid #cbd5e1; padding:5px 3px; text-align:center; }
+.src-perf-table { width:100%; border-collapse:collapse; font-size:8px; border:2px solid #1e3a8a; border-radius:6px; overflow:hidden; margin-bottom:4px; }
+.src-perf-table th,.src-perf-table td { border:1px solid #cbd5e1; padding:3px 3px; text-align:center; }
 .src-perf-table th { background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%); color:#fff; font-weight:600; }
 .src-perf-table tbody tr:nth-child(even) { background:#f8fafc; }
 
 /* summary */
-.src-summary { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; margin:6px 0; font-size:10px; }
-.src-summary div { border:2px solid #1e3a8a; padding:6px; text-align:center; background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%); border-radius:6px; font-weight:500; color:#1e293b; }
+.src-summary { display:grid; grid-template-columns:repeat(4,1fr); gap:3px; margin:3px 0; font-size:9px; }
+.src-summary div { border:2px solid #1e3a8a; padding:4px; text-align:center; background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%); border-radius:5px; font-weight:500; color:#1e293b; }
 .src-summary strong { color:#1e3a8a; font-weight:700; }
 
 /* grade scale */
-.src-grade-scale { width:100%; border-collapse:collapse; font-size:9px; margin:6px 0; }
-.src-grade-scale th { background:linear-gradient(135deg,#d4af37 0%,#f59e0b 100%); color:#1e293b; font-weight:700; border:1px solid #cbd5e1; padding:4px; }
-.src-grade-scale td { border:1px solid #cbd5e1; padding:4px; text-align:center; font-weight:600; }
+.src-grade-scale { width:100%; border-collapse:collapse; font-size:8px; margin:3px 0; }
+.src-grade-scale th { background:linear-gradient(135deg,#d4af37 0%,#f59e0b 100%); color:#1e293b; font-weight:700; border:1px solid #cbd5e1; padding:3px; }
+.src-grade-scale td { border:1px solid #cbd5e1; padding:3px; text-align:center; font-weight:600; }
 
 /* overall */
 .src-overall { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin:6px 0; font-size:10px; }
@@ -74,30 +79,62 @@ const css = `
 .src-overall strong { color:#92400e; font-weight:700; }
 
 /* key terms */
-.src-key { border:2px solid #cbd5e1; border-radius:6px; padding:6px 10px; font-size:9px; margin-top:6px; background:#f8fafc; }
-.src-key p { margin-bottom:2px; line-height:1.5; }
+.src-key { border:1px solid #cbd5e1; border-radius:5px; padding:3px 8px; font-size:8px; margin-top:3px; background:#f8fafc; }
+.src-key p { margin-bottom:1px; line-height:1.4; }
 .src-key strong { color:#1e3a8a; font-weight:600; }
 
 /* comments */
-.src-comments { margin-top:6px; }
-.src-comments strong { font-size:10px; color:#1e3a8a; font-weight:600; }
-.src-comments p { border:2px solid #cbd5e1; border-radius:6px; min-height:36px; padding:5px 7px; font-size:9px; margin:3px 0 6px; background:#fff; line-height:1.5; }
+.src-comments { margin-top:3px; }
+.src-comments strong { font-size:9px; color:#1e3a8a; font-weight:600; }
+.src-comments p { border:1px solid #cbd5e1; border-radius:5px; min-height:22px; padding:3px 6px; font-size:8px; margin:2px 0 4px; background:#fff; line-height:1.4; }
 
 /* footer */
-.src-footer { margin-top:8px; }
-.src-admin-footer { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; margin-bottom:8px; font-size:9px; }
-.src-admin-footer span { border:1px solid #1e3a8a; padding:5px; text-align:center; background:#f0f9ff; border-radius:4px; font-weight:500; }
+.src-footer { margin-top:4px; }
+.src-admin-footer { display:grid; grid-template-columns:repeat(4,1fr); gap:3px; margin-bottom:4px; font-size:8px; }
+.src-admin-footer span { border:1px solid #1e3a8a; padding:3px; text-align:center; background:#f0f9ff; border-radius:3px; font-weight:500; }
 .src-admin-footer strong { color:#1e3a8a; font-weight:700; }
-.src-sigs { display:grid; grid-template-columns:1fr auto 1fr; gap:10px; padding:10px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; margin-bottom:6px; }
-.src-sig-card { display:flex; flex-direction:column; align-items:center; gap:3px; }
-.src-sig-role { font-size:9px; font-weight:700; color:#1e3a8a; letter-spacing:1px; text-transform:uppercase; }
-.src-sig-name { font-size:9px; color:#475569; margin-bottom:3px; }
-.src-sig-line { border-bottom:1px solid #1e3a8a; width:100px; height:28px; }
-.src-sig-label { font-size:8px; color:#64748b; border-top:1px solid #cbd5e1; padding-top:2px; width:100px; text-align:center; }
-.src-stamp-card { display:flex; flex-direction:column; align-items:center; gap:3px; }
-.src-stamp-ph { width:80px; height:80px; border:1.5px dashed #d4af37; border-radius:50%; display:flex; align-items:center; justify-content:center; text-align:center; font-size:9px; color:#d4af37; font-weight:600; background:#fff; }
-.src-stamp-img { width:80px; height:80px; object-fit:contain; }
-.src-footer-bar { background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%); color:#fff; font-size:9px; font-style:italic; padding:6px 12px; text-align:center; border-radius:4px; }
+.src-sigs { display:grid; grid-template-columns:1fr auto 1fr auto; gap:8px; padding:6px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:5px; margin-bottom:4px; }
+.src-qr { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; }
+.src-qr-label { font-size:6.5px; color:#64748b; text-align:center; margin-top:1px; letter-spacing:0.3px; }
+.src-qr-serial { font-size:6px; color:#1e3a8a; font-weight:700; letter-spacing:0.8px; text-align:center; font-family:monospace; margin-top:1px; }
+.src-sig-card { display:flex; flex-direction:column; align-items:center; gap:2px; }
+.src-sig-role { font-size:8px; font-weight:700; color:#1e3a8a; letter-spacing:1px; text-transform:uppercase; }
+.src-sig-name { font-size:8px; color:#475569; margin-bottom:0; }
+.src-sig-line {
+  position:relative;
+  width:100px;
+  height:32px;
+  border-bottom:1.5px solid #1e3a8a;
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  overflow:visible;
+}
+.src-sig-img {
+  position:absolute;
+  bottom:0;
+  left:50%;
+  transform:translateX(-50%);
+  width:100px;
+  height:auto;
+  max-height:36px;
+  object-fit:contain;
+  object-position:bottom center;
+  display:block;
+  image-rendering:-webkit-optimize-contrast;
+  image-rendering:crisp-edges;
+  image-rendering:pixelated;
+}
+.src-sig-label { font-size:7px; color:#64748b; padding-top:2px; width:100px; text-align:center; }
+.src-stamp-card { display:flex; flex-direction:column; align-items:center; gap:2px; }
+.src-stamp-ph { width:60px; height:60px; border:1.5px dashed #d4af37; border-radius:50%; display:flex; align-items:center; justify-content:center; text-align:center; font-size:8px; color:#d4af37; font-weight:600; background:#fff; }
+.src-stamp-img { width:60px; height:60px; object-fit:contain; }
+.src-footer-bar { background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%); color:#fff; font-size:8px; font-style:italic; padding:4px 10px; text-align:center; border-radius:3px; }
+@media print {
+  .src-page { margin:0; padding:0; }
+  .src-card { border-radius:0; page-break-inside:avoid; break-inside:avoid; }
+  @page { size:A4 portrait; margin:6mm; }
+}
 `;
 
 function computeResult(subjects) {
@@ -120,21 +157,52 @@ function mapSubjects(subjects) {
 }
 
 export default function ReportCardSalah({ data }) {
-  const [stamp, setStamp] = useState(data.school?.stamp || '');
+  const [stamp, setStamp] = useState('');
+
+  // Load stamp from receipt settings and composite with date
+  useEffect(() => {
+    const loadStamp = async () => {
+      try {
+        const settings = await loadReceiptSettings();
+        if (settings.stamp_raw) {
+          const opts = {
+            offsetX: Number(settings.stamp_offset_x || 0),
+            offsetY: Number(settings.stamp_offset_y || 0),
+            rotate: Number(settings.stamp_rotate || 0),
+            circular: settings.stamp_circular === true || settings.stamp_circular === 'true',
+          };
+          const stampWithDate = await buildStampWithDate(settings.stamp_raw, opts);
+          setStamp(stampWithDate);
+        }
+      } catch {
+        const cached = localStorage.getItem('schoolStamp');
+        if (cached) setStamp(cached);
+      }
+    };
+    loadStamp();
+  }, []);
 
   const creds = (() => { try { return JSON.parse(localStorage.getItem('staffCredentials') || '[]'); } catch { return []; } })();
-  const teacherCred = creds.find(c => c.role === 'teacher');
-  const headCred    = creds.find(c => c.role === 'headteacher');
+  const teacherCred  = creds.find(c => c.role === 'teacher');
+  const headCred     = creds.find(c => c.role === 'headteacher');
   const teacherName  = teacherCred?.name  || '___________________';
   const teacherTitle = teacherCred?.title || 'Class Teacher';
+  const teacherSig   = teacherCred?.signature || '';
   const headName     = headCred?.name     || '___________________';
   const headTitle    = headCred?.title    || 'Head Teacher';
+  const headSig      = headCred?.signature || '';
 
   const subjects = mapSubjects(data.subjects || []);
   const total = data.subjects.reduce((a, s) => a + (s.score ?? 0), 0);
   const avg = data.subjects.length ? Math.round(total / data.subjects.length) : 0;
   const result = computeResult(data.subjects);
   const payLabel = data.student.payment_status === 'paid' ? 'PAID' : data.student.payment_status === 'partial' ? 'PARTIAL' : 'NOT PAID';
+
+  const reportToken = data.report_token || data.student?.admission_number || 'preview';
+  const qrUrl = `${window.location.origin}/report-view?token=${encodeURIComponent(reportToken)}`;
+  const serial = reportToken && reportToken !== 'preview'
+    ? reportToken.toString().replace(/-/g, '').slice(0, 8).toUpperCase().replace(/(.{4})(.{4})/, '$1-$2')
+    : 'PREVIEW';
 
   return (
     <>
@@ -152,36 +220,39 @@ export default function ReportCardSalah({ data }) {
 
           <div className="src-inner">
             <div className="src-body">
-              {/* Header */}
+              {/* REDESIGNED Header - Centered Layout */}
               <div className="src-hdr">
                 <div className="src-hdr-bar" />
-                <div className="src-hdr-content">
-                  <div className="src-hdr-left">
+                <div className="src-hdr-wrapper">
+                  {/* School Name */}
+                  <div className="src-school-header">
+                    <p className="src-school-name">{data.school?.name || 'KASENYI SECONDARY SCHOOL'}</p>
+                    <p className="src-school-motto">&ldquo;{data.school?.motto || 'Let Our Future Shine'}&rdquo;</p>
+                    <p className="src-school-location">
+                      <span className="src-meta-item">{data.school?.address || 'P.O BOX 246, Village/Subcountry, District'}</span>
+                    </p>
+                  </div>
+
+                  {/* Logo */}
+                  <div className="src-logo-wrapper">
                     {data.school?.logo
                       ? <img src={data.school.logo} alt="logo" className="src-logo" />
                       : <div className="src-logo-ph">LOGO</div>}
-                    <div>
-                      <p className="src-school-name">{data.school?.name || 'School Name'}</p>
-                      <p className="src-school-sub">Secondary School</p>
+                  </div>
+
+                  {/* Title Badge and Term/Year */}
+                  <div className="src-badge-row">
+                    <div className="src-badge">
+                      <h2 className="src-badge-title">REPORT CARD</h2>
+                      <span className="src-badge-sub">Competency Based Assessment</span>
+                    </div>
+                    <div className="src-term-year">
+                      <div className="src-term-badge">
+                        {data.metadata?.term || 'Term 1'}
+                        <span>{data.metadata?.academic_year || new Date().getFullYear()}</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="src-badge">
-                    <span className="src-badge-lbl">NEW CURRICULUM</span>
-                    <h2 className="src-badge-title">REPORT CARD</h2>
-                    <span className="src-badge-sub">Competency Based Assessment</span>
-                  </div>
-                  <div className="src-hdr-right">
-                    <div className="src-term-info">
-                      <span className="src-term-badge">{data.metadata?.term || 'Term 1'}</span>
-                      <span className="src-year-badge">{data.metadata?.academic_year || new Date().getFullYear()}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="src-contacts">
-                  <span className="src-contact-item">📍 {data.school?.address || '—'}</span>
-                  <span className="src-divider">•</span>
-                  <span className="src-contact-item">📞 {data.school?.phone || '—'}</span>
-                  {data.school?.motto && <><span className="src-divider">•</span><span className="src-contact-item" style={{fontStyle:'italic'}}>"{data.school.motto}"</span></>}
                 </div>
               </div>
 
@@ -219,7 +290,7 @@ export default function ReportCardSalah({ data }) {
                 <thead>
                   <tr>
                     <th>#</th><th style={{textAlign:'left'}}>Subject</th>
-                    <th>CA</th><th>Exam</th><th>Total</th>
+                    <th>A1</th><th>A2</th><th>Total</th>
                     <th>Grade</th><th style={{textAlign:'left'}}>Achievement</th>
                   </tr>
                 </thead>
@@ -281,7 +352,9 @@ export default function ReportCardSalah({ data }) {
                   <div className="src-sig-card">
                     <span className="src-sig-role">{teacherTitle.toUpperCase()}</span>
                     <span className="src-sig-name">{teacherName}</span>
-                    <div className="src-sig-line" />
+                    <div className="src-sig-line">
+                      {teacherSig && <img src={teacherSig} alt="" className="src-sig-img" />}
+                    </div>
                     <span className="src-sig-label">Signature</span>
                   </div>
                   <div className="src-stamp-card">
@@ -293,8 +366,21 @@ export default function ReportCardSalah({ data }) {
                   <div className="src-sig-card">
                     <span className="src-sig-role">{headTitle.toUpperCase()}</span>
                     <span className="src-sig-name">{headName}</span>
-                    <div className="src-sig-line" />
+                    <div className="src-sig-line">
+                      {headSig && <img src={headSig} alt="" className="src-sig-img" />}
+                    </div>
                     <span className="src-sig-label">Signature</span>
+                  </div>
+                  <div className="src-qr">
+                    <QRCodeSVG
+                      value={qrUrl}
+                      size={58}
+                      bgColor="transparent"
+                      fgColor="#1e3a8a"
+                      level="M"
+                    />
+                    <span className="src-qr-label">Scan to verify</span>
+                    <span className="src-qr-serial">S/N: {serial}</span>
                   </div>
                 </div>
                 <div className="src-footer-bar">

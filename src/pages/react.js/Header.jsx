@@ -80,7 +80,6 @@ export function Header({ school }) {
 
       <div className="header-right">
         <div className="header-right-inner">
-          <span className="new-curriculum-text">NEW CURRICULUM</span>
           <span className="report-card-title">REPORT CARD</span>
           <span className="cba-badge">COMPETENCY BASED ASSESSMENT</span>
           <span className="term-year">{school.term || 'TERM 1'} &nbsp;|&nbsp; {school.year || '2026'}</span>

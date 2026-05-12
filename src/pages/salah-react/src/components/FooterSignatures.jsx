@@ -1,13 +1,15 @@
 import { getCredentialByRole } from '../../../SchoolSignaturesSettings';
 
-export function FooterSignatures({ admin, school }) {
+export function FooterSignatures({ admin, school, stamp }) {
   const teacherCred = getCredentialByRole('teacher');
   const headCred    = getCredentialByRole('headteacher');
 
   const teacherName  = teacherCred?.name  || admin.classTeacherName || '___________________';
   const teacherTitle = teacherCred?.title || 'Class Teacher';
+  const teacherSig   = teacherCred?.signature || '';
   const headName     = headCred?.name     || admin.headTeacherName  || '___________________';
   const headTitle    = headCred?.title    || 'Head Teacher';
+  const headSig      = headCred?.signature || '';
 
   return (
     <footer className="footer-section">
@@ -22,13 +24,15 @@ export function FooterSignatures({ admin, school }) {
         <div className="sig-card">
           <span className="sig-role">{teacherTitle.toUpperCase()}</span>
           <span className="sig-name">{teacherName}</span>
-          <div className="sig-line" />
+          <div className="sig-line">
+            {teacherSig && <img src={teacherSig} alt="" className="sig-img" />}
+          </div>
           <span className="sig-label">Signature</span>
         </div>
 
         <div className="stamp-card">
-          {school?.stamp
-            ? <img src={school.stamp} alt="stamp" className="stamp-img" />
+          {stamp
+            ? <img src={stamp} alt="stamp" className="stamp-img" />
             : <div className="stamp-placeholder">OFFICIAL<br />STAMP</div>}
           <span className="sig-label">Official Stamp</span>
         </div>
@@ -36,7 +40,9 @@ export function FooterSignatures({ admin, school }) {
         <div className="sig-card">
           <span className="sig-role">{headTitle.toUpperCase()}</span>
           <span className="sig-name">{headName}</span>
-          <div className="sig-line" />
+          <div className="sig-line">
+            {headSig && <img src={headSig} alt="" className="sig-img" />}
+          </div>
           <span className="sig-label">Signature</span>
         </div>
       </div>

@@ -1,0 +1,60 @@
+/* Updated BIO TABLE STYLES - No Blue Contrast */
+.bio-table {
+  flex: 1;
+  border-collapse: collapse;
+  font-size: 11px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.bio-table th,
+.bio-table td {
+  border: 1px solid #e5e7eb;
+  padding: 7px 10px;
+  text-align: left;
+}
+
+.bio-table th {
+  background: #f3f4f6;
+  color: #374151;
+  font-weight: 600;
+  white-space: nowrap;
+  width: 90px;
+}
+
+.bio-table td {
+  background: #ffffff;
+  color: #1f2937;
+}
+
+.bio-table tbody tr:nth-child(even) {
+  background: #f9fafb;
+}
+
+.bio-table tbody tr:hover {
+  background: #f3f4f6;
+}
+
+.bio-input {
+  font-size: 11px;
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #1f2937;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.bio-input:focus {
+  outline: none;
+  border-color: #9ca3af;
+  box-shadow: 0 0 0 2px rgba(156, 163, 175, 0.1);
+}
+
+.bio-input::placeholder {
+  color: #d1d5db;
+}

@@ -219,17 +219,19 @@ function SubjectDropdown({ value, customValue, onSelect, onCustomChange }) {
 }
 
 export default function MarksEntryPage() {
-  const [filters, setFilters] = useState({ year: DEFAULT_YEAR, term: TERMS[0], cls: '', subject: 'English Language' });
+  const [filters, setFilters] = useState({ year: DEFAULT_YEAR, term: TERMS[0], cls: '', subject: 'English Language', a1Max: 20, a2Max: 20, a3Max: 100 });
   const [customSubject, setCustomSubject] = useState('');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null);
   const [saveStates, setSaveStates] = useState({});
+  const [editingScales, setEditingScales] = useState(false);
 
   const timers = useRef({});
   const filtersRef = useRef(filters);
   const customSubjectRef = useRef(customSubject);
+  const loadDataRef = useRef(null);
   useEffect(() => { filtersRef.current = filters; }, [filters]);
   useEffect(() => { customSubjectRef.current = customSubject; }, [customSubject]);
   useEffect(() => () => Object.values(timers.current).forEach(clearTimeout), []);
@@ -237,12 +239,14 @@ export default function MarksEntryPage() {
   const isCustomSubject = filters.subject === '__custom__';
   const activeSubject = isCustomSubject ? customSubject : filters.subject;
 
-  const setFilter = (k, v) => setFilters(f => ({ ...f, [k]: v }));
 
-  const showToast = (msg, ok = true) => {
+
+  const setFilter = useCallback((k, v) => setFilters(f => ({ ...f, [k]: v })), []);
+
+  const showToast = useCallback((msg, ok = true) => {
     setToast({ msg, ok });
     setTimeout(() => setToast(null), 3500);
-  };
+  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -259,12 +263,16 @@ export default function MarksEntryPage() {
       });
       if (filters.cls) markParams.set('class_assigned', filters.cls);
 
+      const studentsUrl = `${API}/students/?${studentParams}`;
+      const marksUrl = `${API}/marks/?${markParams}`;
+      
       const [studentsRes, marksRes] = await Promise.all([
-        fetchWithAuth(`${API}/students/?${studentParams}`),
-        fetchWithAuth(`${API}/marks/?${markParams}`),
+        fetchWithAuth(studentsUrl),
+        fetchWithAuth(marksUrl),
       ]);
 
       if (!studentsRes?.ok) throw new Error('Failed to fetch students');
+      
       const studentsData = await studentsRes.json();
       const students = Array.isArray(studentsData) ? studentsData : (studentsData.results || []);
 
@@ -285,8 +293,9 @@ export default function MarksEntryPage() {
           adm: s.admission_number || '',
           cls: s.class_assigned || '',
           comp: existing?.competency || '',
-          ca: existing?.ca_score ?? '',
-          exam: existing?.exam_score ?? '',
+          a1: existing?.a1_score ?? '',
+          a2: existing?.a2_score ?? '',
+          a3: existing?.a3_score ?? '',
         };
       }));
     } catch (e) {
@@ -294,19 +303,55 @@ export default function MarksEntryPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters.cls, filters.subject, filters.term, filters.year, activeSubject]);
+  }, [filters.cls, filters.term, filters.year, activeSubject]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  // ── Wait for saves to complete before loading new data ──────────────────────
+  useEffect(() => {
+    if (activeSubject) {
+      loadData();
+    }
+  }, [filters.year, filters.term, filters.cls, activeSubject, loadData]);
+
+  // ── Calculate final mark based on A1, A2, A3 with configurable scales ────────────────────────────
+  const calculateFinalMark = useCallback((a1, a2, a3) => {
+    const a1Num = a1 === '' ? null : Number(a1);
+    const a2Num = a2 === '' ? null : Number(a2);
+    const a3Num = a3 === '' ? null : Number(a3);
+    
+    // If no A3, can't calculate
+    if (a3Num === null) return null;
+    
+    let assessment20Percentage = 0;
+    
+    // Calculate 20% component (average of A1 and A2 if both exist, otherwise single value)
+    // Normalized to 20 points
+    if (a1Num !== null && a2Num !== null) {
+      const a1Normalized = (a1Num / filters.a1Max) * 20;
+      const a2Normalized = (a2Num / filters.a2Max) * 20;
+      assessment20Percentage = (a1Normalized + a2Normalized) / 2;
+    } else if (a1Num !== null) {
+      assessment20Percentage = (a1Num / filters.a1Max) * 20;
+    } else if (a2Num !== null) {
+      assessment20Percentage = (a2Num / filters.a2Max) * 20;
+    }
+    
+    // A3 normalized to 80 points (out of configured a3Max)
+    const a3Normalized = (a3Num / filters.a3Max) * 80;
+    
+    // Final mark out of 100
+    return assessment20Percentage + a3Normalized;
+  }, [filters.a1Max, filters.a2Max, filters.a3Max]);
 
   // ── Autosave a single row ─────────────────────────────────────────────────
   const saveRow = useCallback(async (row) => {
     const f = filtersRef.current;
     const subject = f.subject === '__custom__' ? customSubjectRef.current : f.subject;
-    if (!subject || (row.ca === '' && row.exam === '')) return; // nothing to save
+    if (!subject || (row.a1 === '' && row.a2 === '' && row.a3 === '' && row.comp === '')) return;
     if (String(row.studentId).startsWith('manual') && !row.name) return;
 
     setSaveStates(s => ({ ...s, [row.studentId]: 'saving' }));
     try {
+      console.log('💾 Saving row:', row.studentId);
       const res = await fetchWithAuth(`${API}/marks/bulk-save/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -316,51 +361,109 @@ export default function MarksEntryPage() {
           term: f.term,
           academic_year: f.year,
           competency: row.comp,
-          ca_score: row.ca === '' ? null : Number(row.ca),
-          exam_score: row.exam === '' ? null : Number(row.exam),
+          a1_score: row.a1 === '' ? null : Number(row.a1),
+          a2_score: row.a2 === '' ? null : Number(row.a2),
+          a3_score: row.a3 === '' ? null : Number(row.a3),
         }]),
       });
-      if (!res?.ok) throw new Error();
+      if (!res?.ok) {
+        const errorText = await res.text();
+        console.error('Save error:', errorText);
+        throw new Error('Save failed');
+      }
       setSaveStates(s => ({ ...s, [row.studentId]: 'saved' }));
-    } catch {
+      console.log('✅ Saved:', row.studentId);
+    } catch (e) {
+      console.error('❌ Save error:', e);
       setSaveStates(s => ({ ...s, [row.studentId]: 'error' }));
       showToast('Auto-save failed for one record', false);
     }
+  }, [showToast]);
+
+  // ── Update row (no autosave) ──────────────────────────────────────
+  const updateRow = useCallback((studentId, field, value) => {
+    setRows(rs => {
+      return rs.map(r => r.studentId === studentId ? { ...r, [field]: value } : r);
+    });
   }, []);
 
-  // ── Update row + schedule autosave ────────────────────────────────────────
-  const updateRow = useCallback((studentId, field, value) => {
-    setSaveStates(s => ({ ...s, [studentId]: 'idle' }));
-    setRows(rs => {
-      const updated = rs.map(r => r.studentId === studentId ? { ...r, [field]: value } : r);
-      const row = updated.find(r => r.studentId === studentId);
-      clearTimeout(timers.current[studentId]);
-      timers.current[studentId] = setTimeout(() => saveRow(row), 900);
-      return updated;
-    });
-  }, [saveRow]);
-
-  const addRow = () =>
+  const addRow = useCallback(() =>
     setRows(rs => [...rs, {
       studentId: `manual-${Date.now()}`,
       markId: null,
       name: '', adm: '', cls: filters.cls,
       photo: null,
-      comp: '', ca: '', exam: '',
-    }]);
+      comp: '', a1: '', a2: '', a3: '',
+    }]), [filters.cls]);
 
-  const removeRow = (studentId) => {
+  // ── Save all rows manually ────────────────────────────────────────
+  const saveAllRows = useCallback(async () => {
+    const f = filtersRef.current;
+    const subject = f.subject === '__custom__' ? customSubjectRef.current : f.subject;
+    if (!subject) {
+      showToast('Please select a subject', false);
+      return;
+    }
+
+    const rowsToSave = rows.filter(r => r.a1 !== '' || r.a2 !== '' || r.a3 !== '' || r.comp !== '');
+    if (rowsToSave.length === 0) {
+      showToast('No data to save', false);
+      return;
+    }
+
+    setSaveStates(rowsToSave.reduce((acc, r) => ({ ...acc, [r.studentId]: 'saving' }), {}));
+    
+    try {
+      const payload = rowsToSave.map(row => ({
+        student: row.studentId,
+        subject,
+        term: f.term,
+        academic_year: f.year,
+        competency: row.comp,
+        a1_score: row.a1 === '' ? null : Number(row.a1),
+        a2_score: row.a2 === '' ? null : Number(row.a2),
+        a3_score: row.a3 === '' ? null : Number(row.a3),
+      }));
+
+      const res = await fetchWithAuth(`${API}/marks/bulk-save/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res?.ok) {
+        const errorText = await res.text();
+        console.error('Save response:', res.status, errorText);
+        throw new Error(`Save failed: ${errorText}`);
+      }
+
+      const responseData = await res.json();
+      console.log('Save response:', responseData);
+
+      setSaveStates(rowsToSave.reduce((acc, r) => ({ ...acc, [r.studentId]: 'saved' }), {}));
+      showToast(`✅ Saved ${rowsToSave.length} record(s)`, true);
+    } catch (e) {
+      console.error('Save error:', e);
+      setSaveStates(rowsToSave.reduce((acc, r) => ({ ...acc, [r.studentId]: 'error' }), {}));
+      showToast('Failed to save records', false);
+    }
+  }, [rows, showToast]);
+
+  const removeRow = useCallback((studentId) => {
     clearTimeout(timers.current[studentId]);
     setRows(rs => rs.filter(r => r.studentId !== studentId));
-  };
+  }, []);
 
   const savingCount = Object.values(saveStates).filter(v => v === 'saving').length;
   const allSaved   = rows.length > 0 && Object.values(saveStates).every(v => v === 'saved');
 
-  const totals = rows.map(r => (Number(r.ca) || 0) + (Number(r.exam) || 0)).filter(t => t > 0);
+  // Calculate totals based on auto-calculated final marks
+  const totals = rows
+    .map(r => calculateFinalMark(r.a1, r.a2, r.a3))
+    .filter(t => t !== null && t > 0);
   const avg  = totals.length ? (totals.reduce((a, b) => a + b, 0) / totals.length).toFixed(1) : null;
-  const high = totals.length ? Math.max(...totals) : null;
-  const low  = totals.length ? Math.min(...totals) : null;
+  const high = totals.length ? Math.max(...totals).toFixed(1) : null;
+  const low  = totals.length ? Math.min(...totals).toFixed(1) : null;
 
   return (
     <div className="space-y-5">
@@ -413,11 +516,18 @@ export default function MarksEntryPage() {
 
             {/* action buttons */}
             <button
-              onClick={loadData}
+              onClick={() => loadData()}
               disabled={loading}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-medium transition disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
+            </button>
+            <button
+              onClick={() => saveAllRows()}
+              disabled={loading || savingCount > 0 || rows.length === 0}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-green-500 hover:bg-green-600 text-white text-xs font-medium transition disabled:opacity-50"
+            >
+              <Save className="w-3.5 h-3.5" /> Save All
             </button>
             <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-medium transition cursor-pointer">
               <Upload className="w-3.5 h-3.5" /> Bulk Upload
@@ -440,7 +550,8 @@ export default function MarksEntryPage() {
             <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Year</label>
             <div className="relative">
               <select
-                className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-xl px-2 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 pr-6 cursor-pointer"
+                disabled={loading || savingCount > 0}
+                className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-xl px-2 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 pr-6 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 value={filters.year}
                 onChange={e => setFilter('year', e.target.value)}
               >
@@ -454,7 +565,8 @@ export default function MarksEntryPage() {
             <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Term</label>
             <div className="relative">
               <select
-                className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-xl px-2 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 pr-6 cursor-pointer"
+                disabled={loading || savingCount > 0}
+                className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-xl px-2 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 pr-6 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 value={filters.term}
                 onChange={e => setFilter('term', e.target.value)}
               >
@@ -478,7 +590,8 @@ export default function MarksEntryPage() {
             <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Class</label>
             <div className="relative">
               <select
-                className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-xl px-2 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 pr-6 cursor-pointer"
+                disabled={loading || savingCount > 0}
+                className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-xl px-2 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 pr-6 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 value={filters.cls}
                 onChange={e => setFilter('cls', e.target.value)}
               >
@@ -489,7 +602,92 @@ export default function MarksEntryPage() {
             </div>
           </div>
         </div>
+        
+        {/* Scales Section */}
+        <div className="border-t border-gray-100 p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-1 h-3 rounded-full bg-gradient-to-b from-purple-500 to-blue-500" />
+              <span className="text-xs font-bold text-purple-700 uppercase tracking-widest">Assessment Scales (20% + 80%)</span>
+              <span className="text-[10px] text-gray-500 ml-2">A1: {filters.a1Max} | A2: {filters.a2Max} | A3: {filters.a3Max}</span>
+            </div>
+            <button
+              onClick={() => setEditingScales(!editingScales)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                editingScales
+                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                  : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+              }`}
+            >
+              {editingScales ? 'Done' : 'Edit Scales'}
+            </button>
+          </div>
+          
+          {editingScales && (
+            <div className="grid grid-cols-3 gap-2 mt-3">
+              {/* A1 Max */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">A1 Max</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="50"
+                  className="w-full bg-purple-50 border border-purple-200 rounded-xl px-2 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
+                  value={filters.a1Max}
+                  onChange={e => setFilter('a1Max', Math.max(1, Math.min(50, Number(e.target.value))))}
+                />
+              </div>
+              {/* A2 Max */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">A2 Max</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="50"
+                  className="w-full bg-purple-50 border border-purple-200 rounded-xl px-2 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
+                  value={filters.a2Max}
+                  onChange={e => setFilter('a2Max', Math.max(1, Math.min(50, Number(e.target.value))))}
+                />
+              </div>
+              {/* A3 Max */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">A3 Max (80%)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="200"
+                  className="w-full bg-orange-50 border border-orange-200 rounded-xl px-2 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
+                  value={filters.a3Max}
+                  onChange={e => setFilter('a3Max', Math.max(1, Math.min(200, Number(e.target.value))))}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Status Banner - Shows current view and pending saves */}
+      {(loading || savingCount > 0) && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="w-4 h-4 text-blue-600 animate-spin" />
+            <div>
+              <p className="text-sm font-semibold text-blue-900">
+                {loading ? 'Loading' : 'Saving'} marks for <span className="text-blue-700">{filters.term} · {filters.year}</span>
+                {filters.cls && <span className="text-blue-700"> · {filters.cls}</span>}
+              </p>
+              <p className="text-xs text-blue-600 mt-0.5">
+                {loading ? 'Fetching student data…' : `${savingCount} record${savingCount !== 1 ? 's' : ''} being saved…`}
+              </p>
+            </div>
+          </div>
+          {savingCount > 0 && (
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
+              {savingCount} saving
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -518,18 +716,18 @@ export default function MarksEntryPage() {
               {filters.cls && <span className="ml-2 text-xs font-normal text-gray-400">— {filters.cls}</span>}
               <span className="ml-2 text-xs font-normal text-gray-400">· {filters.term} · {filters.year}</span>
             </h2>
-            <p className="text-[11px] text-gray-400 mt-0.5">Changes are saved automatically</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">Click "Save All" button to save all changes</p>
           </div>
-          <button onClick={addRow} className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+          <button onClick={() => addRow()} className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
             <Plus className="w-4 h-4" /> Add Row
           </button>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">
               <tr>
-                {['#', 'Student Name', 'Adm. No.', 'Class', 'Competency', 'CA (/40)', 'Exam (/60)', 'Total', 'Grade', 'Status', ''].map(h => (
+                {['#', 'Student Name', 'Adm. No.', 'Class', 'Competency', `A1 (/${filters.a1Max})`, `A2 (/${filters.a2Max})`, `A3 (80%, /${filters.a3Max})`, 'Total (/100)', 'Grade', 'Status', ''].map(h => (
                   <th key={h} className="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -537,24 +735,23 @@ export default function MarksEntryPage() {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={11} className="text-center py-10 text-gray-400">
+                  <td colSpan={12} className="text-center py-10 text-gray-400">
                     <RefreshCw className="w-5 h-5 animate-spin inline mr-2" />Loading students…
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={11} className="text-center py-10 text-red-400">{error}</td>
+                  <td colSpan={12} className="text-center py-10 text-red-400">{error}</td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="text-center py-10 text-gray-400">
+                  <td colSpan={12} className="text-center py-10 text-gray-400">
                     No students found. {filters.cls ? `No students in ${filters.cls}.` : 'Select a class or add a row manually.'}
                   </td>
                 </tr>
               ) : rows.map((row, i) => {
-                const total = (Number(row.ca) || 0) + (Number(row.exam) || 0);
-                const hasScore = row.ca !== '' || row.exam !== '';
-                const g = hasScore ? getGrade(total) : null;
+                const finalMark = calculateFinalMark(row.a1, row.a2, row.a3);
+                const g = finalMark !== null ? getGrade(finalMark) : null;
                 const ss = saveStates[row.studentId];
                 return (
                   <tr key={row.studentId} className={`hover:bg-gray-50 transition-colors ${ss === 'saving' ? 'bg-teal-50/30' : ''}`}>
@@ -588,24 +785,48 @@ export default function MarksEntryPage() {
                     </td>
                     <td className="px-4 py-3">
                       <input
-                        type="number" min="0" max="40"
-                        className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        type="number" 
+                        min="0" 
+                        max={filters.a1Max}
+                        className="w-14 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-purple-400"
                         placeholder="0"
-                        value={row.ca}
-                        onChange={e => updateRow(row.studentId, 'ca', e.target.value)}
+                        value={row.a1}
+                        onChange={e => {
+                          const val = e.target.value === '' ? '' : Math.min(filters.a1Max, Math.max(0, Number(e.target.value)));
+                          updateRow(row.studentId, 'a1', val);
+                        }}
                       />
                     </td>
                     <td className="px-4 py-3">
                       <input
-                        type="number" min="0" max="60"
-                        className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        type="number" 
+                        min="0" 
+                        max={filters.a2Max}
+                        className="w-14 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-purple-400"
                         placeholder="0"
-                        value={row.exam}
-                        onChange={e => updateRow(row.studentId, 'exam', e.target.value)}
+                        value={row.a2}
+                        onChange={e => {
+                          const val = e.target.value === '' ? '' : Math.min(filters.a2Max, Math.max(0, Number(e.target.value)));
+                          updateRow(row.studentId, 'a2', val);
+                        }}
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        type="number" 
+                        min="0" 
+                        max={filters.a3Max}
+                        className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-400"
+                        placeholder="0"
+                        value={row.a3}
+                        onChange={e => {
+                          const val = e.target.value === '' ? '' : Math.min(filters.a3Max, Math.max(0, Number(e.target.value)));
+                          updateRow(row.studentId, 'a3', val);
+                        }}
                       />
                     </td>
                     <td className="px-4 py-3 text-center font-semibold text-gray-700">
-                      {hasScore ? total : '—'}
+                      {finalMark !== null ? finalMark.toFixed(1) : '—'}
                     </td>
                     <td className="px-4 py-3 text-center">
                       {g
@@ -631,9 +852,30 @@ export default function MarksEntryPage() {
         </div>
       </div>
 
+      {/* Sticky Save Button at Bottom */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-4 flex justify-end gap-3">
+        <button
+          onClick={() => loadData()}
+          disabled={loading || savingCount > 0}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium transition disabled:opacity-50"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+        </button>
+        <button
+          onClick={() => saveAllRows()}
+          disabled={loading || savingCount > 0 || rows.length === 0}
+          className="inline-flex items-center gap-1.5 px-6 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white text-sm font-medium transition disabled:opacity-50"
+        >
+          <Save className="w-4 h-4" /> Save All ({rows.length})
+        </button>
+      </div>
+
+      {/* Add padding to prevent content from hiding under sticky button */}
+      <div className="h-20"></div>
+
       {/* Toast */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 flex items-center gap-2 px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium z-50 ${toast.ok ? 'bg-green-600' : 'bg-red-500'}`}>
+        <div className={`fixed bottom-24 right-6 flex items-center gap-2 px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium z-50 ${toast.ok ? 'bg-green-600' : 'bg-red-500'}`}>
           {toast.ok ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
           {toast.msg}
         </div>
@@ -641,3 +883,5 @@ export default function MarksEntryPage() {
     </div>
   );
 }
+
+/* Remove old table closing and toast */

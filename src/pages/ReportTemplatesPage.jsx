@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { FileText, Eye, Printer, Check } from 'lucide-react';
+import { FileText, Eye, Printer, Check, Maximize2, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useConfig } from '../context/ConfigContext';
 import { useReportTemplate } from '../context/ReportTemplateContext';
 import BIQLogo from '../components/BIQLogo';
+import { ReportPreviewModal } from '../components/ReportPreviewModal';
 import { loadReceiptSettings } from '../services/receiptSettingsService';
 import ReportCardSalah from './ReportCardSalah';
 import ReportCardClassic from './ReportCardClassic';
@@ -20,14 +22,27 @@ const TEMPLATES = [
 ];
 
 const SAMPLE = {
-  school: { name: "St. Joseph's College Layibi", logo: null, address: 'P.O. Box 123, Gulu, Uganda', motto: 'Knowledge is Power' },
+  school: { name: "St. Joseph's College Layibi", logo: null, address: 'P.O BOX 246, Kasenyi/Entebbe, Wakiso', motto: 'Let Our Future Shine' },
   student: { full_name: 'Nakato Sarah', admission_number: 'ADM/2025/001', class_or_grade: 'S.3', stream: 'East', gender: 'Female', nationality: 'Ugandan', district: 'Kampala', enrollment_date: '2023-02-01', status: 'active', index_number: '', previous_school: "St. Mary's Primary", fees_balance: 120000, payment_status: 'partial', photo: null, guardians: [{ full_name: 'Nakato Grace', relationship: 'Mother', phone: '0701234567' }] },
   subjects: [
-    { subject_name: 'Mathematics', score: 78, ca_score: 28, exam_score: 50, grade: 'B', remark: 'Good performance' },
-    { subject_name: 'English',     score: 85, ca_score: 35, exam_score: 50, grade: 'A', remark: 'Excellent' },
-    { subject_name: 'Biology',     score: 62, ca_score: 22, exam_score: 40, grade: 'C', remark: 'Satisfactory' },
-    { subject_name: 'Chemistry',   score: 55, ca_score: 20, exam_score: 35, grade: 'D', remark: 'Needs improvement' },
-    { subject_name: 'History',     score: 90, ca_score: 38, exam_score: 52, grade: 'A', remark: 'Outstanding' },
+    { subject_name: 'Mathematics',          score: 78, ca_score: 28, exam_score: 50, grade: 'B', remark: 'Good performance' },
+    { subject_name: 'English Language',     score: 85, ca_score: 35, exam_score: 50, grade: 'A', remark: 'Excellent' },
+    { subject_name: 'Biology',              score: 62, ca_score: 22, exam_score: 40, grade: 'C', remark: 'Satisfactory' },
+    { subject_name: 'Chemistry',            score: 55, ca_score: 20, exam_score: 35, grade: 'D', remark: 'Needs improvement' },
+    { subject_name: 'History',              score: 90, ca_score: 38, exam_score: 52, grade: 'A', remark: 'Outstanding' },
+    { subject_name: 'Geography',            score: 72, ca_score: 30, exam_score: 42, grade: 'B', remark: 'Good' },
+    { subject_name: 'Physics',              score: 68, ca_score: 26, exam_score: 42, grade: 'B', remark: 'Good performance' },
+    { subject_name: 'Computer Studies',     score: 80, ca_score: 32, exam_score: 48, grade: 'A', remark: 'Excellent' },
+    { subject_name: 'Agriculture',          score: 74, ca_score: 29, exam_score: 45, grade: 'B', remark: 'Good' },
+    { subject_name: 'Religious Education',  score: 88, ca_score: 36, exam_score: 52, grade: 'A', remark: 'Outstanding' },
+    { subject_name: 'Kiswahili',            score: 59, ca_score: 21, exam_score: 38, grade: 'C', remark: 'Satisfactory' },
+    { subject_name: 'Fine Art',             score: 76, ca_score: 30, exam_score: 46, grade: 'B', remark: 'Good performance' },
+    { subject_name: 'Physical Education',   score: 83, ca_score: 33, exam_score: 50, grade: 'A', remark: 'Excellent' },
+    { subject_name: 'Economics',            score: 65, ca_score: 25, exam_score: 40, grade: 'B', remark: 'Good' },
+    { subject_name: 'Entrepreneurship',     score: 70, ca_score: 28, exam_score: 42, grade: 'B', remark: 'Good performance' },
+    { subject_name: 'Literature',           score: 58, ca_score: 20, exam_score: 38, grade: 'C', remark: 'Satisfactory' },
+    { subject_name: 'Technical Drawing',    score: 45, ca_score: 16, exam_score: 29, grade: 'D', remark: 'Needs improvement' },
+    { subject_name: 'Music',                score: 92, ca_score: 40, exam_score: 52, grade: 'A', remark: 'Outstanding' },
   ],
   attendance: [{ title: 'Term 1 Attendance', description: 'Present 58/60 days', date: '2025-04-30' }],
   notes: [{ title: 'Class Teacher Note', description: 'Sarah is a hardworking student who participates actively in class.', date: '2025-04-30' }],
@@ -301,6 +316,9 @@ export const TEMPLATE_MAP = {
 export default function ReportTemplatesPage() {
   const { template: selected, setTemplate: setSelected } = useReportTemplate();
   const [previewing, setPreviewing] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalTemplate, setModalTemplate] = useState(null);
+  const navigate = useNavigate();
   const { schoolInfo } = useConfig();
   const [rsLogo, setRsLogo] = useState('');
 
@@ -325,6 +343,15 @@ export default function ReportTemplatesPage() {
   const PreviewComponent = TEMPLATE_MAP[selected] || ClassicPreview;
 
   const handleSelect = (id) => { setSelected(id); setPreviewing(true); };
+
+  const handleOpenModal = (templateId) => {
+    setModalTemplate(templateId);
+    setModalOpen(true);
+  };
+
+  const handleFullPagePreview = (templateId) => {
+    navigate(`/preview-report?template=${templateId}`);
+  };
 
   const THUMBS = {
     salah:        <div className="w-10 space-y-0.5"><div className="h-2 rounded" style={{background:'linear-gradient(90deg,#1e3a8a,#d4af37)'}} />{[...Array(4)].map((_,i)=><div key={i} className="h-1 bg-blue-200 rounded"/>)}</div>,
@@ -362,21 +389,45 @@ export default function ReportTemplatesPage() {
         <div className="space-y-3">
           <p className="text-sm font-semibold text-gray-700">Select Template</p>
           {TEMPLATES.map(t => (
-            <button key={t.id} onClick={() => handleSelect(t.id)}
-              className={`w-full flex items-start gap-4 p-4 rounded-xl border-2 text-left transition-all ${
-                selected === t.id ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}>
-              <div className={`w-16 h-20 rounded-lg shrink-0 flex items-center justify-center border-2 ${selected === t.id ? 'border-indigo-300 bg-indigo-100' : 'border-gray-200 bg-gray-50'}`}>
-                {THUMBS[t.id]}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-gray-800">{t.name}</p>
-                  {selected === t.id && <Check className="w-4 h-4 text-indigo-600" />}
+            <div key={t.id} className={`flex items-start gap-4 p-4 rounded-xl border-2 transition-all ${
+              selected === t.id ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 bg-white hover:border-gray-300'
+            }`}>
+              <button 
+                onClick={() => handleSelect(t.id)}
+                className="flex items-start gap-4 text-left flex-1"
+              >
+                <div className={`w-16 h-20 rounded-lg shrink-0 flex items-center justify-center border-2 ${selected === t.id ? 'border-indigo-300 bg-indigo-100' : 'border-gray-200 bg-gray-50'}`}>
+                  {THUMBS[t.id]}
                 </div>
-                <p className="text-sm text-gray-500 mt-0.5">{t.description}</p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-gray-800">{t.name}</p>
+                    {selected === t.id && <Check className="w-4 h-4 text-indigo-600" />}
+                  </div>
+                  <p className="text-sm text-gray-500 mt-0.5">{t.description}</p>
+                </div>
+              </button>
+              
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-2 shrink-0">
+                <button
+                  onClick={() => handleOpenModal(t.id)}
+                  className="inline-flex items-center justify-center gap-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors"
+                  title="Preview in modal"
+                >
+                  <Maximize2 className="w-4 h-4" />
+                  <span className="hidden sm:inline">Modal</span>
+                </button>
+                <button
+                  onClick={() => handleFullPagePreview(t.id)}
+                  className="inline-flex items-center justify-center gap-1 px-3 py-2 bg-indigo-100 border border-indigo-300 text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-200 transition-colors"
+                  title="Preview in full page"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span className="hidden sm:inline">Full Page</span>
+                </button>
               </div>
-            </button>
+            </div>
           ))}
 
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
@@ -399,6 +450,17 @@ export default function ReportTemplatesPage() {
           </div>
         )}
       </div>
+
+      {/* Report Preview Modal */}
+      {modalTemplate && (
+        <ReportPreviewModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          templateId={modalTemplate}
+          templateName={TEMPLATES.find(t => t.id === modalTemplate)?.name}
+          data={sampleWithLogo}
+        />
+      )}
     </div>
   );
 }

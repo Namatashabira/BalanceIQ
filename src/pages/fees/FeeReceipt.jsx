@@ -373,7 +373,7 @@ export default function FeeReceipt({ studentId: initStudentId, term: initTerm, a
 
           <div
             className="border border-gray-200 rounded-xl bg-white overflow-hidden"
-            dangerouslySetInnerHTML={{ __html: buildReceiptHTML(student, payments, summary, term, year, school, { ...sig, stamp: previewStamp }, false) }}
+            dangerouslySetInnerHTML={{ __html: buildReceiptHTML(student, payments, summary, term, year, school, { ...sig, stamp: previewStamp || sig.stamp }, false) }}
           />
         </>
       )}

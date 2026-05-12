@@ -1,4 +1,7 @@
 export function PerformanceTable({ subjects, assessmentModel }) {
+  const totalRows = 20;
+  const emptyRows = Math.max(0, totalRows - subjects.length);
+
   return (
     <section>
       <h3>PERFORMANCE RECORDS</h3>
@@ -39,9 +42,52 @@ export function PerformanceTable({ subjects, assessmentModel }) {
                 <td key={idx}>{v}</td>
               ))}
 
+              {assessmentModel === "A1" && s.scores.length === 3 && (
+                <>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                </>
+              )}
+
+              {assessmentModel === "U1" && s.scores.length === 4 && (
+                <td>&nbsp;</td>
+              )}
+
               <td>{s.grade}</td>
               <td>{s.achievement}</td>
               <td>{s.teacher}</td>
+            </tr>
+          ))}
+
+          {Array.from({ length: emptyRows }).map((_, i) => (
+            <tr key={`empty-${i}`}>
+              <td>&nbsp;</td>
+              <td>&nbsp;</td>
+              {assessmentModel === "A1" && (
+                <>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                </>
+              )}
+              {assessmentModel === "U1" && (
+                <>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                </>
+              )}
+              <td>&nbsp;</td>
+              <td>&nbsp;</td>
+              <td>&nbsp;</td>
             </tr>
           ))}
         </tbody>

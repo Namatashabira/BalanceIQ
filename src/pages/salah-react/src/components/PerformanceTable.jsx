@@ -1,4 +1,8 @@
 export function PerformanceTable({ subjects, assessmentModel }) {
+  // Get the maximum number of rows needed (subjects + empty lines)
+  const totalRows = Math.max(subjects.length, 20); // Show at least 20 rows
+  const emptyRows = totalRows - subjects.length;
+
   return (
     <section>
       <h3>PERFORMANCE RECORDS</h3>
@@ -9,13 +13,21 @@ export function PerformanceTable({ subjects, assessmentModel }) {
             <th>Subject</th>
             {assessmentModel === "A1" && (
               <>
-                <th>A1</th><th>A2</th><th>A3</th><th>AVG</th>
-                <th>20%</th><th>80%</th><th>100%</th>
+                <th>A1</th>
+                <th>A2</th>
+                <th>A3</th>
+                <th>AVG</th>
+                <th>20%</th>
+                <th>80%</th>
+                <th>100%</th>
               </>
             )}
             {assessmentModel === "U1" && (
               <>
-                <th>U1</th><th>U2</th><th>U3</th><th>U4</th>
+                <th>U1</th>
+                <th>U2</th>
+                <th>U3</th>
+                <th>U4</th>
                 <th>AVE</th>
               </>
             )}
@@ -29,12 +41,58 @@ export function PerformanceTable({ subjects, assessmentModel }) {
             <tr key={i}>
               <td>{s.code}</td>
               <td>{s.name}</td>
-              {s.scores.map((v, idx) => (
-                <td key={idx}>{v}</td>
-              ))}
+              {assessmentModel === "A1" && (
+                <>
+                  <td>{s.scores[0] || '—'}</td>
+                  <td>{s.scores[1] || '—'}</td>
+                  <td>{s.scores[2] || '—'}</td>
+                  <td>{s.scores[3] || '—'}</td>
+                  <td>{s.scores[4] || '—'}</td>
+                  <td>{s.scores[5] || '—'}</td>
+                  <td>{s.scores[6] || '—'}</td>
+                </>
+              )}
+              {assessmentModel === "U1" && (
+                <>
+                  <td>{s.scores[0] || '—'}</td>
+                  <td>{s.scores[1] || '—'}</td>
+                  <td>{s.scores[2] || '—'}</td>
+                  <td>{s.scores[3] || '—'}</td>
+                  <td>{s.scores[4] || '—'}</td>
+                </>
+              )}
               <td>{s.grade}</td>
               <td>{s.achievement}</td>
               <td>{s.teacher}</td>
+            </tr>
+          ))}
+          {Array.from({ length: emptyRows }).map((_, i) => (
+            <tr key={`empty-${i}`}>
+              <td>&nbsp;</td>
+              <td>&nbsp;</td>
+              {assessmentModel === "A1" && (
+                <>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                </>
+              )}
+              {assessmentModel === "U1" && (
+                <>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                </>
+              )}
+              <td>&nbsp;</td>
+              <td>&nbsp;</td>
+              <td>&nbsp;</td>
             </tr>
           ))}
         </tbody>
