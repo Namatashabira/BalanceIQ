@@ -96,10 +96,10 @@ const features = [
               <Link to="/pricing" className="text-gray-700 hover:text-blue-600 text-sm font-medium transition">Pricing</Link>
               <Link to="/about" className="text-gray-700 hover:text-blue-600 text-sm font-medium transition">About</Link>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3">
               <Link
                 to="/login"
-                className="text-gray-700 hover:text-gray-900 px-4 py-2 rounded-lg text-sm font-medium transition hidden sm:inline"
+                className="text-gray-700 hover:text-gray-900 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition"
               >
                 Sign In
               </Link>
@@ -112,7 +112,7 @@ const features = [
               </Link>
               <Link
                 to="/register"
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition shadow-md hover:shadow-lg"
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition shadow-md hover:shadow-lg"
               >
                 Get Started
               </Link>

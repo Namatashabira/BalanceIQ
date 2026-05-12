@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import BIQLogo from '../components/BIQLogo';
 import { usePlan } from '../context/PlanContext';
-import { CheckCircle, XCircle, Zap, ArrowRight, Download, Monitor, Smartphone } from 'lucide-react';
+import { CheckCircle, XCircle, Zap, ArrowRight, Download, Monitor, Smartphone, Loader2 } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api';
 
