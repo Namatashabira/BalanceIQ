@@ -71,30 +71,36 @@ export default function Sidebar({ isOpen, onToggle, sidebarWidth = 256 }) {
     return () => window.removeEventListener('storage', profileHandler);
   }, []);
 
-  // Business name sync (localStorage + fetch fallback)
+  // Business name sync (localStorage + fetch fallback) - PERSISTENT
   useEffect(() => {
     const storedName = typeof window !== 'undefined' ? localStorage.getItem('businessName') : null;
-    if (storedName) setBusinessName(storedName);
-
-    const handler = () => {
-      const next = localStorage.getItem('businessName') || '';
-      setBusinessName(next);
-    };
-    window.addEventListener('storage', handler);
-
-    // Fetch if missing
-    if (!storedName) {
-      axios.get(`${import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api'}/core/business-settings/`)
-        .then(res => {
-          const name = res.data?.businessName || '';
-          if (name) {
-            setBusinessName(name);
-            localStorage.setItem('businessName', name);
-          }
-        })
-        .catch(err => console.error('Failed to fetch business name for sidebar:', err));
+    if (storedName) {
+      setBusinessName(storedName);
+      return; // Use stored name, don't fetch
     }
 
+    // Only fetch if not in localStorage
+    const fetchBusinessName = async () => {
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api'}/core/business-settings/`);
+        const name = res.data?.businessName || res.data?.name || '';
+        if (name) {
+          setBusinessName(name);
+          localStorage.setItem('businessName', name);
+        }
+      } catch (err) {
+        console.error('Failed to fetch business name:', err);
+      }
+    };
+
+    fetchBusinessName();
+
+    // Listen for storage changes
+    const handler = () => {
+      const next = localStorage.getItem('businessName') || '';
+      if (next) setBusinessName(next);
+    };
+    window.addEventListener('storage', handler);
     return () => window.removeEventListener('storage', handler);
   }, []);
 
@@ -157,7 +163,7 @@ export default function Sidebar({ isOpen, onToggle, sidebarWidth = 256 }) {
             {(businessName || 'B').charAt(0).toUpperCase()}
           </div>
           <span className="text-sm font-semibold text-gray-300 uppercase tracking-widest truncate">
-            {businessName || 'BusinessIQ'}
+            {businessName && businessName.trim() ? businessName : 'Your Business'}
           </span>
         </div>
 
