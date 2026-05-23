@@ -1,0 +1,510 @@
+import { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { jsPDF } from 'jspdf';
+import './report1.css';
+
+const API = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api');
+
+// ── DATA ────────────────────────────────────────────────────────────────────
+const defaultData = {
+  school: {
+    logo: '', name: 'ST. MARK SCHOOLS', subtitle: 'PRIMARY & SECONDARY',
+    address: 'Kayunga, Uganda', phone: '+256 700 123456', phone2: '+256 776 987654',
+    email: 'info@stmark.sc.ug', website: 'www.stmark.sc.ug', term: 'TERM 1', year: '2026',
+  },
+  student: {
+    photo: '', name: 'John Doe', gender: 'Male', section: 'A',
+    class: 'S.5', stream: 'Science', idNo: '12345', payCode: 'PC001', term: 'Term 1', year: '2026',
+  },
+  subjects: [
+    { code: 'ENG', name: 'English',         scores: [90, 85, 88, 87, 18, 69, 87], grade: 'A', achievement: 'Excellent',  teacher: 'Ms. Smith'    },
+    { code: 'BIO', name: 'Biology',          scores: [78, 80, 75, 78, 16, 62, 78], grade: 'B', achievement: 'Very Good',  teacher: 'Mr. Okello'   },
+    { code: 'MAT', name: 'Mathematics',      scores: [92, 88, 90, 90, 18, 72, 90], grade: 'A', achievement: 'Excellent',  teacher: 'Mr. Kato'     },
+    { code: 'CHE', name: 'Chemistry',        scores: [74, 70, 72, 72, 14, 58, 72], grade: 'B', achievement: 'Very Good',  teacher: 'Ms. Namutebi' },
+    { code: 'PHY', name: 'Physics',          scores: [85, 82, 84, 84, 17, 67, 84], grade: 'A', achievement: 'Excellent',  teacher: 'Mr. Ssali'    },
+    { code: 'HIS', name: 'History',          scores: [65, 60, 63, 63, 13, 50, 63], grade: 'C', achievement: 'Good',       teacher: 'Ms. Nakato'   },
+    { code: 'GEO', name: 'Geography',        scores: [70, 68, 69, 69, 14, 55, 69], grade: 'B', achievement: 'Very Good',  teacher: 'Mr. Mugisha'  },
+    { code: 'ICT', name: 'ICT',              scores: [88, 85, 87, 87, 17, 70, 87], grade: 'A', achievement: 'Excellent',  teacher: 'Mr. Tumwine'  },
+    { code: 'ENT', name: 'Entrepreneurship', scores: [76, 72, 74, 74, 15, 59, 74], grade: 'B', achievement: 'Very Good',  teacher: 'Ms. Apio'     },
+  ],
+  assessmentModel: 'A1',
+  summary: { average: 78, total: 100, result: 'Pass', position: 3, outOf: 30 },
+  overall: { identifier: 'OP1', achievement: 'Very Good', grade: 'B' },
+  comments: {
+    classTeacher: 'John has performed very well this term. Keep up the good work!',
+    headTeacher: 'Excellent performance. We encourage continued dedication to studies.',
+  },
+  admin: {
+    termEnded: '2026-04-17', nextTerm: '2026-05-04', balance: '0', nextFees: '450,000',
+    other: 'School uniform', classTeacherName: 'Mr. Ssempala David',
+    headTeacherName: 'Mrs. Nankya Patience',
+  },
+};
+
+// ── SVG ICONS ────────────────────────────────────────────────────────────────
+const IconPin  = () => <svg viewBox="0 0 24 24" fill="currentColor" className="r1-contact-icon"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>;
+const IconPhone= () => <svg viewBox="0 0 24 24" fill="currentColor" className="r1-contact-icon"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C10.61 21 3 13.39 3 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.46.57 3.58a1 1 0 01-.25 1.01l-2.2 2.2z"/></svg>;
+const IconMail = () => <svg viewBox="0 0 24 24" fill="currentColor" className="r1-contact-icon"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>;
+const IconWeb  = () => <svg viewBox="0 0 24 24" fill="currentColor" className="r1-contact-icon"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>;
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+function computeResult(subjects) {
+  if (!subjects?.length) return 'Result 3';
+  const grades = subjects.map(s => s.grade?.toUpperCase());
+  if (grades.every(g => g === 'E')) return 'Result 3';
+  if (grades.some(g => g === 'E')) return 'Result 2';
+  return 'Result 1';
+}
+
+function useImageUpload(initial = '') {
+  const [src, setSrc] = useState(initial);
+  const handle = e => { const f = e.target.files[0]; if (f) setSrc(URL.createObjectURL(f)); };
+  return [src, handle];
+}
+
+// ── SUB-COMPONENTS ───────────────────────────────────────────────────────────
+function R1Header({ school = {} }) {
+  const [logo, onLogo] = useImageUpload(school.logo || '');
+  return (
+    <header className="r1-header">
+      <div className="r1-header-left">
+        <div className="r1-logo-name">
+          <label className="r1-logo-label" title="Upload logo">
+            {logo ? <img src={logo} alt="logo" className="r1-logo-img" />
+                  : <div className="r1-logo-ph">Upload<br/>Logo</div>}
+            <input type="file" accept="image/*" onChange={onLogo} hidden />
+          </label>
+          <div className="r1-school-name-block">
+            <span className="r1-school-name">{school.name || 'School Name'}</span>
+            <span className="r1-school-sub">{school.subtitle || ''}</span>
+          </div>
+        </div>
+        <div className="r1-header-contacts">
+          <span className="r1-contact-line"><IconPin /> {school.address || 'Address'}</span>
+          <span className="r1-contact-line"><IconPhone /> {school.phone || 'Phone'} &nbsp;|&nbsp; {school.phone2 || 'Phone 2'}</span>
+          <span className="r1-contact-line"><IconMail /> {school.email || 'Email'} &nbsp;&nbsp; <IconWeb /> {school.website || 'Website'}</span>
+        </div>
+      </div>
+      <div className="r1-header-right">
+        <div className="r1-header-right-inner">
+          <span className="r1-report-title">REPORT CARD</span>
+          <span className="r1-cba-badge">COMPETENCY BASED ASSESSMENT</span>
+          <span className="r1-term-year">{school.term || 'TERM'} &nbsp;|&nbsp; {school.year || 'YEAR'}</span>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function R1StudentBio({ student = {} }) {
+  const [photo, onPhoto] = useImageUpload(student.photo || '');
+  return (
+    <section className="r1-bio">
+      <label className="r1-photo-label" title="Upload photo">
+        <div className="r1-photo-box">
+          {photo ? <img src={photo} alt="student" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                 : <span className="r1-photo-ph">Photo</span>}
+        </div>
+        <input type="file" accept="image/*" onChange={onPhoto} hidden />
+      </label>
+      <table className="r1-bio-table">
+        <tbody>
+          <tr>
+            <th>Name</th><td>{student.name || 'N/A'}</td>
+            <th>Gender</th><td>{student.gender || 'N/A'}</td>
+            <th>Section</th><td>{student.section || 'N/A'}</td>
+          </tr>
+          <tr>
+            <th>Class</th><td>{student.class || 'N/A'}</td>
+            <th>Stream</th><td>{student.stream || 'N/A'}</td>
+            <th>ID No</th><td>{student.idNo || 'N/A'}</td>
+          </tr>
+          <tr>
+            <th>Pay Code</th><td>{student.payCode || 'N/A'}</td>
+            <th>Term</th><td>{student.term || 'N/A'}</td>
+            <th>Academic Year</th><td>{student.year || 'N/A'}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+function R1PerformanceTable({ subjects = [], assessmentModel }) {
+  if (!subjects || subjects.length === 0) {
+    return (
+      <section>
+        <div className="r1-section-title">ACADEMIC PERFORMANCE</div>
+        <p style={{ padding: '20px', textAlign: 'center', color: '#999' }}>No subjects data available. Please ensure marks have been entered for this student.</p>
+      </section>
+    );
+  }
+  
+  return (
+    <section>
+      <div className="r1-section-title">ACADEMIC PERFORMANCE</div>
+      <table className="r1-table">
+        <thead>
+          <tr>
+            <th>#</th><th>Subject</th><th>Teacher</th><th>A1</th><th>A2</th><th>A3</th><th>Total</th><th>Grade</th><th>Achievement</th>
+          </tr>
+        </thead>
+        <tbody>
+          {subjects.map((s, i) => {
+            const a1 = s.scores?.[0] || 0;
+            const a2 = s.scores?.[1] || 0;
+            const a3 = s.scores?.[2] || 0;
+            const total = s.scores?.[6] || 0;
+            return (
+              <tr key={i}>
+                <td style={{textAlign:'center'}}>{i + 1}</td>
+                <td className="r1-subj-name">{s.name || 'Subject'}</td>
+                <td style={{fontSize:'9px'}}>{s.teacher || 'Teacher'}</td>
+                <td style={{textAlign:'center'}}>{typeof a1 === 'number' ? a1.toFixed(0) : a1}</td>
+                <td style={{textAlign:'center'}}>{typeof a2 === 'number' ? a2.toFixed(0) : a2}</td>
+                <td style={{textAlign:'center'}}>{typeof a3 === 'number' ? a3.toFixed(0) : a3}</td>
+                <td style={{textAlign:'center'}}>{typeof total === 'number' ? total.toFixed(0) : total}</td>
+                <td className="r1-grade-cell">{s.grade || 'N/A'}</td>
+                <td>{s.achievement || 'N/A'}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+function R1GradeScale() {
+  const grades = [
+    { g: 'A', r: '75–100', l: 'Excellent' },
+    { g: 'B', r: '60–74',  l: 'Very Good' },
+    { g: 'C', r: '50–59',  l: 'Good' },
+    { g: 'D', r: '35–49',  l: 'Fair' },
+    { g: 'E', r: '0–34',   l: 'Fail' },
+  ];
+  return (
+    <table className="r1-table r1-grade-scale">
+      <thead>
+        <tr><th>Grade</th><th>Range</th><th>Level</th></tr>
+      </thead>
+      <tbody>
+        {grades.map(({ g, r, l }) => (
+          <tr key={g}><td><span className="r1-grade-badge">{g}</span></td><td>{r}</td><td>{l}</td></tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function R1OverallPerformance({ overall = {} }) {
+  return (
+    <div className="r1-overall">
+      <div className="r1-ov-card"><span>Overall Identifier</span><strong>{overall.identifier || 'N/A'}</strong></div>
+      <div className="r1-ov-card"><span>Overall Achievement</span><strong>{overall.achievement || 'N/A'}</strong></div>
+      <div className="r1-ov-card r1-ov-grade"><span>Overall Grade</span><strong>{overall.grade || 'N/A'}</strong></div>
+    </div>
+  );
+}
+
+function R1KeyToTerms() {
+  return (
+    <div className="r1-key">
+      <span><strong>A1/U1:</strong> Avg Chapter/Unit Assessment</span>
+      <span><strong>Result 1:</strong> Passed all subjects</span>
+      <span><strong>Result 2:</strong> At least one grade E</span>
+      <span><strong>Result 3:</strong> All subjects grade E</span>
+    </div>
+  );
+}
+
+function R1Comments({ comments = {} }) {
+  return (
+    <div className="r1-comments">
+      <div className="r1-comment-block">
+        <div className="r1-comment-label">Class Teacher's Comment</div>
+        <div className="r1-comment-text">{comments.classTeacher || 'No comment available'}</div>
+      </div>
+      <div className="r1-comment-block">
+        <div className="r1-comment-label">Head Teacher's Comment</div>
+        <div className="r1-comment-text">{comments.headTeacher || 'No comment available'}</div>
+      </div>
+    </div>
+  );
+}
+
+function R1SummaryRow({ summary = {}, subjects = [] }) {
+  return (
+    <div className="r1-summary-row">
+      <span>Average: <strong>{summary.average || 0}</strong></span>
+      <span>Total: <strong>{summary.total || 100}</strong></span>
+      <span>Result: <strong>{summary.result || 'N/A'}</strong></span>
+      <span>Position: <strong>{summary.position || 0}/{summary.outOf || 0}</strong></span>
+    </div>
+  );
+}
+
+function R1Footer({ admin = {}, school = {}, staff = {} }) {
+  const [classSig, onClassSig] = useImageUpload('');
+  const [headSig, onHeadSig] = useImageUpload(staff?.headteacher_signature || '');
+  const [stamp, onStamp] = useImageUpload('');
+
+  const headteacherName = staff?.headteacher_name || admin.headTeacherName || 'Head Teacher';
+  const headteacherTitle = staff?.headteacher_title || 'HEAD TEACHER';
+
+  return (
+    <footer className="r1-footer">
+      <div className="r1-admin-grid">
+        <span>Term Ended: <strong>{admin.termEnded || 'N/A'}</strong></span>
+        <span>Next Term: <strong>{admin.nextTerm || 'N/A'}</strong></span>
+        <span>Fees Balance: <strong>UGX {admin.balance || '0'}</strong></span>
+        <span>Next Term Fees: <strong>UGX {admin.nextFees || '0'}</strong></span>
+      </div>
+
+      <div className="r1-sigs">
+        <div className="r1-sig-card">
+          <div className="r1-sig-role">CLASS TEACHER</div>
+          <div className="r1-sig-name">{admin.classTeacherName || 'Class Teacher'}</div>
+          <label className="r1-sig-upload" title="Upload signature">
+            {classSig ? <img src={classSig} alt="sig" className="r1-sig-img" />
+                      : <div className="r1-sig-ph">Upload Signature</div>}
+            <input type="file" accept="image/*" onChange={onClassSig} hidden />
+          </label>
+          <div className="r1-sig-line">Signature</div>
+        </div>
+
+        <div className="r1-stamp-card">
+          <label className="r1-sig-upload" title="Upload stamp">
+            {stamp ? <img src={stamp} alt="stamp" className="r1-stamp-img" />
+                   : <div className="r1-stamp-ph">Official<br />Stamp</div>}
+            <input type="file" accept="image/*" onChange={onStamp} hidden />
+          </label>
+        </div>
+
+        <div className="r1-sig-card">
+          <div className="r1-sig-role">{headteacherTitle}</div>
+          <div className="r1-sig-name">{headteacherName}</div>
+          <label className="r1-sig-upload" title="Upload signature">
+            {headSig ? <img src={headSig} alt="sig" className="r1-sig-img" />
+                     : <div className="r1-sig-ph">Upload Signature</div>}
+            <input type="file" accept="image/*" onChange={onHeadSig} hidden />
+          </label>
+          <div className="r1-sig-line">Signature</div>
+        </div>
+      </div>
+
+      <div className="r1-footer-bar">
+        This report is the property of {school.name || 'School'}. If found, please return it to the school.
+      </div>
+    </footer>
+  );
+}
+
+const PALETTES = [
+  { label: 'Navy & Gold', primary: '#1a3a52', accent: '#d4af37', accent2: '#f5e6d3' },
+  { label: 'Green & Cream', primary: '#2d5016', accent: '#e8d5b7', accent2: '#f9f5f0' },
+  { label: 'Maroon & Gold', primary: '#5c1a1a', accent: '#d4af37', accent2: '#f5e6d3' },
+];
+
+export default function Report1({ propData = null }) {
+  const [searchParams] = useSearchParams();
+  const studentId = searchParams.get('studentId') || '1';
+  const [data, setData] = useState(propData || defaultData);
+  const [palette, setPalette] = useState(PALETTES[0]);
+  const [customPrimary, setCustomPrimary] = useState('');
+  const [customAccent, setCustomAccent] = useState('');
+  const [watermark, setWatermark] = useState('');
+  const cardRef = useRef(null);
+
+  useEffect(() => {
+    if (propData) {
+      setData(propData);
+    } else if (studentId && studentId !== '1') {
+      fetchReportData();
+    }
+  }, [propData, studentId]);
+
+  async function fetchReportData() {
+    const cacheKey = `report1_student_${studentId}`;
+    const cachedData = localStorage.getItem(cacheKey);
+    
+    if (cachedData) {
+      console.log('Loading from cache:', cacheKey);
+      setData(JSON.parse(cachedData));
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('access_token');
+      const url = `${API}/school/students/${studentId}/`;
+      console.log('Fetching from:', url);
+      
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      
+      const response = await fetch(url, { headers });
+      console.log('Response status:', response.status);
+      
+      if (response.ok) {
+        const apiData = await response.json();
+        console.log('API Response:', apiData);
+        const transformedData = transformApiData(apiData);
+        console.log('Transformed Data:', transformedData);
+        localStorage.setItem(cacheKey, JSON.stringify(transformedData));
+        setData(transformedData);
+      } else {
+        console.error('API Error:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error details:', errorText);
+      }
+    } catch (error) {
+      console.error('Fetch error:', error);
+    }
+  }
+
+  function transformApiData(apiData) {
+    const subjects = (apiData.subjects || []).map(s => {
+      const a1 = s.a1_score || 0;
+      const a2 = s.a2_score || 0;
+      const a3 = s.a3_score || 0;
+      const assessmentAvg = (a1 + a2) / 2;
+      const total = (assessmentAvg * 0.2) + (a3 * 0.8);
+      return {
+        code: s.subject_code || 'N/A',
+        name: s.subject_name || 'Subject',
+        scores: [a1, a2, a3, assessmentAvg, assessmentAvg * 0.2, a3 * 0.8, total],
+        grade: s.grade || 'B',
+        achievement: s.achievement || s.remark || 'Good',
+        teacher: s.teacher || 'Teacher',
+      };
+    });
+    return {
+      school: {
+        ...defaultData.school,
+      },
+      student: {
+        photo: '',
+        name: apiData.student?.full_name || defaultData.student.name,
+        gender: apiData.student?.gender || defaultData.student.gender,
+        section: apiData.student?.stream || defaultData.student.section,
+        class: apiData.student?.class_or_grade || defaultData.student.class,
+        stream: apiData.student?.stream || defaultData.student.stream,
+        idNo: apiData.student?.admission_number || defaultData.student.idNo,
+        payCode: apiData.student?.index_number || defaultData.student.payCode,
+        term: defaultData.student.term,
+        year: defaultData.student.year,
+      },
+      subjects: subjects.length > 0 ? subjects : defaultData.subjects,
+      assessmentModel: 'A1',
+      summary: {
+        average: subjects.length > 0 ? Math.round(subjects.reduce((sum, s) => sum + s.scores[6], 0) / subjects.length) : 0,
+        total: 100,
+        result: 'Pass',
+        position: apiData.summary?.position || 0,
+        outOf: apiData.summary?.outOf || 0,
+      },
+      overall: {
+        identifier: 'OP1',
+        achievement: 'Very Good',
+        grade: 'B',
+      },
+      comments: {
+        classTeacher: apiData.notes?.[0]?.description || defaultData.comments.classTeacher,
+        headTeacher: defaultData.comments.headTeacher,
+      },
+      admin: defaultData.admin,
+      staff: {
+        headteacher_name: apiData.staff?.headteacher_name || defaultData.admin.headTeacherName,
+        headteacher_title: apiData.staff?.headteacher_title || 'HEAD TEACHER',
+        headteacher_signature: apiData.staff?.headteacher_signature || '',
+      },
+    };
+  }
+
+  const onWatermark = e => { const f = e.target.files[0]; if (f) setWatermark(URL.createObjectURL(f)); };
+
+  const primary = customPrimary || palette.primary;
+  const accent  = customAccent  || palette.accent;
+  const accent2 = palette.accent2;
+
+  const cssVars = {
+    '--r1-navy':  primary,
+    '--r1-gold':  accent,
+    '--r1-gold2': accent2,
+  };
+
+  function handlePrint() {
+    window.print();
+  }
+
+  return (
+    <div className="r1-page">
+      <div className="r1-controls no-print">        
+        <button className="r1-print-btn" onClick={handlePrint}>🖨 Print / Save PDF</button>
+
+        <div className="r1-palette-bar">
+          {PALETTES.map(p => (
+            <button
+              key={p.label}
+              className={`r1-palette-swatch${palette.label === p.label ? ' active' : ''}`}
+              style={{ background: p.primary, borderColor: p.accent }}
+              title={p.label}
+              onClick={() => { setPalette(p); setCustomPrimary(''); setCustomAccent(''); }}
+            />
+          ))}
+          <label className="r1-custom-label" title="Custom primary colour">
+            <span>Primary</span>
+            <input type="color" value={customPrimary || primary}
+              onChange={e => setCustomPrimary(e.target.value)} className="r1-color-input" />
+          </label>
+          <label className="r1-custom-label" title="Custom accent colour">
+            <span>Accent</span>
+            <input type="color" value={customAccent || accent}
+              onChange={e => setCustomAccent(e.target.value)} className="r1-color-input" />
+          </label>
+        </div>
+
+        <label className="r1-wm-btn">
+          💧 {watermark ? 'Change Watermark' : 'Add Watermark'}
+          <input type="file" accept="image/*" onChange={onWatermark} hidden />
+        </label>
+        {watermark && <button className="r1-wm-btn r1-wm-remove" onClick={() => setWatermark('')}>✕ Remove</button>}
+      </div>
+
+      <div className="r1-card" ref={cardRef} style={cssVars}>
+        <div className="r1-corner r1-tl" /><div className="r1-corner r1-tr" />
+        <div className="r1-corner r1-bl" /><div className="r1-corner r1-br" />
+
+        {watermark && (
+          <div className="r1-watermark-layer">
+            <img src={watermark} alt="" className="r1-watermark-img" />
+          </div>
+        )}
+
+        <div className="r1-inner">
+          <div className="r1-body">
+            <R1Header school={data.school} />
+            <R1StudentBio student={data.student} />
+            <R1PerformanceTable subjects={data.subjects} assessmentModel={data.assessmentModel} />
+            <R1SummaryRow summary={data.summary} subjects={data.subjects} />
+            <div className="r1-two-col">
+              <div>
+                <div className="r1-section-title">GRADE SCALE</div>
+                <R1GradeScale />
+              </div>
+              <div>
+                <div className="r1-section-title">OVERALL PERFORMANCE</div>
+                <R1OverallPerformance overall={data.overall} />
+                <R1KeyToTerms />
+              </div>
+            </div>
+            <R1Comments comments={data.comments} />
+          </div>
+          <div className="r1-footer-push">
+            <R1Footer admin={data.admin} school={data.school} staff={data.staff} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

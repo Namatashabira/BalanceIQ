@@ -9,6 +9,8 @@ import { UsergroupAddOutlined } from '@ant-design/icons';
 export const getNavigationItems = (labels, features, allowedPages, businessType, isAdmin, user) => {
   const isSchool     = businessType === 'school';
   const isSuperadmin = user?.is_superuser || user?.is_staff;
+  const isHeadteacher = user?.school_role?.toLowerCase() === 'headteacher';
+  const isTenantOwner = user?.role === 'tenant_admin';
 
   const isEnabled = (key, def = true) => {
     const v = features?.[key];
@@ -33,7 +35,7 @@ export const getNavigationItems = (labels, features, allowedPages, businessType,
     { path: '/report-templates',   label: 'Report Templates',   icon: FileText,              enabled: hasAccess('report-templates') },
     { path: '/student-reports',    label: 'Student Reports',    icon: BookOpen,              enabled: hasAccess('report-templates') },
     { path: '/school-accounting',  label: 'School Accounting',  icon: Receipt,               enabled: isEnabled('accounting_enabled') && hasAccess('accounting_enabled') },
-    { path: '/school-settings',    label: 'School Settings',    icon: GraduationCap,         enabled: isAdmin },
+    { path: '/school-settings',    label: 'School Settings',    icon: GraduationCap,         enabled: isAdmin || isHeadteacher || isTenantOwner },
     { path: '/manage-users',       label: 'Manage Users',       icon: Lock,                  enabled: isSuperadmin },
   ];
 

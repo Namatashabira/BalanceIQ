@@ -1,0 +1,763 @@
+/* ================================================
+   REPORT 5 — TABLE-BASED PROFESSIONAL DESIGN
+================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --r5-primary: #1e40af;
+  --r5-secondary: #1e3a8a;
+  --r5-accent: #3b82f6;
+  --r5-border: #e5e7eb;
+  --r5-text: #1f2937;
+  --r5-light: #f9fafb;
+}
+
+.r5-page {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  color: var(--r5-text);
+}
+
+.r5-controls {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  justify-content: center;
+}
+
+.r5-print-btn {
+  padding: 10px 24px;
+  background: var(--r5-primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(30, 64, 175, 0.2);
+  transition: all 0.2s;
+}
+
+.r5-print-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);
+}
+
+.r5-card-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 210mm;
+  margin: 30px 0;
+}
+
+.r5-card {
+  width: 100%;
+  max-width: 210mm;
+  background: white;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  border: 3px solid var(--r5-primary);
+}
+
+/* Decorative corners */
+.r5-card-wrapper::before,
+.r5-card-wrapper::after {
+  content: '';
+  position: absolute;
+  width: 25px;
+  height: 25px;
+  border: 2px solid var(--r5-primary);
+  z-index: 10;
+}
+
+.r5-card-wrapper::before {
+  top: -15px;
+  left: -15px;
+  border-right: none;
+  border-bottom: none;
+  border-radius: 8px 0 0 0;
+}
+
+.r5-card-wrapper::after {
+  top: -15px;
+  right: -15px;
+  border-left: none;
+  border-bottom: none;
+  border-radius: 0 8px 0 0;
+}
+
+/* Bottom corners */
+.r5-card::before,
+.r5-card::after {
+  content: '';
+  position: absolute;
+  width: 25px;
+  height: 25px;
+  border: 2px solid var(--r5-primary);
+  z-index: 10;
+  bottom: -18px;
+}
+
+.r5-card::before {
+  left: -18px;
+  border-right: none;
+  border-top: none;
+  border-radius: 0 0 0 8px;
+}
+
+.r5-card::after {
+  right: -18px;
+  border-left: none;
+  border-top: none;
+  border-radius: 0 0 8px 0;
+}
+
+/* ── MODERN ACADEMIC HEADER ────────────────────────────────────────────── */
+.r5-header {
+  background: white;
+  padding: 24px;
+  border-bottom: 3px solid var(--r5-primary);
+}
+
+.r5-header-container {
+  display: grid;
+  grid-template-columns: 100px 1fr 120px;
+  gap: 24px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+/* Logo Section */
+.r5-logo-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%);
+  border: 2px solid var(--r5-primary);
+  border-radius: 12px;
+  padding: 12px;
+  height: 100px;
+  box-shadow: 0 2px 8px rgba(30, 64, 175, 0.1);
+}
+
+.r5-logo-img {
+  max-height: 90px;
+  max-width: 90px;
+  object-fit: contain;
+}
+
+.r5-logo-placeholder {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border-radius: 8px;
+}
+
+/* Center Section */
+.r5-center-section {
+  text-align: center;
+}
+
+.r5-school-name {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--r5-primary);
+  margin-bottom: 6px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.r5-school-motto {
+  font-size: 14px;
+  font-style: italic;
+  color: var(--r5-secondary);
+  margin-bottom: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.r5-school-info-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+}
+
+.r5-info-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 10px;
+  background: var(--r5-light);
+  border-radius: 6px;
+  border-left: 2px solid var(--r5-accent);
+}
+
+.r5-info-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--r5-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.r5-info-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+/* Term/Year Card */
+.r5-term-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: linear-gradient(135deg, var(--r5-primary) 0%, var(--r5-secondary) 100%);
+  color: white;
+  padding: 16px 14px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.r5-term-text {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.r5-year-text {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+/* Divider */
+.r5-header-divider {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--r5-primary), transparent);
+  margin: 16px 0;
+}
+
+/* Report Title */
+.r5-report-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--r5-primary);
+  text-align: center;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+/* ── STUDENT INFO ───────────────────────────────────────────────────────── */
+.r5-student-info {
+  padding: 16px 20px;
+  background: var(--r5-light);
+  border-bottom: 1px solid var(--r5-border);
+}
+
+.r5-info-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.r5-info-table tr {
+  border-bottom: 1px solid var(--r5-border);
+}
+
+.r5-info-table tr:last-child {
+  border-bottom: none;
+}
+
+.r5-info-table td {
+  padding: 8px 12px;
+  font-size: 15px;
+}
+
+.r5-label {
+  font-weight: 600;
+  color: var(--r5-primary);
+  width: 20%;
+}
+
+.r5-value {
+  color: var(--r5-text);
+  width: 30%;
+}
+
+/* ── SUBJECTS TABLE ─────────────────────────────────────────────────────── */
+.r5-subjects-section {
+  padding: 20px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.r5-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--r5-primary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--r5-primary);
+  display: inline-block;
+}
+
+.r5-subjects-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  border: 1px solid var(--r5-border);
+}
+
+.r5-subjects-table thead {
+  background: var(--r5-primary);
+  color: white;
+}
+
+.r5-subjects-table th {
+  padding: 10px 8px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.r5-subjects-table th:last-child {
+  border-right: none;
+}
+
+.r5-subjects-table td {
+  padding: 10px 8px;
+  text-align: left;
+  font-size: 15px;
+  border-right: 1px solid var(--r5-border);
+  border-bottom: 1px solid var(--r5-border);
+}
+
+.r5-subjects-table td:last-child {
+  border-right: none;
+}
+
+.r5-subjects-table tbody tr:nth-child(even) {
+  background: var(--r5-light);
+}
+
+.r5-subjects-table tbody tr:hover {
+  background: #f0f4ff;
+}
+
+.r5-center {
+  text-align: center !important;
+}
+
+.r5-bold {
+  font-weight: 700;
+  color: var(--r5-primary);
+}
+
+.r5-grade {
+  font-weight: 700;
+  color: #059669;
+  font-size: 16px;
+}
+
+/* ── SUMMARY ────────────────────────────────────────────────────────────── */
+.r5-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--r5-light);
+  border-top: 1px solid var(--r5-border);
+  border-bottom: 1px solid var(--r5-border);
+}
+
+.r5-summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: white;
+  border-radius: 6px;
+  border-left: 4px solid var(--r5-accent);
+}
+
+.r5-summary-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.r5-summary-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--r5-primary);
+}
+
+/* ── COMMENTS ───────────────────────────────────────────────────────────── */
+.r5-comments {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 16px 20px;
+  background: white;
+}
+
+.r5-comment-box {
+  padding: 12px;
+  background: var(--r5-light);
+  border-radius: 6px;
+  border-left: 4px solid var(--r5-accent);
+}
+
+.r5-comment-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--r5-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.r5-comment-text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #4b5563;
+  margin: 0;
+}
+
+/* ── FOOTER / SIGNATURES ────────────────────────────────────────────────── */
+.r5-footer {
+  padding: 20px;
+  background: white;
+  border-top: 2px solid var(--r5-primary);
+}
+
+.r5-sig-section {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.r5-sig-col {
+  text-align: center;
+}
+
+.r5-sig-line {
+  height: 1px;
+  background: var(--r5-text);
+  margin-bottom: 8px;
+}
+
+.r5-sig-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--r5-text);
+  margin-bottom: 2px;
+}
+
+.r5-sig-title {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.r5-sig-date {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--r5-text);
+  margin-bottom: 2px;
+}
+
+.r5-sig-image {
+  max-height: 50px;
+  max-width: 100%;
+  object-fit: contain;
+  margin-bottom: 8px;
+}
+
+.r5-stamp-image {
+  max-height: 60px;
+  max-width: 100%;
+  object-fit: contain;
+  margin-bottom: 8px;
+}
+
+/* ── PRINT STYLES ───────────────────────────────────────────────────────── */
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    box-sizing: border-box !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 5mm;
+  }
+
+  .r5-page {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: white !important;
+    min-height: auto !important;
+  }
+
+  .r5-controls {
+    display: none !important;
+  }
+
+  .r5-card {
+    width: 210mm !important;
+    max-width: 210mm !important;
+    height: 297mm !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    border: 2px solid var(--r5-primary) !important;
+  }
+
+  .r5-card::before,
+  .r5-card::after,
+  .r5-card-wrapper::before,
+  .r5-card-wrapper::after {
+    display: none !important;
+  }
+
+  .r5-header {
+    padding: 10px 12px !important;
+    border-bottom: 2px solid var(--r5-primary) !important;
+    flex-shrink: 0 !important;
+  }
+
+  .r5-header-top {
+    grid-template-columns: 50px 1fr 70px !important;
+    gap: 10px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .r5-logo-area {
+    height: 50px !important;
+    padding: 4px !important;
+  }
+
+  .r5-logo {
+    max-height: 50px !important;
+    max-width: 50px !important;
+  }
+
+  .r5-logo-placeholder {
+    width: 48px !important;
+    height: 48px !important;
+  }
+
+  .r5-school-name {
+    font-size: 16px !important;
+    margin-bottom: 3px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .r5-school-motto {
+    font-size: 9px !important;
+    margin-bottom: 3px !important;
+  }
+
+  .r5-school-divider {
+    margin: 3px 0 !important;
+  }
+
+  .r5-school-details-grid {
+    gap: 10px !important;
+    margin-bottom: 3px !important;
+  }
+
+  .r5-detail-row {
+    font-size: 8px !important;
+    gap: 4px !important;
+  }
+
+  .r5-detail-label {
+    min-width: 50px !important;
+  }
+
+  .r5-contact-info {
+    margin-top: 3px !important;
+  }
+
+  .r5-contact-line {
+    font-size: 8px !important;
+    margin: 1px 0 !important;
+    line-height: 1.2 !important;
+  }
+
+  .r5-term-box {
+    padding: 8px 10px !important;
+  }
+
+  .r5-term-label {
+    font-size: 11px !important;
+  }
+
+  .r5-year-label {
+    font-size: 16px !important;
+  }
+
+  .r5-header-line {
+    margin: 6px 0 !important;
+  }
+
+  .r5-report-title {
+    font-size: 15px !important;
+  }
+
+  .r5-student-info {
+    padding: 6px 10px !important;
+    border-bottom: 1px solid var(--r5-border) !important;
+    flex-shrink: 0 !important;
+  }
+
+  .r5-info-table td {
+    padding: 3px 5px !important;
+    font-size: 11px !important;
+  }
+
+  .r5-subjects-section {
+    padding: 8px 10px !important;
+    flex: 1 !important;
+    overflow: hidden !important;
+  }
+
+  .r5-section-title {
+    font-size: 12px !important;
+    margin-bottom: 4px !important;
+    padding-bottom: 2px !important;
+  }
+
+  .r5-subjects-table {
+    margin-bottom: 4px !important;
+    border: 1px solid var(--r5-border) !important;
+    font-size: 10px !important;
+  }
+
+  .r5-subjects-table th {
+    padding: 2px 3px !important;
+    font-size: 10px !important;
+  }
+
+  .r5-subjects-table td {
+    padding: 2px 3px !important;
+    font-size: 10px !important;
+  }
+
+  .r5-summary {
+    gap: 6px !important;
+    padding: 6px 10px !important;
+    border-top: 1px solid var(--r5-border) !important;
+    border-bottom: 1px solid var(--r5-border) !important;
+    flex-shrink: 0 !important;
+  }
+
+  .r5-summary-item {
+    padding: 4px !important;
+  }
+
+  .r5-summary-label {
+    font-size: 10px !important;
+  }
+
+  .r5-summary-value {
+    font-size: 13px !important;
+  }
+
+  .r5-comments {
+    gap: 6px !important;
+    padding: 6px 10px !important;
+    background: white !important;
+    flex-shrink: 0 !important;
+  }
+
+  .r5-comment-box {
+    padding: 4px !important;
+  }
+
+  .r5-comment-title {
+    font-size: 10px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .r5-comment-text {
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+  }
+
+  .r5-footer {
+    padding: 6px 10px !important;
+    border-top: 1px solid var(--r5-primary) !important;
+    flex-shrink: 0 !important;
+    margin-top: auto !important;
+  }
+
+  .r5-sig-section {
+    gap: 10px !important;
+  }
+
+  .r5-sig-line {
+    margin-bottom: 4px !important;
+  }
+
+  .r5-sig-name {
+    font-size: 10px !important;
+    margin-bottom: 1px !important;
+  }
+
+  .r5-sig-title {
+    font-size: 9px !important;
+  }
+
+  .r5-sig-date {
+    font-size: 10px !important;
+    margin-bottom: 1px !important;
+  }
+
+  .r5-sig-image {
+    max-height: 30px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .r5-stamp-image {
+    max-height: 35px !important;
+    margin-bottom: 4px !important;
+  }
+}

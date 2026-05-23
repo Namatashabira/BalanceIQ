@@ -117,6 +117,34 @@ function SchoolGuard({ children }) {
   return children;
 }
 
+// ── Headteacher-only route guard ──────────────────────────────────────────────
+function HeadteacherGuard({ children }) {
+  const { user } = useAuth();
+  const { isSuperAdmin } = usePlan();
+  const role = user?.school_role?.toLowerCase();
+  const isTenantAdmin = user?.role === 'tenant_admin';
+  const isAdmin = ['tenant_admin', 'superadmin'].includes(user?.role) || user?.is_staff;
+  
+  if (isSuperAdmin) return children;
+  if (isAdmin) return children;
+  if (isTenantAdmin) return children;
+  if (role === 'headteacher') return children;
+  
+  return (
+    <div className="flex items-center justify-center h-full py-20">
+      <div className="text-center space-y-4">
+        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+          <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4v2m0 4v2M6.343 3.665c.886-.887 2.318-.887 3.203 0l9.759 9.759c.886.886.886 2.318 0 3.203l-9.759 9.759c-.886.886-2.318.886-3.203 0L3.14 16.168c-.886-.886-.886-2.318 0-3.203L6.343 3.665z" />
+          </svg>
+        </div>
+        <h2 className="text-xl font-bold text-gray-800">Access Denied</h2>
+        <p className="text-gray-600">Only the account owner or Headteacher can access School Settings.</p>
+      </div>
+    </div>
+  );
+}
+
 // ── Business-only route guard ─────────────────────────────────────────────────
 function BusinessGuard({ children }) {
   const { businessType, loading } = useConfig();
@@ -229,7 +257,7 @@ function DashboardLayout({ sidebarOpen, setSidebarOpen, sidebarWidth, setSidebar
             <Route path="/student-management" element={<SchoolGuard><AccessGuard pageKey="student-management"><StudentManagementPage /></AccessGuard></SchoolGuard>} />
             <Route path="/marks-entry" element={<SchoolGuard><AccessGuard pageKey="marks-entry"><MarksEntryPage /></AccessGuard></SchoolGuard>} />
             <Route path="/attendance" element={<SchoolGuard><AccessGuard pageKey="attendance"><AttendancePage /></AccessGuard></SchoolGuard>} />
-            <Route path="/school-settings" element={<SchoolGuard><SchoolSettingsPage /></SchoolGuard>} />
+            <Route path="/school-settings" element={<SchoolGuard><HeadteacherGuard><SchoolSettingsPage /></HeadteacherGuard></SchoolGuard>} />
             <Route path="/fees" element={<SchoolGuard><AccessGuard pageKey="fees"><FeesPage /></AccessGuard></SchoolGuard>} />
             <Route path="/fees/receipt" element={<SchoolGuard><AccessGuard pageKey="fees"><FeeReceipt /></AccessGuard></SchoolGuard>} />
             <Route path="/fees/invoice" element={<SchoolGuard><AccessGuard pageKey="fees"><FeeInvoice /></AccessGuard></SchoolGuard>} />

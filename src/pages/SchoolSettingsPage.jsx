@@ -8,6 +8,7 @@ import {
 import { fetchWithAuth } from '../api';
 import SchoolProfileSettings from './SchoolProfileSettings';
 import SchoolSignaturesSettings from './SchoolSignaturesSettings';
+import SchoolStaffManagement from '../components/settings/SchoolStaffManagement';
 import { useAuth } from '../context/AuthContext';
 
 const API = `${import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api'}/tenants`;
@@ -512,9 +513,10 @@ function PermissionsMatrix() {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 const TABS = [
-  { key: 'profile',     label: 'School Profile',   icon: Building2 },
+  { key: 'profile',     label: 'School Profile',    icon: Building2 },
   { key: 'signatures',  label: 'Signatures',        icon: PenLine },
-  { key: 'staff',       label: 'Staff Management', icon: Users },
+  { key: 'staff',       label: 'Staff Management',  icon: Users },
+  { key: 'school-staff', label: 'School Staff',    icon: Users },
   { key: 'permissions', label: 'Role Permissions',  icon: ShieldCheck },
 ];
 
@@ -550,10 +552,11 @@ export default function SchoolSettingsPage() {
         ))}
       </div>
 
-      {tab === 'profile'     && <SchoolProfileSettings />}
-      {tab === 'signatures'  && <SchoolSignaturesSettings />}
-      {tab === 'staff'       && <StaffTab />}
-      {tab === 'permissions' && <PermissionsMatrix />}
+      {tab === 'profile'       && <SchoolProfileSettings />}
+      {tab === 'signatures'    && <SchoolSignaturesSettings />}
+      {tab === 'staff'         && <StaffTab />}
+      {tab === 'school-staff'  && <SchoolStaffManagement />}
+      {tab === 'permissions'   && <PermissionsMatrix />}
     </div>
   );
 }

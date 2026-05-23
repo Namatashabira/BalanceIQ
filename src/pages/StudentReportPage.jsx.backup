@@ -9,12 +9,10 @@ import { useReportTemplate } from '../context/ReportTemplateContext';
 import { ClassicPreview, ModernPreview, MinimalPreview, TEMPLATE_MAP } from './ReportTemplatesPage';
 import { loadReceiptSettings } from '../services/receiptSettingsService';
 import { loadReportSettings, mergeReportSettings } from '../services/reportSettingsService';
-import { buildCompleteReportData } from '../services/reportDataService';
 import Report1 from './new report templates/report1';
 import Report2 from './new report templates/report2';
 import Report3 from './new report templates/report3';
 import Report4 from './new report templates/report4';
-import Report5 from './new report templates/report5';
 
 const API = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api');
 const STUDENTS_API = `${API}/school`;
@@ -41,7 +39,177 @@ function resolvePhoto(photo) {
   return `${BASE_URL}${photo.startsWith('/') ? '' : '/'}${photo}`;
 }
 
+async function buildReportData(student, term, academicYear, logo, schoolInfo, schoolSettings, reportSettings) {
+  console.log('[buildReportData] Starting for student:', { id: student.id, name: `${student.first_name} ${student.last_name}`, term, academicYear });
+  
+  // Fetch marks
+  const markParams = new URLSearchParams({ student: student.id, term, academic_year: academicYear });
+  const marksUrl = `${STUDENTS_API}/marks/?${markParams}`;
+  console.log('[buildReportData] Fetching marks from:', marksUrl);
+  
+  let marks = [];
+  try {
+    const marksRes = await fetchWithAuth(marksUrl);
+    console.log('[buildReportData] Marks response status:', marksRes?.status, marksRes?.statusText);
+    
+    if (!marksRes?.ok) {
+      console.warn('[buildReportData] Marks fetch failed:', { status: marksRes?.status, statusText: marksRes?.statusText });
+    } else {
+      const md = await marksRes.json();
+      console.log('[buildReportData] Marks data received:', { raw: md, isArray: Array.isArray(md), hasResults: !!md?.results });
+      marks = Array.isArray(md) ? md : (md?.results || []);
+      console.log('[buildReportData] Processed marks count:', marks.length);
+    }
+  } catch (err) {
+    console.error('[buildReportData] Error fetching marks:', err.message, err);
+  }
 
+  // Process subjects - transform marks into report format
+  console.log('[buildReportData] Processing', marks.length, 'marks into subjects');
+  if (marks.length === 0) {
+    console.warn('[buildReportData] No marks found for student:', { studentId: student.id, term, academicYear });
+  }
+  const subjects = marks.map((m, idx) => {
+    const a1 = m.a1_score ?? 0;
+    const a2 = m.a2_score ?? 0;
+    const a3 = m.a3_score ?? 0;
+    const assessmentAvg = (a1 + a2) / 2;
+    const total = (assessmentAvg * 0.2) + (a3 * 0.8);
+    const grade = m.grade || getGrade(total);
+    
+    // Create subject object with scores array for report templates
+    const subject = {
+      subject_name: m.subject,
+      code: m.subject?.substring(0, 3).toUpperCase() || 'N/A',
+      name: m.subject,
+      a1_score: a1,
+      a2_score: a2,
+      a3_score: a3,
+      scores: [a1, a2, a3, assessmentAvg, assessmentAvg * 0.2, a3 * 0.8, total],
+      score: total,
+      grade,
+      remark: REMARK_MAP[grade] || '',
+      achievement: REMARK_MAP[grade] || '',
+      competency: m.competency || '',
+      teacher: m.teacher_name || 'Teacher',
+    };
+    console.log(`[buildReportData] Subject ${idx + 1}:`, { name: m.subject, a1, a2, a3, total, grade });
+    return subject;
+  });
+
+  // Fetch AI comment for this student
+  let aiComment = '';
+  try {
+    const aiUrl = `${API}/ai-comments/generate/`;
+    console.log('[buildReportData] Fetching AI comment from:', aiUrl);
+    const aiRes = await fetchWithAuth(aiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ student_id: student.id, term, academic_year: academicYear }),
+    });
+    console.log('[buildReportData] AI comment response status:', aiRes?.status);
+    if (aiRes?.ok) {
+      const aiData = await aiRes.json();
+      aiComment = aiData.comment || '';
+      console.log('[buildReportData] AI comment received:', aiComment.substring(0, 50) + '...');
+    } else {
+      console.warn('[buildReportData] AI comment fetch failed:', aiRes?.status);
+    }
+  } catch (err) {
+    console.warn('[buildReportData] Error fetching AI comment:', err.message);
+  }
+
+  const guardians = (student.guardians || []).map(g => ({ full_name: g.full_name, relationship: g.relationship, phone: g.phone, email: g.email || '' }));
+  console.log('[buildReportData] Guardians count:', guardians.length);
+  const history = student.history || [];
+  console.log('[buildReportData] History items count:', history.length);
+
+  const reportData = {
+    school: {
+      name: schoolInfo?.name || schoolInfo?.businessName || 'School Name',
+      logo: logo || null,
+      address: [schoolInfo?.poBox, schoolInfo?.location, schoolInfo?.town].filter(Boolean).join(' · ') || '',
+      motto: schoolInfo?.motto || '',
+      phone: schoolInfo?.phone || '',
+      email: schoolInfo?.email || '',
+      website: schoolInfo?.website || '',
+      stamp: schoolSettings?.school_stamp || null,
+      term: term || 'Term 1',
+      year: academicYear || '2024',
+      subtitle: 'PRIMARY & SECONDARY',
+      phone2: schoolInfo?.phone || '',
+    },
+    student: {
+      full_name: `${student.first_name} ${student.last_name}`,
+      name: `${student.first_name} ${student.last_name}`,
+      admission_number: student.admission_number || '—',
+      idNo: student.admission_number || '—',
+      class_or_grade: student.class_assigned || '—',
+      class: student.class_assigned || '—',
+      stream: student.stream_name || student.stream || '—',
+      section: student.stream_name || student.stream || 'A',
+      gender: student.gender || '—',
+      nationality: student.nationality || '—',
+      district: student.district || '—',
+      home_address: student.home_address || '',
+      enrollment_date: student.enrollment_date || '',
+      status: student.status || 'active',
+      index_number: student.index_number || '',
+      payCode: student.index_number || '',
+      previous_school: student.previous_school || '',
+      fees_balance: student.fees_balance ?? 0,
+      payment_status: student.payment_status || 'not_paid',
+      photo: resolvePhoto(student.photo) || null,
+      guardians: (student.guardians || []).map(g => ({ full_name: g.full_name, relationship: g.relationship, phone: g.phone, email: g.email || '' })),
+      term: term || 'Term 1',
+      year: academicYear || '2024',
+    },
+    subjects,
+    attendance: history.filter(h => h.history_type === 'attendance').map(h => ({ title: h.title, description: h.description, date: h.date })),
+    notes: history.filter(h => h.history_type === 'note').map(h => ({ title: h.title, description: h.description, date: h.date })),
+    ai_comment: aiComment,
+    metadata: { term, academic_year: academicYear },
+    staff: {
+      headteacher_name: schoolSettings?.headteacher_name || 'Head Teacher',
+      headteacher_signature: schoolSettings?.headteacher_signature || null,
+      class_teacher_name: schoolSettings?.class_teacher_name || 'Class Teacher',
+      class_teacher_signature: schoolSettings?.class_teacher_signature || null,
+    },
+    fees: {
+      next_term_fees: schoolSettings?.next_term_fees || '0',
+      term_ended_date: schoolSettings?.term_ended_date || new Date().toISOString().split('T')[0],
+      next_term_date: schoolSettings?.next_term_date || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    },
+    admin: {
+      termEnded: schoolSettings?.term_ended_date || new Date().toISOString().split('T')[0],
+      nextTerm: schoolSettings?.next_term_date || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      balance: String(student.fees_balance ?? 0),
+      nextFees: schoolSettings?.next_term_fees || '0',
+      classTeacherName: schoolSettings?.class_teacher_name || 'Class Teacher',
+      headTeacherName: schoolSettings?.headteacher_name || 'Head Teacher',
+    },
+    summary: {
+      position: 0,
+      outOf: 0,
+      average: subjects.length > 0 ? Math.round(subjects.reduce((sum, s) => sum + s.score, 0) / subjects.length) : 0,
+      total: 100,
+      result: 'Pass',
+    },
+    overall: {
+      identifier: 'OP1',
+      achievement: 'Very Good',
+      grade: 'B',
+    },
+    comments: {
+      classTeacher: aiComment || 'No comment available',
+      headTeacher: 'Excellent performance. We encourage continued dedication to studies.',
+    },
+    assessmentModel: 'A1',
+  };
+  
+  console.log('[buildReportData] Report data built successfully:', { studentName: reportData.student.full_name, subjectsCount: reportData.subjects.length, hasAiComment: !!reportData.ai_comment });
+  return reportData;
+}
 
 export default function StudentReportPage() {
   const { schoolInfo } = useConfig();
@@ -58,26 +226,8 @@ export default function StudentReportPage() {
       console.warn('Failed to load receipt settings:', err);
     });
     
-    fetchWithAuth(`${API}/core/business-settings/`)
-      .then(res => {
-        if (res?.ok) return res.json();
-        throw new Error('Failed to fetch business settings');
-      })
-      .then(data => {
-        setSchoolSettings(prev => ({
-          ...prev,
-          headteacher_name: data.headteacher_name || 'Head Teacher',
-          class_teacher_name: data.class_teacher_name || 'Class Teacher',
-          term_ended_date: data.term_ended_date || new Date().toISOString().split('T')[0],
-          next_term_date: data.next_term_date || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          next_term_fees: data.next_term_fees || '0',
-          headteacher_signature: data.headteacher_signature || null,
-          school_stamp: data.school_stamp || null,
-        }));
-      })
-      .catch(err => {
-        console.warn('Failed to load business settings:', err);
-      });
+    // Note: /api/school/settings/ endpoint not available - skipping
+    // If needed in future, create this endpoint in backend or use school_settings from receipt settings
     
     loadReportSettings().then(settings => {
       setReportSettings(settings);
@@ -231,35 +381,6 @@ export default function StudentReportPage() {
     setSaveStatus('');
     setProgress({ done: 0, total: targets.length });
 
-    // Ensure schoolInfo has motto by fetching fresh data if needed
-    let freshSchoolInfo = schoolInfo;
-    if (!freshSchoolInfo?.motto) {
-      try {
-        const bsRes = await fetchWithAuth(`${API}/core/business-settings/`);
-        if (bsRes?.ok) {
-          const bs = await bsRes.json();
-          freshSchoolInfo = {
-            ...schoolInfo,
-            motto: bs.motto || '',
-            name: bs.business_name || bs.businessName || schoolInfo?.name || 'School Name',
-            phone: bs.phone || schoolInfo?.phone || '',
-            email: bs.email || schoolInfo?.email || '',
-            website: bs.website || schoolInfo?.website || '',
-            poBox: bs.po_box || bs.poBox || schoolInfo?.poBox || '',
-            registration_number: bs.registration_number || bs.registrationNumber || schoolInfo?.registration_number || '',
-            location: bs.location || schoolInfo?.location || '',
-            town: bs.town || schoolInfo?.town || '',
-            district: bs.district || schoolInfo?.district || '',
-            headteacher_signature: bs.headteacher_signature || null,
-            school_stamp: bs.school_stamp || null,
-          };
-          console.log('[generateReports] Fresh schoolInfo fetched:', freshSchoolInfo);
-        }
-      } catch (err) {
-        console.warn('[generateReports] Error fetching fresh school info:', err);
-      }
-    }
-
     const results = [];
     const studentMap = {}; // reportData index -> student id
     for (const student of targets) {
@@ -269,7 +390,7 @@ export default function StudentReportPage() {
           const res = await fetchWithAuth(`${STUDENTS_API}/students/${student.id}/`);
           if (res?.ok) fullStudent = await res.json();
         }
-        let data = await buildCompleteReportData(fullStudent, term, academicYear, rsLogo, freshSchoolInfo, reportSettings);
+        let data = await buildReportData(fullStudent, term, academicYear, rsLogo, schoolInfo, schoolSettings, reportSettings);
         if (reportSettings && data) {
           data = mergeReportSettings(data, reportSettings);
         }
@@ -328,126 +449,17 @@ export default function StudentReportPage() {
     const style = document.createElement('style');
     style.id = '__print_style__';
     style.innerHTML = `
-@page {
-  size: A4 portrait;
-  margin: 5mm;
-}
-
-@media print {
-  * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    box-sizing: border-box !important;
-  }
-
-  html, body {
-    width: 100% !important;
-    height: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: white !important;
-  }
-
-  body * {
-    visibility: hidden !important;
-  }
-
-  #print-area,
-  #print-area * {
-    visibility: visible !important;
-  }
-
-  #print-area {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  .no-print {
-    display: none !important;
-  }
-
-  .page-break {
-    width: 210mm !important;
-    height: 297mm !important;
-    page-break-after: always !important;
-    break-after: page !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: white !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
-    overflow: hidden !important;
-    display: flex !important;
-    flex-direction: column !important;
-  }
-
-  .page-break:last-child {
-    page-break-after: auto !important;
-  }
-
-  .r4-card,
-  .r5-card {
-    width: 100% !important;
-    height: 100% !important;
-    margin: 0 !important;
-    padding: 8px !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
-    overflow: hidden !important;
-    display: flex !important;
-    flex-direction: column !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-
-  .r4-header, .r5-header {
-    flex-shrink: 0 !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-
-  .r4-content, .r5-content {
-    flex: 1 !important;
-    overflow: hidden !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-
-  .r4-footer, .r5-footer {
-    flex-shrink: 0 !important;
-    margin-top: auto !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-
-  .r4-table, .r5-table {
-    width: 100% !important;
-    border-collapse: collapse !important;
-    font-size: 8px !important;
-  }
-
-  .r4-table th, .r4-table td,
-  .r5-table th, .r5-table td {
-    padding: 2px 3px !important;
-    font-size: 8px !important;
-  }
-
-  .overflow-x-auto {
-    overflow: visible !important;
-  }
-}
+      @media print {
+        body * { visibility: hidden; }
+        #print-area, #print-area * { visibility: visible; }
+        #print-area { position: absolute; top: 0; left: 0; width: 100%; }
+        #print-area .no-print { display: none !important; }
+        .page-break { page-break-after: always; }
+      }
     `;
     document.head.appendChild(style);
-    setTimeout(() => {
-      window.print();
-      document.head.removeChild(style);
-    }, 100);
+    window.print();
+    document.head.removeChild(style);
   }, []);
 
   const PreviewComponent = TEMPLATE_MAP[template] || TEMPLATE_MAP.classic;
@@ -475,7 +487,7 @@ export default function StudentReportPage() {
         </div>
         {/* Template switcher — wraps on small screens */}
         <div className="flex flex-wrap gap-1.5">
-          {['salah', 'salahv2', 'greenclassic', 'classic2', 'classic', 'modern', 'minimal', 'report1', 'report2', 'report3', 'report4', 'report5'].map(t => (
+          {['salah', 'salahv2', 'greenclassic', 'classic2', 'classic', 'modern', 'minimal', 'report1', 'report2', 'report3', 'report4'].map(t => (
             <button key={t} onClick={() => setTemplate(t)}
               className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold capitalize transition-all border ${
                 template === t

@@ -5,11 +5,13 @@ import { fetchWithAuth } from '../api';
 import { loadReceiptSettings, syncPendingReceiptSettings } from '../services/receiptSettingsService';
 import { buildStampWithDate } from '../utils/stampProcessor';
 import { readSchoolType, writeSchoolType } from '../hooks/useSchoolClasses';
+import ReportSettingsSection from './ReportSettingsSection';
 
 const BASE = import.meta.env.VITE_API_URL || 'https://web-production-36021.up.railway.app/api';
 const SETTINGS_API = `${BASE}/core/business-settings/`;
 const RECEIPT_SETTINGS_API = `${BASE}/fees/receipt-settings/`;
 const SCHOOL_TYPE_API = `${BASE}/tenants/school-type/`;
+const REPORT_SETTINGS_API = `${BASE}/core/report-settings/`;
 
 const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500';
 const labelCls = 'block text-sm font-medium text-gray-700 mb-1';
@@ -142,9 +144,23 @@ export default function SchoolProfileSettings() {
       const tenantUUID = JSON.parse(localStorage.getItem('activeTenant') || '{}')?.uuid;
       const payload = { ...profile };
       if (tenantUUID) payload.tenant_uuid = tenantUUID;
-      await axios.post(SETTINGS_API, payload, {
+      const res = await axios.post(SETTINGS_API, payload, {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
       });
+      if (res?.data?.data) {
+        setProfile({
+          businessName: res.data.data.businessName || '',
+          phone: res.data.data.phone || '',
+          email: res.data.data.email || '',
+          location: res.data.data.location || '',
+          town: res.data.data.town || '',
+          district: res.data.data.district || '',
+          poBox: res.data.data.poBox || '',
+          motto: res.data.data.motto || '',
+          website: res.data.data.website || '',
+          registration_number: res.data.data.registrationNumber || '',
+        });
+      }
       localStorage.setItem('businessName', profile.businessName);
       setProfileSaved(true);
       setTimeout(() => setProfileSaved(false), 3000);
@@ -210,7 +226,7 @@ export default function SchoolProfileSettings() {
   };
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6">
 
       {/* ── School Identity & Contact ── */}
       <form onSubmit={saveProfile} className="space-y-5">
@@ -463,6 +479,9 @@ export default function SchoolProfileSettings() {
           </button>
         </div>
       </form>
+
+      {/* Report Settings Section */}
+      <ReportSettingsSection />
     </div>
   );
 }

@@ -10,6 +10,11 @@ import ReportCardSalah from './ReportCardSalah';
 import ReportCardClassic from './ReportCardClassic';
 import ReportCardSalahV2 from './ReportCardSalahV2';
 import ReportCardGreenClassic from './ReportCardGreenClassic';
+import Report1 from './new report templates/report1';
+import Report2 from './new report templates/report2';
+import Report3 from './new report templates/report3';
+import Report4 from './new report templates/report4';
+import Report5 from './new report templates/report5';
 
 const TEMPLATES = [
   { id: 'salah',         name: 'Navy & Gold (New Curriculum)', description: 'Modern navy blue & gold design with competency-based assessment layout.' },
@@ -19,6 +24,11 @@ const TEMPLATES = [
   { id: 'classic',       name: 'Classic (Original)',            description: 'Traditional school report card with bordered table layout.' },
   { id: 'modern',        name: 'Modern Card',                   description: 'Clean modern design with colored sections and badges.' },
   { id: 'minimal',       name: 'Minimal',                       description: 'Simple plain text format, ideal for printing.' },
+  { id: 'report1',       name: 'Navy & Gold Elegant',          description: 'Elegant navy & gold design with decorative corners and watermark support.' },
+  { id: 'report2',       name: 'Modern Gradient',              description: 'Contemporary gradient design with colorful headers and modern layout.' },
+  { id: 'report3',       name: 'Classic Formal',               description: 'Professional formal design with traditional borders and classic styling.' },
+  { id: 'report4',       name: 'Modern Minimalist',            description: 'Clean minimalist design with teal accents and streamlined layout.' },
+  { id: 'report5',       name: 'Table-Based Professional', description: 'Clean table-based design with professional lines and structured layout.' },
 ];
 
 const SAMPLE = {
@@ -311,6 +321,11 @@ export const TEMPLATE_MAP = {
   classic:      ClassicPreview,
   modern:       ModernPreview,
   minimal:      MinimalPreview,
+  report1:      Report1,
+  report2:      Report2,
+  report3:      Report3,
+  report4:      Report4,
+  report5:      Report5,
 };
 
 export default function ReportTemplatesPage() {
@@ -361,6 +376,11 @@ export default function ReportTemplatesPage() {
     classic:      <div className="w-10 space-y-0.5"><div className="h-1.5 bg-gray-700 rounded"/>{[...Array(4)].map((_,i)=><div key={i} className="h-1 bg-gray-300 rounded"/>)}</div>,
     modern:       <div className="w-10 space-y-0.5"><div className="h-3 bg-indigo-500 rounded"/>{[...Array(3)].map((_,i)=><div key={i} className="h-1.5 bg-gray-200 rounded"/>)}</div>,
     minimal:      <div className="w-10 space-y-0.5">{[...Array(6)].map((_,i)=><div key={i} className={`h-0.5 rounded ${i===0?'bg-gray-700':'bg-gray-300'}`}/>)}</div>,
+    report1:      <div className="w-10 space-y-0.5"><div className="h-2 rounded" style={{background:'linear-gradient(90deg,#0d2b55,#c9a84c)'}} />{[...Array(4)].map((_,i)=><div key={i} className="h-1 bg-blue-100 rounded"/>)}</div>,
+    report2:      <div className="w-10 space-y-0.5"><div className="h-2 rounded" style={{background:'linear-gradient(90deg,#6366f1,#8b5cf6)'}} />{[...Array(4)].map((_,i)=><div key={i} className="h-1 bg-purple-100 rounded"/>)}</div>,
+    report3:      <div className="w-10 space-y-0.5"><div className="h-2 rounded" style={{background:'linear-gradient(90deg,#1e3a8a,#d97706)'}} />{[...Array(4)].map((_,i)=><div key={i} className="h-1 bg-amber-100 rounded"/>)}</div>,
+    report4:      <div className="w-10 space-y-0.5"><div className="h-2 rounded" style={{background:'linear-gradient(90deg,#0d9488,#06b6d4)'}} />{[...Array(4)].map((_,i)=><div key={i} className="h-1 bg-teal-100 rounded"/>)}</div>,
+    report5:      <div className="w-10 space-y-0.5"><div className="h-2 rounded" style={{background:'linear-gradient(90deg,#1e40af,#1e3a8a)'}} />{[...Array(4)].map((_,i)=><div key={i} className="h-1 bg-blue-100 rounded"/>)}</div>,
   };
 
   return (
@@ -385,50 +405,49 @@ export default function ReportTemplatesPage() {
         </div>
       </div>
 
-      <div className={`grid gap-6 ${previewing ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
+      <div className="space-y-6">
         <div className="space-y-3">
           <p className="text-sm font-semibold text-gray-700">Select Template</p>
-          {TEMPLATES.map(t => (
-            <div key={t.id} className={`flex items-start gap-4 p-4 rounded-xl border-2 transition-all ${
-              selected === t.id ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 bg-white hover:border-gray-300'
-            }`}>
-              <button 
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {TEMPLATES.map(t => (
+              <div
+                key={t.id}
                 onClick={() => handleSelect(t.id)}
-                className="flex items-start gap-4 text-left flex-1"
+                className={`flex flex-col items-center text-center p-4 rounded-xl border-2 transition-all cursor-pointer ${
+                  selected === t.id ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 bg-white hover:border-gray-300'
+                }`}
               >
-                <div className={`w-16 h-20 rounded-lg shrink-0 flex items-center justify-center border-2 ${selected === t.id ? 'border-indigo-300 bg-indigo-100' : 'border-gray-200 bg-gray-50'}`}>
+                <div className={`w-16 h-20 rounded-lg flex items-center justify-center border-2 mb-3 ${selected === t.id ? 'border-indigo-300 bg-indigo-100' : 'border-gray-200 bg-gray-50'}`}>
                   {THUMBS[t.id]}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-gray-800">{t.name}</p>
+                <div className="flex-1">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <p className="font-semibold text-gray-800 text-sm">{t.name}</p>
                     {selected === t.id && <Check className="w-4 h-4 text-indigo-600" />}
                   </div>
-                  <p className="text-sm text-gray-500 mt-0.5">{t.description}</p>
+                  <p className="text-xs text-gray-500 mb-3 line-clamp-2">{t.description}</p>
                 </div>
-              </button>
-              
-              {/* Action Buttons */}
-              <div className="flex flex-col gap-2 shrink-0">
-                <button
-                  onClick={() => handleOpenModal(t.id)}
-                  className="inline-flex items-center justify-center gap-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors"
-                  title="Preview in modal"
-                >
-                  <Maximize2 className="w-4 h-4" />
-                  <span className="hidden sm:inline">Modal</span>
-                </button>
-                <button
-                  onClick={() => handleFullPagePreview(t.id)}
-                  className="inline-flex items-center justify-center gap-1 px-3 py-2 bg-indigo-100 border border-indigo-300 text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-200 transition-colors"
-                  title="Preview in full page"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  <span className="hidden sm:inline">Full Page</span>
-                </button>
+                <div className="flex flex-col gap-2 w-full">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleOpenModal(t.id); }}
+                    className="inline-flex items-center justify-center gap-1 px-2 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-700 text-xs font-medium hover:bg-gray-50 transition-colors"
+                    title="Preview in modal"
+                  >
+                    <Maximize2 className="w-3 h-3" />
+                    <span className="hidden sm:inline">Modal</span>
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleFullPagePreview(t.id); }}
+                    className="inline-flex items-center justify-center gap-1 px-2 py-1.5 bg-indigo-100 border border-indigo-300 text-indigo-700 rounded-lg text-xs font-medium hover:bg-indigo-200 transition-colors"
+                    title="Preview in full page"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    <span className="hidden sm:inline">Full Page</span>
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
 
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
             <p className="font-semibold mb-1">How to use</p>

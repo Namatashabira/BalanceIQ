@@ -1,0 +1,741 @@
+/* ================================================
+   REPORT 4 — MODERN MINIMALIST DESIGN
+================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --r4-primary:   #0d9488;
+  --r4-secondary: #06b6d4;
+  --r4-accent:    #14919b;
+  --r4-light:     #f0fdfa;
+  --r4-ink:       #0f172a;
+  --r4-paper:     #ffffff;
+  --r4-border:    #e2e8f0;
+}
+
+.r4-page {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  background: linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%);
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 24px 16px;
+  color: var(--r4-ink);
+}
+
+.r4-controls {
+  display: flex; gap: 12px; margin-bottom: 20px;
+  flex-wrap: wrap; justify-content: center; align-items: center;
+}
+
+.r4-print-btn {
+  padding: 10px 24px;
+  background: var(--r4-primary);
+  color: #fff; border: none; border-radius: 8px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.2); transition: all .2s;
+}
+
+.r4-print-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3); }
+
+.r4-palette-bar {
+  display: flex; align-items: center; gap: 6px; background: #fff;
+  padding: 8px 12px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.1);
+  border: 1px solid var(--r4-border);
+}
+
+.r4-palette-swatch {
+  width: 24px; height: 24px; border-radius: 6px; border: 2px solid transparent;
+  cursor: pointer; transition: all .15s;
+}
+
+.r4-palette-swatch:hover { transform: scale(1.1); }
+.r4-palette-swatch.active { border-color: #fff; box-shadow: 0 0 0 2px currentColor; }
+
+.r4-custom-label {
+  display: flex; flex-direction: column; align-items: center;
+  font-size: 9px; font-weight: 600; color: #64748b; gap: 2px; cursor: pointer;
+}
+
+.r4-color-input {
+  width: 24px; height: 24px; border: none; border-radius: 6px;
+  cursor: pointer; padding: 0;
+}
+
+.r4-card {
+  width: 100%;
+  max-width: 210mm;
+  background: var(--r4-paper);
+  position: relative;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.r4-header {
+  background: linear-gradient(135deg, var(--r4-primary) 0%, var(--r4-secondary) 100%);
+  color: white;
+  padding: 14px 12px;
+  display: grid;
+  grid-template-columns: 65px 2.5fr 1.2fr auto;
+  gap: 14px;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.r4-logo-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.r4-logo-area img {
+  background: transparent !important;
+  background-color: transparent !important;
+  mix-blend-mode: multiply;
+  filter: contrast(1.1) brightness(1.05);
+}
+
+.r4-logo-ph {
+  width: 55px; height: 55px;
+  background: transparent !important;
+  background-color: transparent !important;
+  border-radius: 8px;
+}
+
+.r4-school-details {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.r4-school-name {
+  font-size: 20px; font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+}
+
+.r4-subtitle {
+  font-size: 11px; font-weight: 500;
+  opacity: 0.9;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.r4-report-title {
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 1.2px;
+  opacity: 0.95;
+  margin: 0;
+  padding: 0;
+}
+
+.r4-contact-info {
+  font-size: 9px;
+  line-height: 1.5;
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.r4-contact-line {
+  margin: 0;
+  padding: 0;
+  opacity: 0.95;
+}
+
+.r4-term-badge {
+  display: flex; 
+  flex-direction: column;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 8px 10px;
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.r4-term {
+  font-size: 10px; 
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+.r4-year {
+  font-size: 11px; 
+  font-weight: 800;
+  text-align: center;
+}
+
+.r4-content {
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.r4-student-sec {
+  background: var(--r4-light);
+  padding: 4px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--r4-border);
+  border-left: 4px solid var(--r4-primary);
+  flex-shrink: 0;
+}
+
+.r4-bio-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 0;
+  margin-bottom: 2px;
+}
+
+.r4-bio-row:last-child {
+  margin-bottom: 0;
+}
+
+.r4-bio-cell {
+  font-size: 8px;
+  line-height: 1.2;
+  color: var(--r4-ink);
+}
+
+.r4-bio-label {
+  font-weight: 700;
+  color: var(--r4-primary);
+  margin-right: 6px;
+}
+
+.r4-section-header {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--r4-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin: 0 0 8px 0;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--r4-primary);
+  display: inline-block;
+}
+
+.r4-subjects {
+  overflow-x: auto;
+  border: 1px solid var(--r4-border);
+  border-radius: 8px;
+  padding: 3px;
+  background: white;
+  flex-shrink: 0;
+}
+
+.r4-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  table-layout: fixed;
+  font-size: 7px;
+  border: 1px solid rgba(148, 163, 184, 0.8);
+  line-height: 1.2;
+}
+
+.r4-table th,
+.r4-table td {
+  border: 1px solid rgba(148, 163, 184, 0.8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 2px;
+}
+
+.r4-table th {
+  background: var(--r4-primary);
+  color: white;
+  padding: 2px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 7px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.r4-table td {
+  padding: 2px;
+  text-align: center;
+  background: white;
+  font-size: 7px;
+}
+
+.r4-table th:nth-child(1) { width: 4%; }
+.r4-table th:nth-child(2) { width: 18%; }
+.r4-table th:nth-child(3) { width: 14%; }
+.r4-table th:nth-child(4),
+.r4-table th:nth-child(5),
+.r4-table th:nth-child(6) { width: 8%; }
+.r4-table th:nth-child(7) { width: 7%; }
+.r4-table th:nth-child(8) { width: 7%; }
+.r4-table th:nth-child(9) { width: 7%; }
+.r4-table th:nth-child(10) { width: 18%; }
+
+.r4-table tbody tr:nth-child(even) {
+  background: var(--r4-light);
+}
+
+.r4-table tbody tr:hover {
+  background: #f5fffe;
+}
+
+.r4-table td:nth-child(2) {
+  text-align: left;
+  font-weight: 600;
+  color: var(--r4-ink);
+}
+
+.r4-table td:nth-child(3) {
+  text-align: left;
+  font-weight: 500;
+  color: #475569;
+}
+
+.r4-table td:nth-child(10) {
+  text-align: left;
+  font-weight: 600;
+  color: var(--r4-accent);
+}
+
+.r4-grade {
+  color: var(--r4-secondary);
+  font-weight: 700;
+}
+
+.r4-ach {
+  color: var(--r4-accent);
+  font-weight: 600;
+}
+
+.r4-perf {
+  background: var(--r4-light);
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid var(--r4-border);
+  flex-shrink: 0;
+}
+
+.r4-perf-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+}
+
+.r4-perf-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 3px;
+  background: white;
+  border-radius: 6px;
+  border-left: 3px solid var(--r4-primary);
+}
+
+.r4-perf-label {
+  font-size: 7px;
+  font-weight: 700;
+  color: var(--r4-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.r4-perf-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--r4-ink);
+}
+
+.r4-admin {
+  background: var(--r4-light);
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid var(--r4-border);
+  border-left: 4px solid var(--r4-secondary);
+  flex-shrink: 0;
+}
+
+.r4-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 3px;
+}
+
+.r4-admin-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 3px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid var(--r4-border);
+}
+
+.r4-admin-label {
+  font-size: 7px;
+  font-weight: 700;
+  color: var(--r4-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.r4-admin-value {
+  font-size: 8px;
+  font-weight: 600;
+  color: var(--r4-ink);
+}
+
+.r4-comments {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.r4-comment-box {
+  background: var(--r4-light);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--r4-border);
+  border-left: 4px solid var(--r4-secondary);
+}
+
+.r4-comment-title {
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--r4-primary);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+  letter-spacing: 0.3px;
+}
+
+.r4-comment-box p {
+  font-size: 7px;
+  line-height: 1.2;
+  color: #475569;
+  margin: 0;
+}
+
+.r4-footer {
+  border-top: 2px solid var(--r4-primary);
+  padding: 4px;
+  background: var(--r4-light);
+  border: 1px solid var(--r4-border);
+  flex-shrink: 0;
+  margin-top: auto;
+}
+
+.r4-sig-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 4px;
+  margin-bottom: 2px;
+  align-items: flex-end;
+}
+
+.r4-sig-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.r4-sig-col span:first-child {
+  font-size: 7px;
+  font-weight: 600;
+  color: var(--r4-ink);
+}
+
+.r4-sig-col span:last-child {
+  font-size: 6px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.r4-sig-line {
+  font-size: 7px;
+  letter-spacing: 2px;
+  color: var(--r4-primary);
+}
+
+.r4-stamp-col {
+  width: 35px;
+  height: 35px;
+  border: none;
+  border-radius: 50%;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.r4-stamp-col img {
+  background: transparent !important;
+  background-color: transparent !important;
+  mix-blend-mode: multiply;
+  filter: contrast(1.1) brightness(1.05);
+}
+
+.r4-footer-line {
+  text-align: center;
+  font-size: 6px;
+  color: #64748b;
+  border-top: 1px solid var(--r4-border);
+  padding-top: 2px;
+}
+
+.r4-icon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+/* ── PERFECT A4 PRINT FIX ─────────────────────────────────────────────────────────── */
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    box-sizing: border-box !important;
+  }
+
+  html,
+  body {
+    width: 210mm !important;
+    height: 297mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: white !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 5mm;
+  }
+
+  .r4-page {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: white !important;
+    min-height: auto !important;
+  }
+
+  /* Hide buttons */
+  .r4-controls,
+  .no-print {
+    display: none !important;
+  }
+
+  /* MAIN REPORT CARD */
+  .r4-card {
+    width: 210mm !important;
+    max-width: 210mm !important;
+    height: 297mm !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* HEADER */
+  .r4-header {
+    flex-shrink: 0 !important;
+
+    padding: 6px 8px !important;
+    gap: 8px !important;
+
+    grid-template-columns: 50px 2fr 1fr auto !important;
+
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  .r4-school-name {
+    font-size: 14px !important;
+    line-height: 1.1 !important;
+  }
+
+  .r4-report-title {
+    font-size: 9px !important;
+  }
+
+  .r4-contact-info {
+    font-size: 7px !important;
+    line-height: 1.2 !important;
+  }
+
+  .r4-logo-ph {
+    width: 45px !important;
+    height: 45px !important;
+  }
+
+  /* CONTENT AREA */
+  .r4-content {
+    flex: 1 !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    padding: 4px !important;
+    gap: 2px !important;
+
+    overflow: visible !important;
+  }
+
+  /* ALL SECTIONS */
+  .r4-student-sec,
+  .r4-subjects,
+  .r4-perf,
+  .r4-comments,
+  .r4-admin,
+  .r4-footer {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-bottom: 4px !important;
+  }
+
+  /* STUDENT BIO */
+  .r4-student-sec {
+    padding: 4px !important;
+  }
+
+  .r4-bio-cell {
+    font-size: 8px !important;
+  }
+
+  /* TABLE */
+  .r4-subjects {
+    padding: 3px !important;
+    overflow: hidden !important;
+  }
+
+  .r4-table {
+    width: 100% !important;
+    table-layout: fixed !important;
+    font-size: 7px !important;
+  }
+
+  .r4-table th,
+  .r4-table td {
+    padding: 2px !important;
+    line-height: 1.2 !important;
+    overflow: hidden !important;
+  }
+
+  .r4-table th {
+    font-size: 7px !important;
+  }
+
+  .r4-table td {
+    font-size: 7px !important;
+  }
+
+  /* PERFORMANCE */
+  .r4-perf {
+    padding: 4px !important;
+  }
+
+  .r4-perf-box {
+    padding: 3px !important;
+  }
+
+  .r4-perf-label {
+    font-size: 7px !important;
+  }
+
+  .r4-perf-value {
+    font-size: 12px !important;
+  }
+
+  /* COMMENTS */
+  .r4-comments {
+    gap: 4px !important;
+  }
+
+  .r4-comment-box {
+    padding: 4px !important;
+  }
+
+  .r4-comment-title {
+    font-size: 8px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .r4-comment-box p {
+    font-size: 7px !important;
+    line-height: 1.2 !important;
+  }
+
+  /* ADMIN */
+  .r4-admin {
+    padding: 4px !important;
+  }
+
+  .r4-admin-label {
+    font-size: 7px !important;
+  }
+
+  .r4-admin-value {
+    font-size: 8px !important;
+  }
+
+  /* FOOTER */
+  .r4-footer {
+    flex-shrink: 0 !important;
+
+    margin-top: auto !important;
+    padding: 4px !important;
+
+    border-top: 1px solid var(--r4-border) !important;
+  }
+
+  .r4-sig-row {
+    gap: 4px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .r4-sig-col span:first-child {
+    font-size: 7px !important;
+  }
+
+  .r4-sig-col span:last-child {
+    font-size: 6px !important;
+  }
+
+  .r4-sig-line {
+    font-size: 7px !important;
+  }
+
+  .r4-stamp-col {
+    width: 35px !important;
+    height: 35px !important;
+  }
+
+  .r4-footer-line {
+    font-size: 6px !important;
+    padding-top: 2px !important;
+  }
+}

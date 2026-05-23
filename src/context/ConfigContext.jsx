@@ -151,11 +151,20 @@ export function ConfigProvider({ children }) {
           });
           const bs = bsRes.data;
           const schoolInfo = {
-            name: bs.businessName || '',
+            name: bs.businessName || bs.business_name || '',
+            businessName: bs.businessName || bs.business_name || '',
             address: [bs.location, bs.town, bs.district, bs.country].filter(Boolean).join(', '),
-            poBox: bs.poBox || '',
+            location: bs.location || '',
+            town: bs.town || '',
+            district: bs.district || '',
+            poBox: bs.poBox || bs.po_box || '',
             logo: bs.businessLogoUrl || response.data.theme?.logo_url || null,
             motto: bs.motto || '',
+            phone: bs.phone || '',
+            email: bs.email || '',
+            website: bs.website || '',
+            registration_number: bs.registration_number || bs.registrationNumber || '',
+            regNumber: bs.registration_number || bs.registrationNumber || '',
           };
           localStorage.setItem('cachedSchoolInfo', JSON.stringify(schoolInfo));
           setConfig(prev => ({ ...prev, schoolInfo }));
