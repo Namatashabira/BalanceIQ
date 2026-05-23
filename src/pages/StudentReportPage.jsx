@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchWithAuth } from '../api';
 import {
   Printer, Loader2, FileText, Calendar,
-  Users, GraduationCap, CheckSquare, Square, X, History, Trash2
+  Users, GraduationCap, CheckSquare, Square, X, History, Trash2, CheckCircle
 } from 'lucide-react';
 import { useConfig } from '../context/ConfigContext';
 import { useReportTemplate } from '../context/ReportTemplateContext';
@@ -104,7 +104,17 @@ export default function StudentReportPage() {
   const [saveStatus, setSaveStatus] = useState('');
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('generate');
+  const [showSaveModal, setShowSaveModal] = useState(false);
   const printRef = useRef(null);
+
+  useEffect(() => {
+    if (saveStatus === 'saving') {
+      setShowSaveModal(true);
+    } else if (saveStatus === 'saved') {
+      const timer = setTimeout(() => setShowSaveModal(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [saveStatus]);
 
   // History state
   const [history, setHistory] = useState([]);
@@ -462,6 +472,34 @@ export default function StudentReportPage() {
 
   return (
     <div className="space-y-5">
+      {/* Save Status Modal */}
+      {showSaveModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4">
+            {saveStatus === 'saving' ? (
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-bold text-gray-900">Saving Reports</p>
+                  <p className="text-sm text-gray-500 mt-1">Please wait while we save your reports…</p>
+                </div>
+              </div>
+            ) : saveStatus === 'saved' ? (
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center">
+                  <CheckCircle className="w-8 h-8 text-green-600" />
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-bold text-gray-900">Reports Saved</p>
+                  <p className="text-sm text-gray-500 mt-1">All reports have been saved to history</p>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-3">

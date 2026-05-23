@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import {
   Plus, Search, Filter, Trash2, Edit, Eye, Printer, X,
   Upload, ChevronDown, Users, Phone, Mail, MapPin, AlertCircle,
-  RefreshCw, Save, CheckCircle, Camera, Zap
+  RefreshCw, Save, CheckCircle, Camera, Zap, Loader2
 } from 'lucide-react';
 import { fetchWithAuth } from '../../api';
 
@@ -220,11 +220,22 @@ function StaffForm({ staff, onSave, onClose }) {
 
   const [section, setSection] = useState('basic');
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 6; // basic, contact, professional, permission, signature, employment
+  const totalSteps = 6;
   const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState('');
+  const [showSaveModal, setShowSaveModal] = useState(false);
   const [error, setError] = useState('');
   const [photoPreview, setPhotoPreview] = useState(staff?.profile_photo ? (staff.profile_photo.startsWith('http') ? staff.profile_photo : `${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'}${staff.profile_photo}`) : null);
   const [signaturePreview, setSignaturePreview] = useState(staff?.profile_signature ? (staff.profile_signature.startsWith('http') ? staff.profile_signature : `${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'}${staff.profile_signature}`) : null);
+
+  useEffect(() => {
+    if (saveStatus === 'saving') {
+      setShowSaveModal(true);
+    } else if (saveStatus === 'saved') {
+      const timer = setTimeout(() => setShowSaveModal(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [saveStatus]);
 
   const handleInputChange = (field, value) => {
     setForm(f => ({ ...f, [field]: value }));
@@ -257,6 +268,7 @@ function StaffForm({ staff, onSave, onClose }) {
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
+    setSaveStatus('saving');
     setError('');
     try {
       const fullNameTrimmed = form.full_name?.trim() || '';
@@ -317,22 +329,60 @@ function StaffForm({ staff, onSave, onClose }) {
         const data = await res.json();
         const errorMsg = data.detail || data.error || JSON.stringify(data);
         setError('Failed to save staff: ' + errorMsg);
+        setSaveStatus('');
+        setSaving(false);
         console.error('API Error:', data);
         return;
       }
 
-      onSave();
+      const savedData = await res.json();
+      setSaveStatus('saved');
+      
+      setTimeout(() => {
+        setSaving(false);
+        setSaveStatus('');
+        onSave(savedData?.id);
+      }, 3000);
     } catch (err) {
       setError('Network error: ' + err.message);
+      setSaveStatus('');
       console.error('Save error:', err);
-    } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <>
+      {showSaveModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4">
+            {saveStatus === 'saving' ? (
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-bold text-gray-900">Saving Staff Member</p>
+                  <p className="text-sm text-gray-500 mt-1">Please wait while we save the information…</p>
+                </div>
+              </div>
+            ) : saveStatus === 'saved' ? (
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center">
+                  <CheckCircle className="w-8 h-8 text-green-600" />
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-bold text-gray-900">Staff Member Saved</p>
+                  <p className="text-sm text-gray-500 mt-1">Successfully saved to the system</p>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white">
           <h2 className="font-bold text-gray-800">{staff ? 'Edit Staff' : 'Add New Staff Member'}</h2>
@@ -850,6 +900,7 @@ function StaffForm({ staff, onSave, onClose }) {
         </form>
       </div>
     </div>
+    </>
   );
 }
 
@@ -921,14 +972,24 @@ export default function SchoolStaffManagement() {
       const data = await res.json();
       if (res?.ok) {
         loadStaff();
-        alert('Staff account synced successfully!');
         setError('');
+        return true;
       } else {
         setError('Sync failed: ' + (data.message || data.error || 'Unknown error'));
+        return false;
       }
     } catch (err) {
       setError('Sync error: ' + err.message);
+      return false;
     }
+  };
+
+  const onSaveHandler = async (staffId) => {
+    if (staffId && !selectedStaff) {
+      await handleSyncWithAccount(staffId);
+    }
+    loadStaff();
+    setModal(null);
   };
 
   return (
@@ -1033,7 +1094,7 @@ export default function SchoolStaffManagement() {
       {(modal === 'add' || modal === 'edit') && (
         <StaffForm
           staff={modal === 'edit' ? selectedStaff : null}
-          onSave={() => { loadStaff(); setModal(null); }}
+          onSave={onSaveHandler}
           onClose={() => setModal(null)}
         />
       )}

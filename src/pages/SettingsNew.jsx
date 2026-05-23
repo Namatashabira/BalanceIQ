@@ -513,9 +513,9 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Tabs — scrollable on mobile */}
-      <div className="border-b border-gray-200 mb-4 sm:mb-6">
-        <div className="flex overflow-x-auto scrollbar-hide gap-1 sm:gap-0">
+      {/* Tabs — scrollable on mobile, responsive layout */}
+      <div className="border-b border-gray-200 mb-4 sm:mb-6 overflow-x-auto">
+        <div className="flex gap-1 sm:gap-0 min-w-min sm:min-w-full">
           {tabs.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -523,22 +523,22 @@ export default function SettingsPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-4 py-2.5 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap transition-colors ${
+                className={`flex-shrink-0 flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2.5 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap transition-colors ${
                   isActive
                     ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <Icon size={14} className="shrink-0" />
-                <span>{tab.label}</span>
+                <Icon size={16} className="shrink-0 hidden sm:inline" />
+                <span className="truncate">{tab.label}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Tab Content */}
-      <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+      {/* Tab Content — responsive padding */}
+      <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 md:p-6">
         {/* Terminology Tab */}
         {activeTab === 'terminology' && (
           <div>
