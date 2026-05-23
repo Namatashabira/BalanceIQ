@@ -214,13 +214,19 @@ export default function Dashboard() {
       connectWebSocket();
     }
     return () => {
+      // Cleanup: close WebSocket and clear retry timeout
       if (wsRef.current) {
         wsRef.current.close();
+      }
+      if (wsRetryRef.current?.timeout) {
+        clearTimeout(wsRetryRef.current.timeout);
       }
     };
   }, []);
 
   // WebSocket connection for real-time notifications
+  const wsRetryRef = useRef({ count: 0, maxRetries: 5, timeout: null });
+  
   const connectWebSocket = useCallback(() => {
     try {
       // Avoid duplicate sockets in React Strict Mode double-mount
@@ -232,49 +238,70 @@ export default function Dashboard() {
       const ws = new WebSocket(wsUrl);
       
       ws.onopen = () => {
-        console.log(`WebSocket connected for admin notifications (${wsUrl})`);
+        console.log(`✅ WebSocket connected for admin notifications (${wsUrl})`);
+        // Reset retry counter on successful connection
+        wsRetryRef.current = { count: 0, maxRetries: 5, timeout: null };
       };
       
       ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        
-        const isOrderCreated = data.type === 'order.created' || data.type === 'new_order';
-        const isStatusUpdate = data.type === 'order.status.update' || data.type === 'status_update';
-
-        if (isOrderCreated || isStatusUpdate) {
-          const notification = {
-            id: Date.now(),
-            type: isOrderCreated ? 'new_order' : 'order_update',
-            title: isOrderCreated ? 'New Order Received' : 'Order Status Updated',
-            message: isOrderCreated 
-              ? `Order #${data.order_number ?? data.order?.id} from ${data.customer_name ?? data.order?.customer_name ?? 'customer'}` 
-              : `Order #${data.order_number ?? data.order?.id} is now ${data.status ?? data.order?.status}`,
-            timestamp: new Date().toISOString(),
-            read: false,
-            orderData: data
-          };
+        try {
+          const data = JSON.parse(event.data);
           
-          setNotifications(prev => [notification, ...prev].slice(0, 50));
-          setUnreadCount(prev => prev + 1);
-          // Refresh dashboard data if function exists
-          if (typeof fetchDashboardData === 'function') {
-            fetchDashboardData();
+          const isOrderCreated = data.type === 'order.created' || data.type === 'new_order';
+          const isStatusUpdate = data.type === 'order.status.update' || data.type === 'status_update';
+
+          if (isOrderCreated || isStatusUpdate) {
+            const notification = {
+              id: Date.now(),
+              type: isOrderCreated ? 'new_order' : 'order_update',
+              title: isOrderCreated ? 'New Order Received' : 'Order Status Updated',
+              message: isOrderCreated 
+                ? `Order #${data.order_number ?? data.order?.id} from ${data.customer_name ?? data.order?.customer_name ?? 'customer'}` 
+                : `Order #${data.order_number ?? data.order?.id} is now ${data.status ?? data.order?.status}`,
+              timestamp: new Date().toISOString(),
+              read: false,
+              orderData: data
+            };
+            
+            setNotifications(prev => [notification, ...prev].slice(0, 50));
+            setUnreadCount(prev => prev + 1);
           }
+        } catch (err) {
+          console.warn('Error processing WebSocket message:', err);
         }
       };
       
       ws.onerror = (error) => {
-        console.error('WebSocket error:', error, 'url:', wsUrl);
+        console.warn(`⚠️ WebSocket error: ${error.type || 'Unknown error'}`);
       };
       
       ws.onclose = (event) => {
-        console.log(`WebSocket disconnected (code ${event.code}). Reconnecting in 5s...`);
-        setTimeout(() => connectWebSocket(), 5000);
+        const retryState = wsRetryRef.current;
+        
+        if (retryState.count >= retryState.maxRetries) {
+          console.warn(`❌ WebSocket failed after ${retryState.maxRetries} retries. Stopping reconnect attempts.`);
+          console.info('📌 Real-time notifications disabled. Reload page to retry.');
+          return;
+        }
+        
+        // Exponential backoff: 1s, 2s, 4s, 8s, 16s
+        const delayMs = Math.min(1000 * Math.pow(2, retryState.count), 16000);
+        retryState.count += 1;
+        
+        console.log(`🔄 WebSocket disconnected (code ${event.code}). Retry ${retryState.count}/${retryState.maxRetries} in ${delayMs}ms...`);
+        
+        // Clear previous timeout if it exists
+        if (retryState.timeout) clearTimeout(retryState.timeout);
+        
+        // Schedule reconnect with exponential backoff
+        retryState.timeout = setTimeout(() => {
+          connectWebSocket();
+        }, delayMs);
       };
       
       wsRef.current = ws;
     } catch (error) {
-      console.error('Error connecting WebSocket:', error);
+      console.error('❌ Error connecting WebSocket:', error);
     }
   }, [getAdminWsUrl]);
 
