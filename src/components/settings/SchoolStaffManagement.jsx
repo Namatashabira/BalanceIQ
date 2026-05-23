@@ -179,7 +179,8 @@ function StaffForm({ staff, onSave, onClose }) {
         staff_priority_ranking: staff.staff_priority_ranking || 50,
         can_sign_report_cards: staff.can_sign_report_cards || false,
         can_sign_attendance_reports: staff.can_sign_attendance_reports || false,
-        can_sign_recommendation_letters: staff.can_sign_recommendation_letters || false,
+        is_class_teacher: staff?.is_class_teacher || false,
+        class_teacher_for: staff?.class_teacher_for || [],
       };
     }
     return {
@@ -213,6 +214,8 @@ function StaffForm({ staff, onSave, onClose }) {
       can_sign_report_cards: false,
       can_sign_attendance_reports: false,
       can_sign_recommendation_letters: false,
+      is_class_teacher: false,
+      class_teacher_for: [],
     };
   };
 
@@ -311,6 +314,8 @@ function StaffForm({ staff, onSave, onClose }) {
       formData.append('can_sign_report_cards', form.can_sign_report_cards || false);
       formData.append('can_sign_attendance_reports', form.can_sign_attendance_reports || false);
       formData.append('can_sign_recommendation_letters', form.can_sign_recommendation_letters || false);
+      formData.append('is_class_teacher', form.is_class_teacher || false);
+      formData.append('class_teacher_for', JSON.stringify(form.class_teacher_for || []));
       
       if (form.profile_photo instanceof File) {
         formData.append('profile_photo', form.profile_photo);
