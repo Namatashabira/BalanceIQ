@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
+import QRCode from 'qrcode.react';
 import './report1.css';
 
 const API = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api');
@@ -244,13 +245,15 @@ function R1SummaryRow({ summary = {}, subjects = [] }) {
   );
 }
 
-function R1Footer({ admin = {}, school = {}, staff = {} }) {
+function R1Footer({ admin = {}, school = {}, staff = {}, student = {} }) {
   const [classSig, onClassSig] = useImageUpload('');
   const [headSig, onHeadSig] = useImageUpload(staff?.headteacher_signature || '');
   const [stamp, onStamp] = useImageUpload('');
 
   const headteacherName = staff?.headteacher_name || admin.headTeacherName || 'Head Teacher';
   const headteacherTitle = staff?.headteacher_title || 'HEAD TEACHER';
+  const baseUrl = window.location.origin;
+  const qrValue = `${baseUrl}/verify-report?id=${student.idNo || 'N/A'}&class=${student.class || 'N/A'}&name=${encodeURIComponent(student.name || 'N/A')}`;
 
   return (
     <footer className="r1-footer">
@@ -259,6 +262,11 @@ function R1Footer({ admin = {}, school = {}, staff = {} }) {
         <span>Next Term: <strong>{admin.nextTerm || 'N/A'}</strong></span>
         <span>Fees Balance: <strong>UGX {admin.balance || '0'}</strong></span>
         <span>Next Term Fees: <strong>UGX {admin.nextFees || '0'}</strong></span>
+      </div>
+
+      <div className="r1-qr-section" style={{ textAlign: 'center', margin: '10px 0', padding: '10px', borderTop: '1px solid #ddd' }}>
+        <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '5px' }}>Report Verification</div>
+        <QRCode value={qrValue} size={80} level="H" includeMargin={true} />
       </div>
 
       <div className="r1-sigs">
@@ -501,7 +509,7 @@ export default function Report1({ propData = null }) {
             <R1Comments comments={data.comments} />
           </div>
           <div className="r1-footer-push">
-            <R1Footer admin={data.admin} school={data.school} staff={data.staff} />
+            <R1Footer admin={data.admin} school={data.school} staff={data.staff} student={data.student} />
           </div>
         </div>
       </div>

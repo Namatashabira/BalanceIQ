@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import QRCode from 'qrcode.react';
 import './report2.css';
 
 const API = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api');
@@ -267,13 +268,20 @@ function R2Admin({ admin }) {
   );
 }
 
-function R2Footer({ admin, school }) {
+function R2Footer({ admin, school, student = {} }) {
   const [classSig, onClassSig] = useImageUpload('');
   const [headSig, onHeadSig] = useImageUpload('');
   const [stamp, onStamp] = useImageUpload('');
+  const baseUrl = window.location.origin;
+  const qrValue = `${baseUrl}/verify-report?id=${student.idNo || 'N/A'}&class=${student.class || 'N/A'}&name=${encodeURIComponent(student.name || 'N/A')}`;
 
   return (
     <footer className="r2-footer">
+      <div className="r2-qr-section" style={{ textAlign: 'center', margin: '10px 0', padding: '10px', borderTop: '1px solid #ddd' }}>
+        <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '5px' }}>Report Verification</div>
+        <QRCode value={qrValue} size={80} level="H" includeMargin={true} />
+      </div>
+
       <div className="r2-signatures">
         <div className="r2-sig-card">
           <div className="r2-sig-role">CLASS TEACHER</div>
@@ -492,7 +500,7 @@ export default function Report2({ data: propData }) {
           <R2Overall overall={data.overall} />
           <R2Comments comments={data.comments} />
           <R2Admin admin={data.admin} />
-          <R2Footer admin={data.admin} school={data.school} />
+          <R2Footer admin={data.admin} school={data.school} student={data.student} />
         </div>
       </div>
     </div>

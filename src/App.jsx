@@ -68,6 +68,7 @@ import AttendancePage from "./pages/AttendancePage";
 import SchoolSettingsPage from "./pages/SchoolSettingsPage";
 import SchoolAccounting from "./pages/Accounting/SchoolAccounting";
 import ReportViewPage from "./pages/ReportViewPage";
+import VerifyReportPage from "./pages/VerifyReportPage";
 
 // ── Plan guard ────────────────────────────────────────────────────────────────
 function PlanGuard({ pageKey, children }) {
@@ -342,6 +343,7 @@ function AppContent() {
       ) : (
         <Routes>
           <Route path="/report-view" element={<ReportViewPage />} />
+          <Route path="/verify-report" element={<VerifyReportPage />} />
           <Route path="/manual-entry-old" element={<ManualEntry />} />
           <Route path="/" element={<HomePage />} />
           <Route path="/pricing" element={<Pricing />} />
